@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Reclaim",
+    "slug": "reclaim",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#0B2545",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.reclaim.app"
+    },
+    "android": {
+      "package": "com.reclaim.app"
+    },
+    "plugins": [
+      "expo-status-bar"
+    ]
+  }
+}
