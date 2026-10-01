@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
-import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { ROLES, stepNumber } from '../../constants/content';
@@ -19,19 +18,18 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const choose = (key) => {
+  // One tap picks the role and moves on: a short pause lets the highlight register first.
+  const choose = async (key) => {
+    if (loading) return;
     Haptics.selectionAsync().catch(() => {});
     setRole(key);
-  };
-
-  const next = async () => {
     setError('');
     setLoading(true);
     try {
-      const data = { role };
+      const data = { role: key };
       // A different role means different suggestions, so start their day fresh.
-      if (onboarding?.role && role !== onboarding.role) data.schedule = [];
-      await saveStep(data, 'buyback_rate');
+      if (onboarding?.role && key !== onboarding.role) data.schedule = [];
+      await Promise.all([saveStep(data, 'buyback_rate'), new Promise((r) => setTimeout(r, 250))]);
       navigation.navigate('BuybackRate');
     } catch (err) {
       setError(err.message);
@@ -41,12 +39,12 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <Screen footer={<Button title="Continue" icon="arrow-forward" onPress={next} loading={loading} disabled={!role} />}>
+    <Screen>
       <StepHeader
         step={stepNumber('profile')}
         eyebrow="Let's begin"
         title="What best describes you?"
-        subtitle="We'll suggest the activities people like you usually do."
+        subtitle="Tap one. We'll suggest the activities people like you usually do."
       />
 
       <View style={styles.grid}>
@@ -56,6 +54,7 @@ export default function ProfileScreen({ navigation }) {
             <Pressable
               key={r.key}
               onPress={() => choose(r.key)}
+              disabled={loading}
               accessibilityRole="radio"
               accessibilityState={{ checked: on }}
               style={({ pressed }) => [styles.tile, on && styles.tileOn, pressed && { transform: [{ scale: 0.98 }] }]}
@@ -64,7 +63,15 @@ export default function ProfileScreen({ navigation }) {
                 <Ionicons name={r.icon} size={22} color={on ? colors.onColor : colors.primaryDark} />
               </View>
               <Text style={[styles.label, on && styles.labelOn]}>{r.label}</Text>
-              {on ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} style={styles.check} /> : null}
+              {on ? (
+                <View style={styles.check}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                  )}
+                </View>
+              ) : null}
             </Pressable>
           );
         })}

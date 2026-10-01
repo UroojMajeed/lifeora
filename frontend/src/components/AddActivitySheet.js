@@ -55,6 +55,20 @@ export default function AddActivitySheet({ visible, role, items, editing, onAdd,
   const [name, setName] = useState('');
   const [draft, setDraft] = useState('');
   const slide = useRef(new Animated.Value(0)).current;
+  // Our own open/close animation: the backdrop fades while the sheet glides up.
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.spring(progress, { toValue: 1, damping: 22, stiffness: 220, mass: 0.9, useNativeDriver: true }).start();
+    } else {
+      Animated.timing(progress, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(
+        ({ finished }) => finished && setMounted(false)
+      );
+    }
+  }, [visible, progress]);
 
   // Names already in the day, except the one being edited.
   const taken = (n) => items.some((i) => i !== editing && sameName(i.activity, n));
@@ -100,16 +114,19 @@ export default function AddActivitySheet({ visible, role, items, editing, onAdd,
   const draftInvalid = !draft.trim() || taken(draft);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={[styles.backdrop, { opacity: progress }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
+      </Animated.View>
       <View style={styles.anchor} pointerEvents="box-none">
-        <View
+        <Animated.View
           style={[
             styles.sheet,
             {
               maxHeight: WINDOW_HEIGHT - keyboard - insets.top - spacing.lg,
               marginBottom: keyboard,
               paddingBottom: (keyboard ? 0 : insets.bottom) + spacing.md,
+              transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [WINDOW_HEIGHT * 0.6, 0] }) }],
             },
           ]}
         >
@@ -228,7 +245,7 @@ export default function AddActivitySheet({ visible, role, items, editing, onAdd,
               </ScrollView>
             )}
           </Animated.View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

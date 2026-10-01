@@ -32,13 +32,24 @@ export default function ScheduleScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // First visit: open the picker straight away so the user starts with their first activity.
+  // First visit: open the picker as soon as the screen has finished sliding in, so the two
+  // animations don't overlap. (If we resumed straight onto this screen there is no transition.)
   useEffect(() => {
-    if (!items.length) {
-      const t = setTimeout(() => setSheetOpen(true), 350);
-      return () => clearTimeout(t);
-    }
-    return undefined;
+    if (items.length) return undefined;
+    let opened = false;
+    const open = () => {
+      if (opened) return;
+      opened = true;
+      setSheetOpen(true);
+    };
+    const unsubscribe = navigation.addListener('transitionEnd', (e) => {
+      if (!e.data?.closing) open();
+    });
+    const fallback = setTimeout(open, 600);
+    return () => {
+      unsubscribe();
+      clearTimeout(fallback);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -131,12 +142,7 @@ export default function ScheduleScreen({ navigation }) {
           />
           {items.length > 1 ? <Text style={styles.hint}>Hold ≡ and drag to reorder. Tap an activity to edit it.</Text> : null}
         </>
-      ) : (
-        <View style={styles.empty}>
-          <Ionicons name="sunny-outline" size={40} color={colors.primary} />
-          <Text style={styles.emptyText}>Your day is empty. Add the first thing you do.</Text>
-        </View>
-      )}
+      ) : null}
 
       {items.length < MAX_ACTIVITIES ? (
         <Pressable
@@ -173,8 +179,6 @@ const makeStyles = (colors) => ({
   total: { fontSize: 14, fontWeight: '700', color: colors.muted },
   totalOver: { color: colors.error },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
-  empty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl },
-  emptyText: { fontSize: 15, color: colors.muted, textAlign: 'center' },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
