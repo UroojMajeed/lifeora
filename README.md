@@ -80,5 +80,5 @@ Restart `npx expo start` after changing `.env`.
 ## Branding
 
 - **Name:** Reclaim, with the tagline "Buy back your time."
-- **Logo:** a clock circled by an orange arrow that loops back around it, standing for the Buyback Loop. The React component is `frontend/src/components/Logo.js` and the standalone file is `frontend/assets/logo.svg`.
-- **Colors:** sky blue `#00A9E0`, orange `#F26522`, navy `#0B2545`.
+- **Logo:** "Where the hours land." A white hourglass on a sky → indigo tile, whose falling sand gathers into an orange heart: every hour you buy back lands with the people and things you love. On the landing screen it gives a small heartbeat. The React component is `frontend/src/components/Logo.js` and the standalone file is `frontend/assets/logo.svg`.
+- **Colors:** sky `#0EA5E9`, indigo `#6366F1`, orange `#FB923C`.

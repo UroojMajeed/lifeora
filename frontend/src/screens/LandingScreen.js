@@ -29,7 +29,7 @@ export default function LandingScreen({ navigation }) {
 
   const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const spin = useRef(new Animated.Value(0)).current;
+  const beat = useRef(new Animated.Value(1)).current;
   const ctaOpacity = useRef(new Animated.Value(0)).current;
   const ctaRise = useRef(new Animated.Value(16)).current;
 
@@ -46,11 +46,14 @@ export default function LandingScreen({ navigation }) {
   };
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(logoScale, { toValue: 1, friction: 6, useNativeDriver: true }),
-      Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      // One full turn backwards: time being "bought back".
-      Animated.timing(spin, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    const pulse = (to, duration) => Animated.timing(beat, { toValue: to, duration, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, { toValue: 1, friction: 6, useNativeDriver: true }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]),
+      // A heartbeat: the hours you buy back land with what you love.
+      Animated.sequence([pulse(1.08, 140), pulse(1, 140), pulse(1.05, 120), pulse(1, 220)]),
     ]).start();
 
     let cancelled = false;
@@ -70,9 +73,7 @@ export default function LandingScreen({ navigation }) {
     return () => {
       cancelled = true;
     };
-  }, [bootstrap, navigation, logoScale, logoOpacity, spin, ctaOpacity, ctaRise]);
-
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
+  }, [bootstrap, navigation, logoScale, logoOpacity, beat, ctaOpacity, ctaRise]);
 
   return (
     <LinearGradient colors={colors.landing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fill}>
@@ -87,7 +88,7 @@ export default function LandingScreen({ navigation }) {
         </View>
 
         <View style={styles.center}>
-          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }, { rotate }] }]}>
+          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }, { scale: beat }] }]}>
             <Logo size={128} />
           </Animated.View>
           <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
