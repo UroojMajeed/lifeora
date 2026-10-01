@@ -16,35 +16,47 @@ function calculateBuybackRate(annualIncome) {
   };
 }
 
-// Replacement Ladder: how the founder feels tells you which rung they're on.
-const REPLACEMENT_LADDER = {
-  stuck: { rung: 1, name: 'Admin', keyHire: 'Admin Assistant', ownership: 'Inbox & Calendar' },
-  stalled: { rung: 2, name: 'Delivery', keyHire: 'Head of Delivery', ownership: 'Onboarding & Support' },
-  friction: { rung: 3, name: 'Marketing', keyHire: 'Head of Marketing', ownership: 'Campaigns & Traffic' },
-  freedom: { rung: 4, name: 'Sales', keyHire: 'Sales Representative', ownership: 'Calls & Follow-up' },
-  flow: { rung: 5, name: 'Leadership', keyHire: 'Leadership Team', ownership: 'Strategy & Outcomes' },
-};
+// DRIP Matrix: every activity sits on two axes, money (value) and energy.
+const DRIP_QUADRANTS = ['delegation', 'replacement', 'investment', 'production'];
 
-const FEELINGS = Object.keys(REPLACEMENT_LADDER);
+// Null until the user has said how the activity makes them feel.
+function quadrantFor({ value, energy }) {
+  if (!energy) return null;
+  if (value === 'high') return energy === 'energizing' ? 'production' : 'replacement';
+  return energy === 'energizing' ? 'investment' : 'delegation';
+}
 
-const TIME_ASSASSINS = ['staller', 'speed_demon', 'supervisor', 'saver', 'self_medicator'];
+// Hours per quadrant, the quadrant the day is dominated by, and the cost to buy back draining hours.
+function summarizeSchedule(schedule = [], buybackRate = 0) {
+  const hours = Object.fromEntries(DRIP_QUADRANTS.map((q) => [q, 0]));
+  schedule.forEach((item) => {
+    if (item.quadrant) hours[item.quadrant] += item.hours;
+  });
+  const totalHours = DRIP_QUADRANTS.reduce((sum, q) => sum + hours[q], 0);
+  const dominant = totalHours ? DRIP_QUADRANTS.reduce((a, b) => (hours[b] > hours[a] ? b : a)) : null;
+  const drainingHours = hours.delegation + hours.replacement;
 
-const ONBOARDING_STEPS = [
-  'buyback_rate',
-  'energy_drains',
-  'feeling',
-  'time_assassins',
-  'vision',
-  'summary',
-  'done',
-];
+  return {
+    hours: Object.fromEntries(DRIP_QUADRANTS.map((q) => [q, round2(hours[q])])),
+    totalHours: round2(totalHours),
+    dominant,
+    drainingHours: round2(drainingHours),
+    dailyBuybackCost: round2(drainingHours * (Number(buybackRate) || 0)),
+  };
+}
+
+const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip', 'done'];
+
+// "What best describes you?" Picks the activities we suggest for the user's day.
+const ROLES = ['agency', 'coach', 'ecommerce', 'saas', 'freelancer', 'other'];
 
 module.exports = {
   WORK_HOURS_PER_YEAR,
   BUYBACK_DIVISOR,
   calculateBuybackRate,
-  REPLACEMENT_LADDER,
-  FEELINGS,
-  TIME_ASSASSINS,
+  DRIP_QUADRANTS,
+  quadrantFor,
+  summarizeSchedule,
   ONBOARDING_STEPS,
+  ROLES,
 };

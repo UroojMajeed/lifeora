@@ -1,12 +1,28 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { FEELINGS, TIME_ASSASSINS, ONBOARDING_STEPS } = require('../utils/buyback');
+const { DRIP_QUADRANTS, ONBOARDING_STEPS, ROLES } = require('../utils/buyback');
+
+// One activity from the user's typical day, placed on the DRIP Matrix.
+const activitySchema = new mongoose.Schema(
+  {
+    activity: { type: String, required: true, trim: true, maxlength: 60 },
+    hours: { type: Number, required: true, min: 0.25, max: 24 },
+    value: { type: String, enum: ['high', 'low'], required: true },
+    // Empty until the user swipes the activity.
+    energy: { type: String, enum: ['energizing', 'draining', null], default: null },
+    quadrant: { type: String, enum: [...DRIP_QUADRANTS, null], default: null },
+  },
+  { _id: false }
+);
 
 const onboardingSchema = new mongoose.Schema(
   {
-    currentStep: { type: String, enum: ONBOARDING_STEPS, default: 'buyback_rate' },
+    currentStep: { type: String, enum: ONBOARDING_STEPS, default: 'profile' },
     completed: { type: Boolean, default: false },
     completedAt: Date,
+
+    // What best describes the user; picks their starting day template
+    role: { type: String, enum: ROLES },
 
     // Buyback Rate (chapter 2)
     annualIncome: { type: Number, min: 0 },
@@ -14,45 +30,40 @@ const onboardingSchema = new mongoose.Schema(
     effectiveHourlyRate: Number,
     buybackRate: Number,
 
-    // Delegation Quadrant tasks that drain energy (chapters 2, 4, 6)
-    drainingTasks: { type: [String], default: [] },
-
-    // Replacement Ladder position (chapter 5)
-    feeling: { type: String, enum: FEELINGS },
-    ladderRung: { type: Number, min: 1, max: 5 },
-
-    // 5 Time Assassins (chapter 3)
-    timeAssassins: { type: [{ type: String, enum: TIME_ASSASSINS }], default: [] },
-
-    // "What would I fill my time with?" (chapter 1)
-    visionStatement: { type: String, maxlength: 1000, trim: true },
+    // Typical day in the user's own words, then sorted into the DRIP Matrix (chapter 2)
+    dayDescription: { type: String, trim: true, maxlength: 2000 },
+    schedule: { type: [activitySchema], default: [] },
   },
   { _id: false }
 );
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true, maxlength: 80 },
+    // Guests start using the app right away; name, email and password come later if they sign up.
+    isGuest: { type: Boolean, default: false },
+    name: { type: String, trim: true, maxlength: 80 },
     email: {
       type: String,
-      required: true,
-      unique: true,
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Invalid email'],
     },
-    password: { type: String, required: true, minlength: 8, select: false },
+    password: { type: String, minlength: 8, select: false },
     onboarding: { type: onboardingSchema, default: () => ({}) },
   },
   { timestamps: true }
 );
 
+// Unique only among users who have an email, so any number of guests can exist.
+userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: 'string' } } });
+
 userSchema.pre('save', async function hashPassword() {
-  if (!this.isModified('password')) return;
+  if (!this.isModified('password') || !this.password) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidate) {
+  if (!this.password) return false;
   return bcrypt.compare(candidate, this.password);
 };
 

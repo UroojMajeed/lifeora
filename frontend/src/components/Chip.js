@@ -1,32 +1,40 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { Pressable, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useStyles, useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme';
 
-export default function Chip({ label, selected, onPress }) {
+/** Rounded tag. Shows a ✓ when selected, or a custom Ionicons `icon` (e.g. "add"). */
+export default function Chip({ label, selected, onPress, icon }) {
+  const { colors } = useTheme();
+  const styles = useStyles(makeStyles);
+  const iconName = selected ? 'checkmark' : icon;
+
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      style={({ pressed }) => [styles.chip, selected && styles.selected, pressed && { opacity: 0.85 }]}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [styles.chip, selected && styles.selected, pressed && { opacity: 0.8 }]}
     >
-      <Text style={[styles.label, selected && styles.labelSelected]}>
-        {selected ? '✓ ' : ''}
-        {label}
-      </Text>
+      {iconName ? <Ionicons name={iconName} size={15} color={selected ? colors.primaryDark : colors.muted} /> : null}
+      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => ({
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md - 2,
+    paddingVertical: 9,
     borderRadius: radius.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  selected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  selected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   label: { fontSize: 14, fontWeight: '600', color: colors.text },
-  labelSelected: { color: colors.accent },
+  labelSelected: { color: colors.primaryDark },
 });

@@ -4,7 +4,7 @@
     "slug": "reclaim",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#0B2545",
     "ios": {
       "supportsTablet": false,
@@ -14,7 +14,16 @@
       "package": "com.reclaim.app"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Reclaim lets you pick a photo that motivates you. It stays on your phone.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

@@ -1,37 +1,47 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors, radius, spacing, type } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import ThemeToggle from './ThemeToggle';
+import { useStyles, useTheme } from '../theme/ThemeContext';
+import { spacing } from '../theme';
 import { TOTAL_STEPS } from '../constants/content';
 
-/** Back button + progress bar + heading for each onboarding step. */
-export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true }) {
+/** Back button, segmented progress, theme toggle, and the step's heading. */
+export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true, onBack }) {
   const navigation = useNavigation();
-  const canGoBack = showBack && navigation.canGoBack();
-  const progress = Math.min(step / TOTAL_STEPS, 1);
+  const { colors, type } = useTheme();
+  const styles = useStyles(makeStyles);
+  const canGoBack = onBack || (showBack && navigation.canGoBack());
 
   return (
     <View style={styles.wrap}>
       <View style={styles.topRow}>
         {canGoBack ? (
           <Pressable
-            onPress={() => navigation.goBack()}
+            onPress={onBack || (() => navigation.goBack())}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            style={styles.back}
+            style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
           >
-            <Text style={styles.backText}>‹ Back</Text>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
         ) : (
-          <View style={styles.back} />
+          <View style={styles.spacer} />
         )}
-        <Text style={styles.count}>
-          Step {step} of {TOTAL_STEPS}
-        </Text>
-      </View>
 
-      <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ now: step, min: 0, max: TOTAL_STEPS }}>
-        <View style={[styles.fill, { width: `${progress * 100}%` }]} />
+        <View
+          style={styles.segments}
+          accessibilityRole="progressbar"
+          accessibilityLabel={`Step ${step} of ${TOTAL_STEPS}`}
+          accessibilityValue={{ now: step, min: 0, max: TOTAL_STEPS }}
+        >
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+            <View key={i} style={[styles.segment, i < step && styles.segmentOn]} />
+          ))}
+        </View>
+
+        <ThemeToggle />
       </View>
 
       {eyebrow ? <Text style={[type.label, styles.eyebrow]}>{eyebrow}</Text> : null}
@@ -41,21 +51,23 @@ export default function StepHeader({ step, eyebrow, title, subtitle, showBack = 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => ({
   wrap: { paddingTop: spacing.sm, marginBottom: spacing.lg },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 },
-  back: { minWidth: 60 },
-  backText: { fontSize: 16, fontWeight: '600', color: colors.primaryDark },
-  count: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  track: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    overflow: 'hidden',
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  fill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.primary },
-  eyebrow: { color: colors.accent, marginBottom: spacing.xs },
+  spacer: { width: 40 },
+  segments: { flex: 1, flexDirection: 'row', gap: 6 },
+  segment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.border },
+  segmentOn: { backgroundColor: colors.primary },
+  eyebrow: { color: colors.accent, marginBottom: spacing.sm },
   subtitle: { marginTop: spacing.sm },
 });

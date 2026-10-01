@@ -1,8 +1,11 @@
 import { forwardRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { Text, TextInput, View } from 'react-native';
+import { useStyles, useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme';
 
 const TextField = forwardRef(function TextField({ label, hint, error, prefix, style, multiline, ...props }, ref) {
+  const { colors, isDark } = useTheme();
+  const styles = useStyles(makeStyles);
   const [focused, setFocused] = useState(false);
 
   return (
@@ -20,6 +23,7 @@ const TextField = forwardRef(function TextField({ label, hint, error, prefix, st
         <TextInput
           ref={ref}
           placeholderTextColor={colors.muted}
+          keyboardAppearance={isDark ? 'dark' : 'light'}
           style={[styles.input, multiline && styles.multilineInput]}
           multiline={multiline}
           onFocus={() => setFocused(true)}
@@ -34,7 +38,7 @@ const TextField = forwardRef(function TextField({ label, hint, error, prefix, st
 
 export default TextField;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => ({
   wrap: { gap: 6 },
   label: { fontSize: 14, fontWeight: '600', color: colors.text },
   box: {
@@ -50,9 +54,9 @@ const styles = StyleSheet.create({
   multilineBox: { alignItems: 'flex-start', paddingVertical: spacing.sm },
   focused: { borderColor: colors.primary },
   errored: { borderColor: colors.error },
-  prefix: { fontSize: 18, fontWeight: '700', color: colors.muted, marginRight: 6 },
+  prefix: { fontSize: 16, fontWeight: '700', color: colors.muted, marginRight: 8 },
   input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 12 },
-  multilineInput: { minHeight: 120, textAlignVertical: 'top' },
+  multilineInput: { minHeight: 160, textAlignVertical: 'top', lineHeight: 22 },
   hint: { fontSize: 13, color: colors.muted },
   error: { fontSize: 13, color: colors.error },
 });

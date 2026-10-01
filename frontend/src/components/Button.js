@@ -1,16 +1,20 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { colors, radius, spacing } from '../theme';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
+import { radius, spacing } from '../theme';
 
-const VARIANTS = {
-  primary: { bg: colors.accent, fg: colors.white, border: colors.accent },
-  secondary: { bg: colors.surface, fg: colors.navy, border: colors.border },
-  light: { bg: colors.white, fg: colors.navy, border: colors.white },
+const variants = (colors) => ({
+  primary: { bg: colors.accent, fg: colors.onColor, border: colors.accent },
+  secondary: { bg: colors.surface, fg: colors.text, border: colors.border },
   ghost: { bg: 'transparent', fg: colors.primaryDark, border: 'transparent' },
-  ghostLight: { bg: 'transparent', fg: colors.white, border: 'transparent' },
-};
+  light: { bg: colors.white, fg: '#0F172A', border: colors.white },
+});
 
-export default function Button({ title, onPress, variant = 'primary', loading = false, disabled = false, style }) {
-  const v = VARIANTS[variant] || VARIANTS.primary;
+/** Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"). */
+export default function Button({ title, onPress, variant = 'primary', icon, loading = false, disabled = false, style }) {
+  const { colors } = useTheme();
+  const all = variants(colors);
+  const v = all[variant] || all.primary;
   const isDisabled = disabled || loading;
 
   return (
@@ -22,26 +26,36 @@ export default function Button({ title, onPress, variant = 'primary', loading = 
       style={({ pressed }) => [
         styles.base,
         { backgroundColor: v.bg, borderColor: v.border },
+        variant === 'primary' && !isDisabled && { shadowColor: colors.accent, ...styles.glow },
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={v.fg} /> : <Text style={[styles.text, { color: v.fg }]}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={v.fg} />
+      ) : (
+        <View style={styles.row}>
+          <Text style={[styles.text, { color: v.fg }]}>{title}</Text>
+          {icon ? <Ionicons name={icon} size={18} color={v.fg} /> : null}
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 54,
-    borderRadius: radius.md,
+    minHeight: 56,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
-  text: { fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
-  disabled: { opacity: 0.45 },
+  glow: { shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  text: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
+  disabled: { opacity: 0.4 },
 });

@@ -10,19 +10,21 @@ reclaim/
 
 ## Phase 1: onboarding
 
-| # | Screen | Book concept | Saved to MongoDB |
-|---|--------|--------------|------------------|
-| – | Landing (animated logo) | – | – |
-| – | Welcome (3 slides) | Buyback Principle, Buyback Loop, DRIP Matrix | – |
-| – | Sign up / Log in | – | `users` |
-| 1 | Buyback Rate | Pay ÷ 2,000 hrs ÷ 4 | `annualIncome`, `effectiveHourlyRate`, `buybackRate` |
-| 2 | Energy drains | Audit your Delegation Quadrant | `drainingTasks` |
-| 3 | How does your business feel? | Replacement Ladder (Stuck → Flow) | `feeling`, `ladderRung` |
-| 4 | Time Assassins | Staller, Speed Demon, Supervisor, Saver, Self-Medicator | `timeAssassins` |
-| 5 | Vision | "What would I fill my time with?" | `visionStatement` |
-| 6 | Summary | Your Buyback Plan | `completed`, `completedAt` |
+No sign-up wall and almost no typing. "Get started" creates a guest account in the background, and the phone keeps its token (valid for a year).
 
-Progress is saved after every step, so a user who closes the app resumes on the step they left.
+| # | Screen | How it works | Book concept | Saved to MongoDB |
+|---|--------|--------------|--------------|------------------|
+| – | Landing | Theme-aware gradient, logo | – | guest `users` document |
+| 1 | What best describes you? | One tap: agency, coach, e-commerce, SaaS, freelancer, other | – | `role` |
+| 2 | Buyback Rate | Currency dropdown inside the yearly-pay field | Pay ÷ 2,000 hrs ÷ 4 | `currency`, `annualIncome`, `effectiveHourlyRate`, `buybackRate` |
+| 3 | Your day | A sheet pops up: tap a suggested activity (or type one) → pick how long it takes → back to pick the next. Tap an activity's hours later to change them | Time & Energy Audit | `schedule[]` |
+| 4 | Swipe your day | One card per activity: right = energizes, left = drains. Each card asks "Could someone else do this for your Buyback Rate or less?" | Green/red energy, $ value | `schedule[].energy`, `schedule[].value` |
+| 5 | Your DRIP Matrix | Animated reveal, daily buyback cost, first handoff | Delegation, Replacement, Investment, Production | `completed`, `completedAt` |
+| – | Home | **Your why** (optional motivational photo + a few words, stored only on the phone), Buyback Rate, this week's move, DRIP Matrix, theme setting | Vision: what you buy back time for | – (on-device) |
+
+Each activity's DRIP quadrant is computed by the server. Progress is saved after every step, so a user who closes the app resumes where they left off.
+
+Every screen has a ☀️/🌙 button to switch light and dark mode; Home also offers "Auto" to follow the phone.
 
 ## Prerequisites
 
@@ -37,7 +39,7 @@ cd backend
 cp .env.example .env        # Windows: copy .env.example .env
 # edit .env: set MONGODB_URI and a long random JWT_SECRET
 npm install
-npm run dev                 # http://localhost:5000/api/health
+npm run dev                 # http://localhost:5000/api/health (or the PORT in .env)
 ```
 
 ### API
@@ -45,14 +47,18 @@ npm run dev                 # http://localhost:5000/api/health
 | Method | Path | Auth | Body |
 |--------|------|------|------|
 | GET | `/api/health` | – | – |
+| POST | `/api/auth/guest` | – | – (creates a guest, returns a token) |
 | POST | `/api/auth/register` | – | `{ name, email, password }` |
 | POST | `/api/auth/login` | – | `{ email, password }` |
 | GET | `/api/auth/me` | Bearer | – |
 | GET | `/api/onboarding` | Bearer | – |
-| PUT | `/api/onboarding` | Bearer | any of `{ currentStep, annualIncome, drainingTasks, feeling, timeAssassins, visionStatement }` |
+| PUT | `/api/onboarding` | Bearer | any of `{ currentStep, role, annualIncome, currency, schedule: [{ activity, hours, value, energy }] }` |
+| POST | `/api/onboarding/schedule/extract` | Bearer | `{ text }` → `{ activities }` (optional, not used by the app; reads the day with Claude; 20 per user per hour) |
 | POST | `/api/onboarding/complete` | Bearer | – |
 
-`effectiveHourlyRate`, `buybackRate` and `ladderRung` are always computed by the server.
+`effectiveHourlyRate`, `buybackRate` and each activity's `quadrant` are always computed by the server. Register and login exist for a later "save your progress" step but have no screen yet.
+
+The backend also has an optional endpoint that reads a typed description of a day with the Claude API (`POST /api/onboarding/schedule/extract`, needs `ANTHROPIC_API_KEY`). The app doesn't use it right now.
 
 ## Run the app
 

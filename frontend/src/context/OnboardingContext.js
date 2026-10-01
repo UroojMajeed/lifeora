@@ -7,14 +7,13 @@ const OnboardingContext = createContext(null);
 export function OnboardingProvider({ children }) {
   const [user, setUser] = useState(null);
   const [onboarding, setOnboarding] = useState(null);
-  const [insights, setInsights] = useState(null);
 
   const applyUser = useCallback((u) => {
     setUser(u);
     setOnboarding(u?.onboarding || null);
   }, []);
 
-  // Restores a saved session. Returns the screen the user should land on, or null if signed out.
+  // Restores a saved session. Returns the screen the user should land on, or null if there is none.
   const bootstrap = useCallback(async () => {
     const token = await tokenStore.get();
     if (!token) return null;
@@ -28,25 +27,13 @@ export function OnboardingProvider({ children }) {
     }
   }, [applyUser]);
 
-  const signUp = useCallback(
-    async ({ name, email, password }) => {
-      const { token, user: u } = await api.register({ name, email, password });
-      await tokenStore.set(token);
-      applyUser(u);
-      return screenForStep(u.onboarding?.currentStep);
-    },
-    [applyUser]
-  );
-
-  const logIn = useCallback(
-    async ({ email, password }) => {
-      const { token, user: u } = await api.login({ email, password });
-      await tokenStore.set(token);
-      applyUser(u);
-      return screenForStep(u.onboarding?.currentStep);
-    },
-    [applyUser]
-  );
+  // No sign-up wall: the first tap creates a guest account and this device keeps its token.
+  const startAsGuest = useCallback(async () => {
+    const { token, user: u } = await api.createGuest();
+    await tokenStore.set(token);
+    applyUser(u);
+    return screenForStep(u.onboarding?.currentStep);
+  }, [applyUser]);
 
   // Saves one step's answers and advances the server-side step pointer.
   const saveStep = useCallback(async (data, nextStep) => {
@@ -58,20 +45,12 @@ export function OnboardingProvider({ children }) {
   const complete = useCallback(async () => {
     const res = await api.completeOnboarding();
     setOnboarding(res.onboarding);
-    setInsights(res.insights);
     return res;
   }, []);
 
-  const logOut = useCallback(async () => {
-    await tokenStore.clear();
-    setUser(null);
-    setOnboarding(null);
-    setInsights(null);
-  }, []);
-
   const value = useMemo(
-    () => ({ user, onboarding, insights, bootstrap, signUp, logIn, saveStep, complete, logOut }),
-    [user, onboarding, insights, bootstrap, signUp, logIn, saveStep, complete, logOut]
+    () => ({ user, onboarding, bootstrap, startAsGuest, saveStep, complete }),
+    [user, onboarding, bootstrap, startAsGuest, saveStep, complete]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

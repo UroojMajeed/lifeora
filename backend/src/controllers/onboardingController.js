@@ -2,11 +2,44 @@ const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const {
   calculateBuybackRate,
-  REPLACEMENT_LADDER,
-  FEELINGS,
-  TIME_ASSASSINS,
+  quadrantFor,
+  summarizeSchedule,
   ONBOARDING_STEPS,
+  ROLES,
 } = require('../utils/buyback');
+
+const { extractSchedule: extractFromText } = require('../services/scheduleExtractor');
+
+const MAX_ACTIVITIES = 30;
+const MAX_DAY_DESCRIPTION = 2000;
+
+function sanitizeSchedule(schedule, errors) {
+  if (!Array.isArray(schedule) || schedule.length > MAX_ACTIVITIES) {
+    errors.push(`schedule must be an array of up to ${MAX_ACTIVITIES} activities`);
+    return undefined;
+  }
+
+  const items = schedule.map((item, i) => {
+    const activity = String(item?.activity ?? '').trim().slice(0, 60);
+    const hours = Number(item?.hours);
+    if (!activity) errors.push(`schedule[${i}]: activity is required`);
+    if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) {
+      errors.push(`schedule[${i}]: hours must be between 0.25 and 24`);
+    }
+    const value = item?.value;
+    if (!['high', 'low'].includes(value)) errors.push(`schedule[${i}]: value must be high or low`);
+    const energy = item?.energy ?? null;
+    if (![null, 'energizing', 'draining'].includes(energy)) {
+      errors.push(`schedule[${i}]: energy must be energizing, draining or null`);
+    }
+    // The quadrant is always derived here, never trusted from the client.
+    return { activity, hours, value, energy, quadrant: quadrantFor({ value, energy }) };
+  });
+
+  const total = items.reduce((sum, item) => sum + (Number.isFinite(item.hours) ? item.hours : 0), 0);
+  if (total > 24) errors.push('A day only has 24 hours. Trim a few activities.');
+  return items;
+}
 
 // Validate and pick only known onboarding fields from the request body.
 function sanitize(body = {}) {
@@ -16,6 +49,11 @@ function sanitize(body = {}) {
   if (body.currentStep !== undefined) {
     if (!ONBOARDING_STEPS.includes(body.currentStep)) errors.push('Invalid currentStep');
     else out.currentStep = body.currentStep;
+  }
+
+  if (body.role !== undefined) {
+    if (!ROLES.includes(body.role)) errors.push(`role must be one of: ${ROLES.join(', ')}`);
+    else out.role = body.role;
   }
 
   if (body.annualIncome !== undefined) {
@@ -29,31 +67,14 @@ function sanitize(body = {}) {
     else out.currency = body.currency;
   }
 
-  if (body.drainingTasks !== undefined) {
-    if (!Array.isArray(body.drainingTasks) || body.drainingTasks.length > 30) {
-      errors.push('drainingTasks must be an array of up to 30 items');
-    } else {
-      out.drainingTasks = [...new Set(body.drainingTasks.map((t) => String(t).trim().slice(0, 60)).filter(Boolean))];
-    }
+  if (body.dayDescription !== undefined) {
+    const d = String(body.dayDescription).trim();
+    if (d.length > MAX_DAY_DESCRIPTION) errors.push(`dayDescription must be ${MAX_DAY_DESCRIPTION} characters or fewer`);
+    else out.dayDescription = d;
   }
 
-  if (body.feeling !== undefined) {
-    if (!FEELINGS.includes(body.feeling)) errors.push(`feeling must be one of: ${FEELINGS.join(', ')}`);
-    else out.feeling = body.feeling;
-  }
-
-  if (body.timeAssassins !== undefined) {
-    if (!Array.isArray(body.timeAssassins) || body.timeAssassins.some((a) => !TIME_ASSASSINS.includes(a))) {
-      errors.push(`timeAssassins must be a subset of: ${TIME_ASSASSINS.join(', ')}`);
-    } else {
-      out.timeAssassins = [...new Set(body.timeAssassins)];
-    }
-  }
-
-  if (body.visionStatement !== undefined) {
-    const v = String(body.visionStatement).trim();
-    if (v.length > 1000) errors.push('visionStatement must be 1000 characters or fewer');
-    else out.visionStatement = v;
+  if (body.schedule !== undefined) {
+    out.schedule = sanitizeSchedule(body.schedule, errors);
   }
 
   if (errors.length) throw new ApiError(400, 'Validation failed', errors);
@@ -82,12 +103,28 @@ async function updateOnboarding(req, res, next) {
     if (data.annualIncome !== undefined) {
       Object.assign(user.onboarding, calculateBuybackRate(data.annualIncome));
     }
-    if (data.feeling) {
-      user.onboarding.ladderRung = REPLACEMENT_LADDER[data.feeling].rung;
-    }
 
     await user.save();
     res.json({ onboarding: user.onboarding });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Reads the user's description of their day and returns activities for them to review. Saves nothing.
+async function extractSchedule(req, res, next) {
+  try {
+    const text = String(req.body?.text ?? '').trim();
+    if (text.length < 10) throw new ApiError(400, 'Tell us a bit more about your day first.');
+    if (text.length > MAX_DAY_DESCRIPTION) {
+      throw new ApiError(400, `Keep it under ${MAX_DAY_DESCRIPTION} characters.`);
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) throw new ApiError(404, 'User not found');
+
+    const activities = await extractFromText(text, user.onboarding);
+    res.json({ activities });
   } catch (err) {
     next(err);
   }
@@ -99,8 +136,11 @@ async function completeOnboarding(req, res, next) {
     if (!user) throw new ApiError(404, 'User not found');
 
     const o = user.onboarding;
-    if (o.annualIncome === undefined || !o.feeling) {
-      throw new ApiError(400, 'Finish the Buyback Rate and Replacement Ladder steps first');
+    if (o.annualIncome === undefined || !o.schedule.length) {
+      throw new ApiError(400, 'Finish the Buyback Rate and daily schedule steps first');
+    }
+    if (o.schedule.some((item) => !item.energy)) {
+      throw new ApiError(400, 'Swipe every activity first');
     }
 
     o.completed = true;
@@ -108,16 +148,10 @@ async function completeOnboarding(req, res, next) {
     o.currentStep = 'done';
     await user.save();
 
-    res.json({
-      onboarding: o,
-      insights: {
-        ladder: REPLACEMENT_LADDER[o.feeling],
-        buybackRule: `Stop doing tasks you dislike that someone else could do for $${o.buybackRate}/hour or less.`,
-      },
-    });
+    res.json({ onboarding: o, insights: { drip: summarizeSchedule(o.schedule, o.buybackRate) } });
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { getOnboarding, updateOnboarding, completeOnboarding };
+module.exports = { getOnboarding, updateOnboarding, extractSchedule, completeOnboarding };

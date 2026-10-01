@@ -2,10 +2,20 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 
+// A guest's token is their only way back to their data, so it lasts much longer.
 const signToken = (user) =>
   jwt.sign({ sub: user.id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: user.isGuest ? '365d' : process.env.JWT_EXPIRES_IN || '7d',
   });
+
+async function createGuest(req, res, next) {
+  try {
+    const user = await User.create({ isGuest: true });
+    res.status(201).json({ token: signToken(user), user });
+  } catch (err) {
+    next(err);
+  }
+}
 
 async function register(req, res, next) {
   try {
@@ -48,4 +58,4 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { register, login, me };
+module.exports = { createGuest, register, login, me };

@@ -9,135 +9,158 @@ export function calculateBuybackRate(annualIncome) {
   return { effectiveHourlyRate: hourly, buybackRate: hourly / BUYBACK_DIVISOR };
 }
 
-export const WELCOME_SLIDES = [
-  {
-    key: 'principle',
-    eyebrow: 'The Buyback Principle',
-    title: "Don't hire to grow your business. Hire to buy back your time.",
-    body: 'Your time is the most finite asset your business has. Spend it only on work you excel at, enjoy, and that moves the needle.',
+// DRIP Matrix quadrants. Matches the backend's quadrantFor(). Colors are theme keys.
+export const DRIP = {
+  production: {
+    name: 'Production',
+    axes: 'Makes money · Energizes you',
+    advice: 'Your zone of genius. Protect these hours and fill freed-up time with more of them.',
+    color: 'success',
+    soft: 'successSoft',
   },
-  {
-    key: 'loop',
-    eyebrow: 'The Buyback Loop',
-    title: 'Audit. Transfer. Fill.',
-    body: 'Audit where your time goes, transfer draining tasks to someone better suited, then fill that time with work that lights you up and makes money.',
+  replacement: {
+    name: 'Replacement',
+    axes: 'Makes money · Drains you',
+    advice: "You're good at it, but it wears you down. Write the playbook and hire someone to replace you.",
+    color: 'accent',
+    soft: 'accentSoft',
   },
-  {
-    key: 'drip',
-    eyebrow: 'The DRIP Matrix',
-    title: 'Live in your Production Quadrant.',
-    body: 'Every task sits on two axes: money and energy. Reclaim helps you move from Delegation and Replacement into Production.',
+  investment: {
+    name: 'Investment',
+    axes: "Doesn't pay yet · Energizes you",
+    advice: 'Learning, health and planning. It pays off later, so keep investing here.',
+    color: 'violet',
+    soft: 'violetSoft',
   },
+  delegation: {
+    name: 'Delegation',
+    axes: "Doesn't pay · Drains you",
+    advice: 'The cheapest hours to buy back. Hand these off first.',
+    color: 'error',
+    soft: 'errorSoft',
+  },
+};
+
+// Grid order as drawn in the book: money on top, energy on the right.
+export const DRIP_GRID = [
+  ['replacement', 'production'],
+  ['delegation', 'investment'],
 ];
 
-// Tasks that commonly sit in the Delegation Quadrant.
-export const DRAINING_TASKS = [
-  'Email inbox',
-  'Calendar & scheduling',
-  'Invoicing & billing',
-  'Bookkeeping',
-  'Customer support',
-  'Social media posting',
-  'Travel arrangements',
-  'Data entry & reports',
-  'Website updates',
-  'Onboarding clients',
-  'Sales calls & follow-up',
-  'Hiring & interviews',
+export function quadrantFor({ value, energy }) {
+  if (value === 'high') return energy === 'energizing' ? 'production' : 'replacement';
+  return energy === 'energizing' ? 'investment' : 'delegation';
+}
+
+export function summarizeSchedule(schedule = [], buybackRate = 0) {
+  const hours = { production: 0, replacement: 0, investment: 0, delegation: 0 };
+  const tasks = { production: [], replacement: [], investment: [], delegation: [] };
+  schedule.forEach((item) => {
+    if (!item.energy) return;
+    const q = quadrantFor(item);
+    hours[q] += item.hours;
+    tasks[q].push(item);
+  });
+  const totalHours = Object.values(hours).reduce((a, b) => a + b, 0);
+  const dominant = totalHours ? Object.keys(hours).reduce((a, b) => (hours[b] > hours[a] ? b : a)) : null;
+  const drainingHours = hours.delegation + hours.replacement;
+  // First handoff: the biggest Delegation task, else the biggest Replacement task.
+  const byHours = (a, b) => b.hours - a.hours;
+  const firstHandoff = [...tasks.delegation].sort(byHours)[0] || [...tasks.replacement].sort(byHours)[0] || null;
+
+  return {
+    hours,
+    tasks,
+    totalHours,
+    dominant,
+    drainingHours,
+    dailyBuybackCost: drainingHours * (Number(buybackRate) || 0),
+    firstHandoff,
+  };
+}
+
+// "What best describes you?" Picks which activities we suggest. Icons are Ionicons names.
+export const ROLES = [
+  { key: 'agency', label: 'Agency owner', icon: 'briefcase-outline' },
+  { key: 'coach', label: 'Coach or consultant', icon: 'people-outline' },
+  { key: 'ecommerce', label: 'E-commerce', icon: 'bag-handle-outline' },
+  { key: 'saas', label: 'Software / SaaS', icon: 'code-slash-outline' },
+  { key: 'freelancer', label: 'Freelancer', icon: 'laptop-outline' },
+  { key: 'other', label: 'Something else', icon: 'sparkles-outline' },
 ];
 
-// Replacement Ladder: the founder's current feeling maps to a rung.
-export const FEELINGS = [
-  {
-    key: 'stuck',
-    label: 'Stuck',
-    description: 'Buried in email, calendar and admin. The inbox runs my day.',
-    rung: 1,
-    rungName: 'Admin',
-    nextHire: 'Admin Assistant',
-    ownership: 'Inbox & Calendar',
-  },
-  {
-    key: 'stalled',
-    label: 'Stalled',
-    description: 'I still deliver the product or service myself, so growth stalls.',
-    rung: 2,
-    rungName: 'Delivery',
-    nextHire: 'Head of Delivery',
-    ownership: 'Onboarding & Support',
-  },
-  {
-    key: 'friction',
-    label: 'Friction',
-    description: 'Business comes in waves. I market, then stop to deliver, then start again.',
-    rung: 3,
-    rungName: 'Marketing',
-    nextHire: 'Head of Marketing',
-    ownership: 'Campaigns & Traffic',
-  },
-  {
-    key: 'freedom',
-    label: 'Freedom',
-    description: 'Admin, delivery and marketing are owned. I am still the main salesperson.',
-    rung: 4,
-    rungName: 'Sales',
-    nextHire: 'Sales Representative',
-    ownership: 'Calls & Follow-up',
-  },
-  {
-    key: 'flow',
-    label: 'Flow',
-    description: 'Capable people run the day-to-day. I focus on strategy and leadership.',
-    rung: 5,
-    rungName: 'Leadership',
-    nextHire: 'Leadership Team',
-    ownership: 'Strategy & Outcomes',
-  },
-];
+// Activities we can suggest: usual hours a day, and value
+// ('high' = hard to hand off / makes money, 'low' = someone could do it for your Buyback Rate or less).
+const A = (hours, value) => ({ hours, value });
+export const ACTIVITIES = {
+  'Email & Messages': A(1, 'low'),
+  Scheduling: A(0.5, 'low'),
+  'Client Calls': A(2, 'high'),
+  'Client Work': A(4, 'high'),
+  'Project Management': A(1.5, 'low'),
+  'Sales & Proposals': A(1, 'high'),
+  'Sales Calls': A(1, 'high'),
+  'Sales Demos': A(1, 'high'),
+  'Team Meetings': A(1, 'high'),
+  'Invoicing & Admin': A(0.5, 'low'),
+  Bookkeeping: A(0.5, 'low'),
+  'Social Media': A(1, 'low'),
+  'Customer Support': A(1.5, 'low'),
+  'Orders & Inventory': A(1.5, 'low'),
+  'Marketing & Ads': A(1.5, 'high'),
+  'Product Sourcing': A(1, 'high'),
+  'Product & Roadmap': A(2, 'high'),
+  Hiring: A(1, 'high'),
+  'Coaching Sessions': A(3, 'high'),
+  'Creating Content': A(1, 'high'),
+  'Finding Clients': A(1, 'high'),
+  'Strategy & Planning': A(1, 'high'),
+  'Data Entry & Reports': A(1, 'low'),
+  'Learning & Reading': A(1, 'low'),
+  Exercise: A(0.5, 'low'),
+};
 
-export const TIME_ASSASSINS = [
-  {
-    key: 'staller',
-    label: 'The Staller',
-    description: 'I hesitate on big decisions and let opportunities slide by.',
-  },
-  {
-    key: 'speed_demon',
-    label: 'The Speed Demon',
-    description: 'I decide fast and pick the first option, then repeat the same mistakes.',
-  },
-  {
-    key: 'supervisor',
-    label: 'The Supervisor',
-    description: "I micromanage or just do it myself because \"no one does it right.\"",
-  },
-  {
-    key: 'saver',
-    label: 'The Saver',
-    description: 'I hoard cash instead of spending it to buy back hours.',
-  },
-  {
-    key: 'self_medicator',
-    label: 'The Self-Medicator',
-    description: 'I reach for food, drink or other vices to celebrate or escape.',
-  },
-];
+// Suggested first for each role; COMMON ones follow for everyone.
+const ROLE_SUGGESTIONS = {
+  agency: ['Email & Messages', 'Client Calls', 'Project Management', 'Sales & Proposals', 'Team Meetings', 'Invoicing & Admin', 'Social Media', 'Hiring'],
+  coach: ['Coaching Sessions', 'Email & Messages', 'Scheduling', 'Creating Content', 'Sales Calls', 'Social Media', 'Invoicing & Admin'],
+  ecommerce: ['Orders & Inventory', 'Customer Support', 'Email & Messages', 'Marketing & Ads', 'Product Sourcing', 'Social Media', 'Bookkeeping'],
+  saas: ['Product & Roadmap', 'Team Meetings', 'Email & Messages', 'Customer Support', 'Sales Demos', 'Hiring', 'Invoicing & Admin'],
+  freelancer: ['Client Work', 'Email & Messages', 'Finding Clients', 'Invoicing & Admin', 'Social Media', 'Learning & Reading'],
+  other: ['Email & Messages', 'Team Meetings', 'Client Calls', 'Invoicing & Admin', 'Social Media', 'Strategy & Planning'],
+};
+const COMMON = ['Strategy & Planning', 'Sales Calls', 'Creating Content', 'Hiring', 'Scheduling', 'Customer Support', 'Data Entry & Reports', 'Learning & Reading', 'Exercise'];
 
-// Order of data-collecting steps after sign-up. Keys match the backend.
+/** Suggested activity names for a role: role-specific first, then common ones. */
+export function suggestionsFor(role) {
+  const first = ROLE_SUGGESTIONS[role] || ROLE_SUGGESTIONS.other;
+  return [...first, ...COMMON.filter((n) => !first.includes(n))];
+}
+
+/** A day-list entry. Typed activities default to "only you" (high); the swipe card lets them change it. */
+export function newActivity(name, hours) {
+  return { activity: name, hours, value: ACTIVITIES[name]?.value || 'high', energy: null };
+}
+
+/** Hour choices in the picker; the activity's usual hours are highlighted. */
+export const HOUR_OPTIONS = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 8];
+export const usualHours = (name) => ACTIVITIES[name]?.hours ?? null;
+export const hoursLabel = (h) => (h < 1 ? `${h * 60} min` : `${h} ${h === 1 ? 'hour' : 'hours'}`);
+
+// Order of onboarding steps. Keys match the backend.
 export const STEPS = [
+  { key: 'profile', screen: 'Profile' },
   { key: 'buyback_rate', screen: 'BuybackRate' },
-  { key: 'energy_drains', screen: 'EnergyDrains' },
-  { key: 'feeling', screen: 'Feeling' },
-  { key: 'time_assassins', screen: 'TimeAssassins' },
-  { key: 'vision', screen: 'Vision' },
-  { key: 'summary', screen: 'Summary' },
+  { key: 'schedule', screen: 'Schedule' },
+  { key: 'swipe', screen: 'Swipe' },
+  { key: 'drip', screen: 'Drip' },
 ];
 
 export const TOTAL_STEPS = STEPS.length;
 
 export function screenForStep(stepKey) {
   if (stepKey === 'done') return 'Home';
-  return STEPS.find((s) => s.key === stepKey)?.screen || 'BuybackRate';
+  return STEPS.find((s) => s.key === stepKey)?.screen || 'Profile';
 }
 
 export function stepNumber(stepKey) {
