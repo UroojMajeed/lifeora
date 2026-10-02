@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
@@ -23,6 +24,11 @@ const navFonts = {
 function ThemedApp() {
   const { colors, isDark } = useTheme();
   const base = isDark ? DarkTheme : DefaultTheme;
+
+  // The window behind the app (visible under Android's navigation bar) matches the screen, not the splash.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.background).catch(() => {});
+  }, [colors.background]);
   const navTheme = {
     ...base,
     fonts: navFonts,

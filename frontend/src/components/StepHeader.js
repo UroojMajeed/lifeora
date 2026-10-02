@@ -4,21 +4,24 @@ import { Ionicons } from '@expo/vector-icons';
 import ThemeToggle from './ThemeToggle';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
-import { TOTAL_STEPS } from '../constants/content';
+import { STEPS, TOTAL_STEPS } from '../constants/content';
 
 /** Back button, segmented progress, theme toggle, and the step's heading. */
 export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true, onBack }) {
   const navigation = useNavigation();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
-  const canGoBack = onBack || (showBack && navigation.canGoBack());
+  // After resuming straight onto a later step there is nothing behind it, so go to the previous step instead.
+  const previous = step > 1 ? STEPS[step - 2]?.screen : null;
+  const goBack = onBack || (() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate(previous)));
+  const canGoBack = Boolean(onBack) || (showBack && (navigation.canGoBack() || Boolean(previous)));
 
   return (
     <View style={styles.wrap}>
       <View style={styles.topRow}>
         {canGoBack ? (
           <Pressable
-            onPress={onBack || (() => navigation.goBack())}
+            onPress={goBack}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Go back"

@@ -25,12 +25,17 @@ import { radius, spacing } from '../theme';
 const WINDOW_HEIGHT = Dimensions.get('window').height;
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-/** Height of the on-screen keyboard, so the sheet can sit right above it. */
+/**
+ * Height of the on-screen keyboard, so the sheet can sit right above it.
+ * Only iOS needs this: Android already shrinks the window for the keyboard, so adding the
+ * height there pushed the sheet up twice (off the top of the screen).
+ */
 function useKeyboardHeight() {
   const [height, setHeight] = useState(0);
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    if (Platform.OS !== 'ios') return undefined;
     const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates.height));
     const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
     return () => {
@@ -115,15 +120,18 @@ export default function AddActivitySheet({ visible, role, items, editing, onAdd,
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Animated.View style={[styles.backdrop, { opacity: progress }]}>
+      {/* collapsable={false}: keep these real native views so the native-driver fade/slide always applies. */}
+      <Animated.View collapsable={false} style={[styles.backdrop, { opacity: progress }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
       </Animated.View>
       <View style={styles.anchor} pointerEvents="box-none">
         <Animated.View
+          collapsable={false}
           style={[
             styles.sheet,
             {
-              maxHeight: WINDOW_HEIGHT - keyboard - insets.top - spacing.lg,
+              // A share of the space left above the keyboard, so the top (and the text box) stays visible.
+              maxHeight: keyboard ? WINDOW_HEIGHT - keyboard - insets.top - spacing.lg : '88%',
               marginBottom: keyboard,
               paddingBottom: (keyboard ? 0 : insets.bottom) + spacing.md,
               transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [WINDOW_HEIGHT * 0.6, 0] }) }],

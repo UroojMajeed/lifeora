@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -60,8 +60,9 @@ export default function MotivationCard({ motivation, onChange: setMotivation, st
           setEditing(false);
         },
       },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+      // Android dialogs show at most 3 buttons, so Cancel there is tapping outside or Back.
+      ...(Platform.OS === 'ios' ? [{ text: 'Cancel', style: 'cancel' }] : []),
+    ], { cancelable: true });
   };
 
   if (!motivation) return null;

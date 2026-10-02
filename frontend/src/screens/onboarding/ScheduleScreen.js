@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LayoutAnimation, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -31,6 +31,21 @@ export default function ScheduleScreen({ navigation }) {
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Save the list as it changes (shortly after the last edit), so closing the app never loses it.
+  const firstRender = useRef(true);
+  const autosave = useRef(null);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return undefined;
+    }
+    autosave.current = setTimeout(() => {
+      autosave.current = null;
+      saveStep({ schedule: items }, 'schedule').catch(() => {});
+    }, 600);
+    return () => clearTimeout(autosave.current);
+  }, [items, saveStep]);
 
   // First visit: open the picker as soon as the screen has finished sliding in, so the two
   // animations don't overlap. (If we resumed straight onto this screen there is no transition.)
@@ -79,6 +94,8 @@ export default function ScheduleScreen({ navigation }) {
   };
 
   const next = async () => {
+    // Moving on saves the list itself; a pending autosave must not pull the step back afterwards.
+    clearTimeout(autosave.current);
     setError('');
     setLoading(true);
     try {

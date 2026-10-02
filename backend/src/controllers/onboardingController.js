@@ -57,8 +57,10 @@ function sanitize(body = {}) {
   }
 
   if (body.annualIncome !== undefined) {
+    // Number(null) and Number('') are 0, so reject blanks explicitly instead of saving a zero income.
+    const blank = body.annualIncome === null || String(body.annualIncome).trim() === '';
     const n = Number(body.annualIncome);
-    if (!Number.isFinite(n) || n < 0 || n > 1e10) errors.push('annualIncome must be a positive number');
+    if (blank || !Number.isFinite(n) || n < 0 || n > 1e10) errors.push('annualIncome must be a positive number');
     else out.annualIncome = n;
   }
 
