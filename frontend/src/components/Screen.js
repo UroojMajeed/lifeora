@@ -5,7 +5,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
 /** Standard onboarding screen: scrollable content with a pinned footer (for the CTA). */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, contentStyle }) {
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle }) {
   const { isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const Body = scroll ? ScrollView : View;
@@ -14,7 +14,7 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
     : { style: [styles.content, styles.fill, contentStyle] };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={edges}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Body {...bodyProps}>{children}</Body>

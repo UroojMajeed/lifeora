@@ -77,7 +77,7 @@ export default function BuybackRateScreen({ navigation }) {
       </HeroCard>
 
       <View style={styles.rule}>
-        <Ionicons name="bulb-outline" size={18} color={colors.accent} />
+        <Ionicons name="bulb-outline" size={18} color={colors.accentText} />
         <Text style={styles.ruleText}>
           {amount > 0
             ? `If a task you don't enjoy can be done by someone else for ${formatMoney(buybackRate, currency)}/hr or less, it shouldn't be yours.`

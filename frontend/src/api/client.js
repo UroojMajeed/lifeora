@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
 
-const TOKEN_KEY = 'reclaim.token';
+const TOKEN_KEY = 'lifeora.token';
 
 export const tokenStore = {
   get: () => AsyncStorage.getItem(TOKEN_KEY),

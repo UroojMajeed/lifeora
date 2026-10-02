@@ -2,8 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { StyleSheet, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { darkColors, lightColors, makeType } from './index';
+import { withFonts } from './fonts';
 
-const MODE_KEY = 'reclaim.themeMode';
+const MODE_KEY = 'lifeora.themeMode';
 const MODES = ['system', 'light', 'dark'];
 
 const ThemeContext = createContext(null);
@@ -31,7 +32,7 @@ export function ThemeProvider({ children }) {
 
   const value = useMemo(() => {
     const colors = isDark ? darkColors : lightColors;
-    return { colors, type: makeType(colors), isDark, mode, setMode, toggle };
+    return { colors, type: withFonts(makeType(colors)), isDark, mode, setMode, toggle };
   }, [isDark, mode, setMode, toggle]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -46,5 +47,5 @@ export function useTheme() {
 /** Builds a StyleSheet from the current theme: `const styles = useStyles(makeStyles)`. */
 export function useStyles(makeStyles) {
   const theme = useTheme();
-  return useMemo(() => StyleSheet.create(makeStyles(theme.colors, theme.isDark)), [makeStyles, theme]);
+  return useMemo(() => StyleSheet.create(withFonts(makeStyles(theme.colors, theme.isDark))), [makeStyles, theme]);
 }

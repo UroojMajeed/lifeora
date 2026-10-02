@@ -282,7 +282,7 @@ const makeStyles = (colors) => ({
   },
   input: { flex: 1, fontSize: 16, color: colors.text, paddingVertical: 12 },
   warn: { fontSize: 13, color: colors.error, marginTop: 6 },
-  next: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  next: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   chipScroll: { flexShrink: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingBottom: spacing.sm },
   back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', marginBottom: spacing.sm },

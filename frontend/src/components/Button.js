@@ -2,12 +2,13 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
+import { withFonts } from '../theme/fonts';
 
 const variants = (colors) => ({
-  primary: { bg: colors.accent, fg: colors.onColor, border: colors.accent },
+  primary: { bg: colors.primary, fg: colors.onColor, border: colors.primary },
   secondary: { bg: colors.surface, fg: colors.text, border: colors.border },
   ghost: { bg: 'transparent', fg: colors.primaryDark, border: 'transparent' },
-  light: { bg: colors.white, fg: '#0F172A', border: colors.white },
+  light: { bg: colors.white, fg: '#1B1530', border: colors.white },
 });
 
 /** Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"). */
@@ -26,7 +27,7 @@ export default function Button({ title, onPress, variant = 'primary', icon, load
       style={({ pressed }) => [
         styles.base,
         { backgroundColor: v.bg, borderColor: v.border },
-        variant === 'primary' && !isDisabled && { shadowColor: colors.accent, ...styles.glow },
+        variant === 'primary' && !isDisabled && { shadowColor: colors.primary, ...styles.glow },
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
@@ -44,7 +45,7 @@ export default function Button({ title, onPress, variant = 'primary', icon, load
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(withFonts({
   base: {
     minHeight: 56,
     borderRadius: radius.pill,
@@ -58,4 +59,4 @@ const styles = StyleSheet.create({
   text: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.4 },
-});
+}));

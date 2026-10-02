@@ -1,4 +1,4 @@
-# Reclaim — Buy back your time
+# Lifeora — Buy back your time
 
 A mobile app built on the ideas in *Buy Back Your Time* by Dan Martell. It helps founders find the work that drains them, hand it off, and spend their hours where they matter most.
 
@@ -20,7 +20,7 @@ No sign-up wall and almost no typing. "Get started" creates a guest account in t
 | 3 | Your day | A sheet pops up: tap a suggested activity (or type one) → pick how long it takes → back to pick the next. Tap an activity's hours later to change them | Time & Energy Audit | `schedule[]` |
 | 4 | Swipe your day | One card per activity: right = energizes, left = drains. Each card asks "Could someone else do this for your Buyback Rate or less?" | Green/red energy, $ value | `schedule[].energy`, `schedule[].value` |
 | 5 | Your DRIP Matrix | Animated reveal, daily buyback cost, first handoff | Delegation, Replacement, Investment, Production | `completed`, `completedAt` |
-| – | Home | **Your why** (optional motivational photo + a few words, stored only on the phone), Buyback Rate, this week's move, DRIP Matrix, theme setting | Vision: what you buy back time for | – (on-device) |
+| – | Home | **Your why** photo, also softly blurred behind the top of Home (stored only on the phone), Buyback Rate, this week's move, DRIP Matrix, theme setting | Vision: what you buy back time for | – (on-device) |
 
 Each activity's DRIP quadrant is computed by the server. Progress is saved after every step, so a user who closes the app resumes where they left off.
 
@@ -29,7 +29,7 @@ Every screen has a ☀️/🌙 button to switch light and dark mode; Home also o
 ## Prerequisites
 
 - Node.js 18+
-- MongoDB: a local install (`mongodb://127.0.0.1:27017`) or a free MongoDB Atlas cluster
+- MongoDB: a local install (`mongodb://127.0.0.1:27017/lifeora`) or a free MongoDB Atlas cluster
 - The Expo Go app on your phone, or an Android emulator / iOS simulator
 
 ## Run the backend
@@ -79,6 +79,7 @@ Restart `npx expo start` after changing `.env`.
 
 ## Branding
 
-- **Name:** Reclaim, with the tagline "Buy back your time."
-- **Logo:** a clock circled by an orange arrow that loops back around it, standing for the Buyback Loop. The React component is `frontend/src/components/Logo.js` and the standalone file is `frontend/assets/logo.svg`.
-- **Colors:** sky blue `#00A9E0`, orange `#F26522`, navy `#0B2545`.
+- **Name:** Lifeora, with the tagline "Buy back your time." The wordmark is lowercase Plus Jakarta Sans SemiBold with an apricot dot on the i.
+- **Type:** the whole UI uses Plus Jakarta Sans (400, 500, 600, 700, 800), bundled with the app and loaded behind the splash screen. Styles keep using `fontWeight`; `src/theme/fonts.js` swaps in the matching font file automatically.
+- **Logo:** an evergreen tile with an open white ring and a Warm Apricot arc, the spark of reclaimed time. On the landing page the arc glides into place on a loop. Brand files are in `frontend/assets/brand/`; the app icons are `frontend/assets/icon.png` and `adaptive-icon.png`. Components: `Logo.js`, `AnimatedLogo.js`, `Wordmark.js` (shapes in `src/constants/brandPaths.js`).
+- **Colors ("The Opening"):** Deep Evergreen `#123C3A` (brand, headers), Life Teal `#1E7770` (primary actions), Fresh Mint `#BFE9D8` (positive states), Soft Aqua `#E8F7F3` (calm backgrounds), Off White `#F8FAF8` (surfaces), Ink `#172322` (text), and Warm Apricot `#F5B971`, used for shapes only, never as text on light. All light and dark tokens are in `frontend/src/theme/index.js`.

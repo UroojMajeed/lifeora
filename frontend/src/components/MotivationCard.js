@@ -1,42 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import {
-  loadMotivation,
-  removeMotivation,
-  saveMotivationCaption,
-  saveMotivationPhoto,
-} from '../storage/motivation';
+import { pickMotivationPhoto, removeMotivation, saveMotivationCaption } from '../storage/motivation';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-/** "Your why": an optional photo (and a few words) of what the user is buying back time for. */
-export default function MotivationCard({ style }) {
+/**
+ * "Your why": an optional photo (and a few words) of what the user is buying back time for.
+ * The parent owns the saved value (`motivation`) so other parts of the screen can use the photo too.
+ */
+export default function MotivationCard({ motivation, onChange: setMotivation, style }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
-  const [motivation, setMotivation] = useState(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
-  useEffect(() => {
-    loadMotivation().then(setMotivation);
-  }, []);
-
   const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
     setBusy(true);
     try {
-      const saved = await saveMotivationPhoto(result.assets[0].uri, motivation);
+      const saved = await pickMotivationPhoto(motivation);
+      if (!saved) return;
       setMotivation(saved);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       // Fresh photo with no words yet: invite a caption right away.

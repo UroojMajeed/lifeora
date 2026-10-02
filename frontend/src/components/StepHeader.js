@@ -68,6 +68,6 @@ const makeStyles = (colors) => ({
   segments: { flex: 1, flexDirection: 'row', gap: 6 },
   segment: { flex: 1, height: 5, borderRadius: 3, backgroundColor: colors.border },
   segmentOn: { backgroundColor: colors.primary },
-  eyebrow: { color: colors.accent, marginBottom: spacing.sm },
+  eyebrow: { color: colors.primary, marginBottom: spacing.sm },
   subtitle: { marginTop: spacing.sm },
 });

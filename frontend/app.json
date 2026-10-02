@@ -1,17 +1,21 @@
 {
   "expo": {
-    "name": "Reclaim",
-    "slug": "reclaim",
+    "name": "Lifeora",
+    "slug": "lifeora",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#0B2545",
+    "backgroundColor": "#123C3A",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.reclaim.app"
+      "bundleIdentifier": "com.lifeora.app"
     },
     "android": {
-      "package": "com.reclaim.app"
+      "package": "com.lifeora.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#123C3A"
+      }
     },
     "plugins": [
       "expo-status-bar",
@@ -19,11 +23,22 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Reclaim lets you pick a photo that motivates you. It stays on your phone.",
+          "photosPermission": "Lifeora lets you pick a photo that motivates you. It stays on your phone.",
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/adaptive-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#123C3A"
+        }
       ]
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }

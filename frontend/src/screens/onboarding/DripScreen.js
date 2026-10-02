@@ -78,7 +78,7 @@ export default function DripScreen({ navigation }) {
         <Card style={styles.gap}>
           <View style={styles.cardRow}>
             <View style={styles.iconWrap}>
-              <Ionicons name="hand-right-outline" size={20} color={colors.accent} />
+              <Ionicons name="hand-right-outline" size={20} color={colors.accentText} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardLabel}>Your first handoff</Text>
@@ -110,7 +110,7 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.accentSoft,
   },
-  cardLabel: { fontSize: 12, fontWeight: '700', color: colors.accent, textTransform: 'uppercase', letterSpacing: 1 },
+  cardLabel: { fontSize: 12, fontWeight: '700', color: colors.accentText, textTransform: 'uppercase', letterSpacing: 1 },
   cardTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginTop: 2 },
   cardBody: { fontSize: 14, lineHeight: 21, color: colors.muted, marginTop: spacing.sm },
 });

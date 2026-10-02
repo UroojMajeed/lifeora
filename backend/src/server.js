@@ -12,7 +12,7 @@ if (!process.env.JWT_SECRET) {
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`Reclaim API listening on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`Lifeora API listening on http://localhost:${PORT}`));
   })
   .catch((err) => {
     console.error('Failed to connect to MongoDB:', err.message);

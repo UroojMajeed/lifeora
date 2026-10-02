@@ -2,6 +2,7 @@ import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useStyles, useTheme } from '../theme/ThemeContext';
+import { brand } from '../theme';
 
 /** Round ☀️/🌙 button that switches between light and dark. `onHero` styles it for gradient backgrounds. */
 export default function ThemeToggle({ onHero = false }) {
@@ -24,7 +25,7 @@ export default function ThemeToggle({ onHero = false }) {
       <Ionicons
         name={isDark ? 'sunny' : 'moon'}
         size={18}
-        color={onHero ? colors.heroText : isDark ? '#FBBF24' : colors.text}
+        color={onHero ? colors.heroText : isDark ? brand.apricot : colors.text}
       />
     </Pressable>
   );

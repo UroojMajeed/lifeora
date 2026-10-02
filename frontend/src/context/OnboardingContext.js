@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { api, tokenStore } from '../api/client';
 import { screenForStep } from '../constants/content';
+import { loadMotivation, removeMotivation } from '../storage/motivation';
 
 const OnboardingContext = createContext(null);
 
@@ -22,7 +23,11 @@ export function OnboardingProvider({ children }) {
       applyUser(u);
       return screenForStep(u.onboarding?.currentStep);
     } catch (err) {
-      if (err.status === 401 || err.status === 404) await tokenStore.clear();
+      // The account is gone (expired or reset): start completely fresh, photo included.
+      if (err.status === 401 || err.status === 404) {
+        await tokenStore.clear();
+        await removeMotivation(await loadMotivation());
+      }
       return null;
     }
   }, [applyUser]);

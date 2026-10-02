@@ -4,12 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Logo from '../components/Logo';
+import AnimatedLogo from '../components/AnimatedLogo';
+import Wordmark from '../components/Wordmark';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { brand, radius, spacing } from '../theme';
 
 const MIN_SPLASH_MS = 1400;
 
@@ -29,7 +30,6 @@ export default function LandingScreen({ navigation }) {
 
   const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const spin = useRef(new Animated.Value(0)).current;
   const ctaOpacity = useRef(new Animated.Value(0)).current;
   const ctaRise = useRef(new Animated.Value(16)).current;
 
@@ -49,8 +49,6 @@ export default function LandingScreen({ navigation }) {
     Animated.parallel([
       Animated.spring(logoScale, { toValue: 1, friction: 6, useNativeDriver: true }),
       Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-      // One full turn backwards: time being "bought back".
-      Animated.timing(spin, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
 
     let cancelled = false;
@@ -70,9 +68,7 @@ export default function LandingScreen({ navigation }) {
     return () => {
       cancelled = true;
     };
-  }, [bootstrap, navigation, logoScale, logoOpacity, spin, ctaOpacity, ctaRise]);
-
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-360deg'] });
+  }, [bootstrap, navigation, logoScale, logoOpacity, ctaOpacity, ctaRise]);
 
   return (
     <LinearGradient colors={colors.landing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fill}>
@@ -87,11 +83,11 @@ export default function LandingScreen({ navigation }) {
         </View>
 
         <View style={styles.center}>
-          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }, { rotate }] }]}>
-            <Logo size={128} />
+          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+            <AnimatedLogo size={128} />
           </Animated.View>
           <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
-            <Text style={styles.name}>Reclaim</Text>
+            <Wordmark height={52} color={colors.text} />
             <Text style={styles.tagline}>Buy back your time.</Text>
           </Animated.View>
         </View>
@@ -130,15 +126,14 @@ const makeStyles = (colors, isDark) => ({
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logoShadow: {
-    shadowColor: '#6366F1',
+    shadowColor: brand.teal,
     shadowOpacity: isDark ? 0.5 : 0.35,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
-    borderRadius: 34,
+    borderRadius: 28,
   },
   brand: { alignItems: 'center', marginTop: spacing.lg },
-  name: { fontSize: 46, fontWeight: '800', color: colors.text, letterSpacing: -1.5 },
-  tagline: { fontSize: 18, fontWeight: '600', color: colors.primaryDark, marginTop: 2 },
+  tagline: { fontSize: 18, fontWeight: '600', color: colors.primary, marginTop: spacing.sm },
   bottom: { minHeight: 240, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   ctas: { gap: spacing.md },
   pitch: { color: colors.muted, fontSize: 16, lineHeight: 24, textAlign: 'center' },

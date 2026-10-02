@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Paths } from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
 
 // The user's motivational photo ("Your why") lives only on this phone: the image is copied into
 // the app's document folder (the picker's own copy can be cleared by the system) and its
 // location and caption are kept in AsyncStorage.
-const KEY = 'reclaim.motivation';
+const KEY = 'lifeora.motivation';
 
 const empty = { uri: null, caption: '' };
 
@@ -39,6 +40,18 @@ export async function saveMotivationPhoto(pickedUri, current) {
   new File(pickedUri).copySync(dest);
   deleteQuietly(current?.uri);
   return write({ uri: dest.uri, caption: current?.caption || '' });
+}
+
+/** Opens the photo library (with a 4:3 crop) and saves the pick. Returns the saved value, or null if cancelled. */
+export async function pickMotivationPhoto(current) {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [4, 3],
+    quality: 0.8,
+  });
+  if (result.canceled || !result.assets?.[0]?.uri) return null;
+  return saveMotivationPhoto(result.assets[0].uri, current);
 }
 
 export function saveMotivationCaption(caption, current) {

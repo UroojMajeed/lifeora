@@ -1,7 +1,7 @@
 {
-  "name": "reclaim-backend",
+  "name": "lifeora-backend",
   "version": "1.0.0",
-  "description": "Reclaim API - buy back your time (Node.js + Express + MongoDB)",
+  "description": "Lifeora API - buy back your time (Node.js + Express + MongoDB)",
   "main": "src/server.js",
   "private": true,
   "scripts": {
