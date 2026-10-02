@@ -45,6 +45,10 @@ function summarizeSchedule(schedule = [], buybackRate = 0) {
   };
 }
 
+// Handing off a draining task (the "Transfer" in the Buyback Loop: Audit → Transfer → Fill).
+const HANDOFF_STATUSES = ['mine', 'in_progress', 'done'];
+const HANDOFF_METHODS = ['hire', 'automate', 'team', 'drop'];
+
 const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip', 'done'];
 
 // "What best describes you?" Picks the activities we suggest for the user's day.
@@ -59,4 +63,6 @@ module.exports = {
   summarizeSchedule,
   ONBOARDING_STEPS,
   ROLES,
+  HANDOFF_STATUSES,
+  HANDOFF_METHODS,
 };

@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { OnboardingProvider } from './src/context/OnboardingContext';
+import { HandoffsProvider } from './src/context/HandoffsContext';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { FONT_FILES, fontFamilyFor } from './src/theme/fonts';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -58,7 +59,9 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <OnboardingProvider>
-            <ThemedApp />
+            <HandoffsProvider>
+              <ThemedApp />
+            </HandoffsProvider>
           </OnboardingProvider>
         </ThemeProvider>
       </SafeAreaProvider>

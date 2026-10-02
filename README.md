@@ -26,6 +26,10 @@ Each activity's DRIP quadrant is computed by the server. Progress is saved after
 
 Every screen has a ☀️/🌙 button to switch light and dark mode; Home also offers "Auto" to follow the phone.
 
+## Phase 2: buy back your time (Transfer)
+
+After onboarding, Home shows **Hours bought back**: a progress ring of how many draining hours a day have been handed off. "Your handoffs" lists every draining task (Delegation first). Each task has a status (Still mine → Handing off → Handed off), **ideas to buy it back** written for that activity (hire, automate, give to team, or drop it; tap one to make it the plan), who's taking it, and notes. Marking a task handed off adds its hours to the total. Stored per account in `users.handoffs`; totals are computed by the server.
+
 ## Prerequisites
 
 - Node.js 18+
@@ -55,6 +59,8 @@ npm run dev                 # http://localhost:5000/api/health (or the PORT in .
 | PUT | `/api/onboarding` | Bearer | any of `{ currentStep, role, annualIncome, currency, schedule: [{ activity, hours, value, energy }] }` |
 | POST | `/api/onboarding/schedule/extract` | Bearer | `{ text }` → `{ activities }` (optional, not used by the app; reads the day with Claude; 20 per user per hour) |
 | POST | `/api/onboarding/complete` | Bearer | – |
+| GET | `/api/handoffs` | Bearer | – → draining tasks (Delegation, then Replacement) with progress, plus totals (hours bought back, %, per week, value) |
+| PUT | `/api/handoffs/:activity` | Bearer | any of `{ status: mine \| in_progress \| done, plan, method: hire \| automate \| team \| drop \| null, who, notes }` |
 
 `effectiveHourlyRate`, `buybackRate` and each activity's `quadrant` are always computed by the server. Register and login exist for a later "save your progress" step but have no screen yet.
 

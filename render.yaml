@@ -1,0 +1,24 @@
+# Render Blueprint: deploys the Lifeora backend (free plan, Singapore, next to the Atlas cluster).
+# In Render: New → Blueprint → pick this repo. You'll be asked for MONGODB_URI; everything else is set here.
+services:
+  - type: web
+    name: lifeora-api
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # paste the Atlas connection string (with the lifeora-api password) when Render asks
+      - key: JWT_SECRET
+        generateValue: true # Render creates a long random secret
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_ORIGIN
+        value: "*"

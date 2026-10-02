@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { DRIP_QUADRANTS, ONBOARDING_STEPS, ROLES } = require('../utils/buyback');
+const {
+  DRIP_QUADRANTS,
+  ONBOARDING_STEPS,
+  ROLES,
+  HANDOFF_STATUSES,
+  HANDOFF_METHODS,
+} = require('../utils/buyback');
 
 // One activity from the user's typical day, placed on the DRIP Matrix.
 const activitySchema = new mongoose.Schema(
@@ -37,6 +43,21 @@ const onboardingSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Progress on handing off one draining activity, keyed by the activity's name in the schedule.
+const handoffSchema = new mongoose.Schema(
+  {
+    activity: { type: String, required: true, trim: true, maxlength: 60 },
+    status: { type: String, enum: HANDOFF_STATUSES, default: 'mine' },
+    // The chosen way to buy it back (one of the app's suggestions), and its kind.
+    plan: { type: String, trim: true, maxlength: 140, default: '' },
+    method: { type: String, enum: [...HANDOFF_METHODS, null], default: null },
+    who: { type: String, trim: true, maxlength: 60, default: '' },
+    notes: { type: String, trim: true, maxlength: 1000, default: '' },
+    doneAt: Date,
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     // Guests start using the app right away; name, email and password come later if they sign up.
@@ -50,6 +71,7 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, minlength: 8, select: false },
     onboarding: { type: onboardingSchema, default: () => ({}) },
+    handoffs: { type: [handoffSchema], default: [] },
   },
   { timestamps: true }
 );
