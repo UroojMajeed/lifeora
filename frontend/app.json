@@ -39,6 +39,12 @@
         }
       ]
     ],
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "extra": {
+      "eas": {
+        "projectId": "5f67c32c-54c0-44e1-9171-9031cf7f86db"
+      }
+    },
+    "owner": "uroojmajeed"
   }
 }
