@@ -14,11 +14,11 @@ import { fontFamilyFor } from '../theme/fonts';
 
 const Tab = createBottomTabNavigator();
 
-// [route, label, icon (outline when idle, filled when active)]
+// [route, label, icon (outline when idle, filled when active)]. Home sits in the middle.
 const TABS = [
-  ['Home', 'Home', 'home'],
   ['Handoffs', 'Handoffs', 'swap-horizontal'],
   ['CheckIns', 'Check-ins', 'pulse'],
+  ['Home', 'Home', 'home'],
   ['MyDay', 'My day', 'pie-chart'],
   ['Me', 'Me', 'person'],
 ];
@@ -33,6 +33,8 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
+      initialRouteName="Home"
+      backBehavior="initialRoute"
       screenOptions={({ route }) => {
         const [, label, icon] = TABS.find(([name]) => name === route.name);
         return {
