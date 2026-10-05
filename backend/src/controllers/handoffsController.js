@@ -64,6 +64,7 @@ function buildHandoffs(user) {
       filledHours: sum(fills),
       // Kept for the next round: still draining, but not blocking this round.
       later: items.filter((h) => h.status === 'later').length,
+      laterHours: sum(items.filter((h) => h.status === 'later')),
       // Rounds of the Buyback Loop: which one this is, and hours bought back in finished rounds.
       round: (user.rounds || []).length + 1,
       pastBoughtBackHours: round2((user.rounds || []).reduce((t, r) => t + (r.boughtBackHours || 0), 0)),

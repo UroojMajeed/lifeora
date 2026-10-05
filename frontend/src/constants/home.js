@@ -12,8 +12,12 @@ export const LOOP_STEPS = [
   { key: 'fill', label: 'Fill', caption: 'Do what you love' },
 ];
 
-/** Every draining task is handed off, or kept for the next round. */
-const transferDone = (summary) => Boolean(summary) && summary.done + (summary.later || 0) === summary.total;
+/**
+ * Every draining task is handed off or kept for the next round, and at least one was really handed
+ * off (a round where everything is postponed hasn't bought anything back yet).
+ */
+const transferDone = (summary) =>
+  Boolean(summary) && summary.done + (summary.later || 0) === summary.total && (summary.done > 0 || summary.total === 0);
 
 /**
  * This lap of the Loop is finished: audited, everything transferred (or kept for later) and every
@@ -114,6 +118,19 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
             },
     };
     return { stage: 'transfer', go, ...MOVES[nextStep(next)?.key || 'checkin'] };
+  }
+
+  // Every task is kept for later and none handed off: this round needs at least one.
+  if (summary && !transferDone(summary)) {
+    return {
+      stage: 'transfer',
+      icon: 'refresh-outline',
+      title: 'Bring one task back for this round',
+      body: 'Everything is kept for later, so nothing is bought back yet. Pick one draining task, even a small one, and hand it off now.',
+      minutes: 1,
+      cta: 'See my handoffs',
+      go: ['Handoffs'],
+    };
   }
 
   // Everything draining is handed off: give the freed hours a new, energizing job.

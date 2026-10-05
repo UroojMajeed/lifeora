@@ -66,7 +66,10 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
 
   const draining = summary?.drainingHours || 0;
   const bought = summary?.boughtBackHours || 0;
-  const target = summary ? (draining ? bought / draining : 1) : 0;
+  // This round's goal: every draining hour except the tasks kept for the next round.
+  const laterHours = summary?.laterHours || 0;
+  const roundDraining = Math.max(0, draining - laterHours);
+  const target = summary ? (roundDraining ? bought / roundDraining : draining ? 0 : 1) : 0;
   const nothingDrains = Boolean(summary) && !summary.total;
   const filledTarget = bought ? Math.min(1, (summary?.filledHours || 0) / bought) : 0;
 
@@ -92,7 +95,7 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const perWeek = bought * WORKDAYS_PER_WEEK;
-  const targetWeek = draining * WORKDAYS_PER_WEEK;
+  const targetWeek = roundDraining * WORKDAYS_PER_WEEK;
   const valueYear = bought * effectiveHourlyRate * WORKDAYS_PER_YEAR;
   const potentialYear = draining * effectiveHourlyRate * WORKDAYS_PER_YEAR;
 
@@ -170,7 +173,9 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
                 <Text style={styles.ringBig} adjustsFontSizeToFit numberOfLines={1}>
                   {summary ? formatHours(perWeek) : '–'}
                 </Text>
-                <Text style={styles.ringSub}>of {formatHours(targetWeek)} a week</Text>
+                <Text style={styles.ringSub}>
+                  {roundDraining || !draining ? `of ${formatHours(targetWeek)} a week` : 'All kept for later'}
+                </Text>
               </>
             )}
           </Animated.View>
@@ -179,9 +184,11 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
         <Text style={styles.value}>{valueLine}</Text>
         {summary?.pastBoughtBackHours ? (
           <Text style={styles.share}>
-            Since you started: {formatHours((summary.pastBoughtBackHours + bought) * WORKDAYS_PER_WEEK)} a week bought back over{' '}
-            {summary.round} rounds
+            Since you started: {formatHours((summary.pastBoughtBackHours + bought) * WORKDAYS_PER_WEEK)} a week bought back
           </Text>
+        ) : null}
+        {laterHours ? (
+          <Text style={styles.share}>+{formatHours(laterHours)} a day kept for the next round</Text>
         ) : null}
         {share && share.now !== share.start ? (
           <Text style={styles.share}>
@@ -208,7 +215,7 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
           <View style={styles.stat}>
             <Text style={styles.statLabel}>Handed off</Text>
             <Text style={styles.statValue}>
-              {summary?.done || 0} of {summary?.total || 0}
+              {summary?.done || 0} of {(summary?.total || 0) - (summary?.later || 0)}
             </Text>
           </View>
           <View style={styles.statDivider} />
