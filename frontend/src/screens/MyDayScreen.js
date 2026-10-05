@@ -1,7 +1,6 @@
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
-import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import { Card, HeroCard } from '../components/Card';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -27,22 +26,11 @@ export default function MyDayScreen({ navigation }) {
 
   const day = dayNow(schedule, handoffs, fills);
   const summary = summarizeSchedule(scheduleNow(day), rate);
-  const home = summary.dominant ? DRIP[summary.dominant] : null;
-  const active = day.filter((a) => !a.handedOff);
   const unsorted = schedule.filter((i) => !i.energy).length;
-  const handedOffHours = day.filter((a) => a.handedOff).reduce((t, a) => t + a.hours, 0);
   const rows = [...day].sort((a, b) => order(a) - order(b));
 
   return (
-    <Screen edges={['top']}>
-      <PageHeader
-        eyebrow="My day"
-        title={home ? `You live in ${home.name}.` : 'Your DRIP Matrix'}
-        subtitle={`${formatHours(summary.totalHours)} across ${active.length} ${active.length === 1 ? 'activity' : 'activities'}${
-          handedOffHours ? `, ${formatHours(handedOffHours)} handed off` : ''
-        }. ${home ? home.advice : ''}`}
-      />
-
+    <Screen edges={['top']} contentStyle={styles.top}>
       {unsorted ? (
         <Button
           title={`Swipe ${unsorted} unsorted ${unsorted === 1 ? 'activity' : 'activities'}`}
@@ -118,6 +106,7 @@ export default function MyDayScreen({ navigation }) {
 }
 
 const makeStyles = (colors) => ({
+  top: { paddingTop: spacing.md },
   gap: { marginTop: spacing.md },
   unsorted: { marginBottom: spacing.md },
   section: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm },
