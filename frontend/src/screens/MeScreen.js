@@ -4,19 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
-import Segmented from '../components/Segmented';
 import { Card } from '../components/Card';
 import { useOnboarding } from '../context/OnboardingContext';
 import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
-
-const THEME_OPTIONS = [
-  { key: 'system', label: 'Auto' },
-  { key: 'light', label: 'Light' },
-  { key: 'dark', label: 'Dark' },
-];
 
 function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   const { colors } = useTheme();
@@ -43,10 +36,10 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   );
 }
 
-/** Settings and profile: Buyback Rate, business type, appearance, account (later), about. */
+/** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
 export default function MeScreen({ navigation }) {
   const { onboarding, startOver } = useOnboarding();
-  const { type, mode, setMode } = useTheme();
+  const { type } = useTheme();
   const [deleting, setDeleting] = useState(false);
 
   const deleteEverything = async () => {
@@ -95,11 +88,6 @@ export default function MeScreen({ navigation }) {
           onPress={() => navigation.navigate('Profile', { editing: true })}
         />
       </Card>
-
-      <Text style={[type.label, styles.section]}>Appearance</Text>
-      <View style={styles.themeRow}>
-        <Segmented options={THEME_OPTIONS} value={mode} onChange={setMode} accessibilityLabel="App theme" />
-      </View>
 
       <Text style={[type.label, styles.section]}>Account</Text>
       <Card style={styles.card}>
@@ -158,5 +146,4 @@ const makeStyles = (colors) => ({
     borderRadius: 999,
     overflow: 'hidden',
   },
-  themeRow: { flexDirection: 'row' },
 });
