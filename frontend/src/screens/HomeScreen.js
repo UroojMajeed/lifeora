@@ -23,7 +23,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 // Home tab, built around one goal: buying back the hours that drain you.
-// The headline ring, where you are in the Buyback Loop, and today's one move.
+// Your DRIP Matrix first, then the headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
@@ -97,6 +97,21 @@ export default function HomeScreen({ navigation }) {
         <ThemeToggle />
       </View>
 
+      <Pressable
+        onPress={() => navigation.navigate('MyDay')}
+        accessibilityRole="button"
+        accessibilityLabel="Your DRIP Matrix. Open My day"
+        style={({ pressed }) => [styles.drip, pressed && { opacity: 0.9 }]}
+      >
+        <View style={[styles.sectionRow, styles.topRow]}>
+          <Text style={type.label}>Your DRIP Matrix</Text>
+          <View style={styles.link}>
+            <Text style={styles.linkText}>My day</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </View>
+        </View>
+        <DripMatrix summary={drip} compact />
+      </Pressable>
       <BuybackRingCard
         summary={handoffSummary}
         share={handoffSummary ? energyShare(schedule, handoffSummary) : null}
@@ -135,21 +150,6 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <Pressable
-        onPress={() => navigation.navigate('MyDay')}
-        accessibilityRole="button"
-        accessibilityLabel="Your DRIP Matrix. Open My day"
-        style={({ pressed }) => pressed && { opacity: 0.9 }}
-      >
-        <View style={styles.sectionRow}>
-          <Text style={type.label}>Your DRIP Matrix</Text>
-          <View style={styles.link}>
-            <Text style={styles.linkText}>My day</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </View>
-        </View>
-        <DripMatrix summary={drip} compact />
-      </Pressable>
     </Screen>
   );
 }
@@ -189,6 +189,8 @@ const makeStyles = (colors) => ({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
+  topRow: { marginTop: 0 },
+  drip: { marginBottom: spacing.md },
   link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
 });
