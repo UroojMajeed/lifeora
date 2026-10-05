@@ -8,8 +8,11 @@ export const ACTIVITY_ROW_HEIGHT = 62;
 
 const PassThrough = ({ children }) => children;
 
-/** One activity in the user's day: drag handle, name, hours (tap the row to edit), remove. */
-export default function ActivityRow({ item, isActive, Handle = PassThrough, onEdit, onRemove }) {
+/**
+ * One activity in the user's day: drag handle, name, hours (tap the row to edit), remove.
+ * `badge` ({ label, tone: 'success' | 'primary' }) marks e.g. a handed-off task or extra time from Fill.
+ */
+export default function ActivityRow({ item, isActive, Handle = PassThrough, onEdit, onRemove, badge, muted }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
@@ -27,9 +30,24 @@ export default function ActivityRow({ item, isActive, Handle = PassThrough, onEd
         accessibilityLabel={`${item.activity}, ${hoursLabel(item.hours)} a day. Tap to edit.`}
         style={({ pressed }) => [styles.body, pressed && { opacity: 0.6 }]}
       >
-        <Text style={styles.title} numberOfLines={1}>
-          {item.activity}
-        </Text>
+        <View style={styles.titleWrap}>
+          <Text style={[styles.title, muted && styles.titleMuted]} numberOfLines={1}>
+            {item.activity}
+          </Text>
+          {badge ? (
+            <Text
+              style={[
+                styles.badge,
+                badge.tone === 'success'
+                  ? { color: colors.success, backgroundColor: colors.successSoft }
+                  : { color: colors.primaryDark, backgroundColor: colors.primarySoft },
+              ]}
+              numberOfLines={1}
+            >
+              {badge.label}
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.hours}>
           <Ionicons name="time-outline" size={14} color={colors.primaryDark} />
           <Text style={styles.hoursText}>{hoursLabel(item.hours)}</Text>
@@ -60,7 +78,18 @@ const makeStyles = (colors, isDark) => ({
   cardActive: { borderColor: colors.primary },
   handle: { width: 44, height: '100%', alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: '100%' },
-  title: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  titleWrap: { flex: 1, gap: 3 },
+  title: { fontSize: 16, fontWeight: '600', color: colors.text },
+  titleMuted: { color: colors.muted, textDecorationLine: 'line-through' },
+  badge: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 1,
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+  },
   hours: {
     flexDirection: 'row',
     alignItems: 'center',

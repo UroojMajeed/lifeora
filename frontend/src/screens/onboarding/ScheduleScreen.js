@@ -9,6 +9,7 @@ import ActivityRow, { ACTIVITY_ROW_HEIGHT } from '../../components/ActivityRow';
 import DraggableList from '../../components/DraggableList';
 import AddActivitySheet from '../../components/AddActivitySheet';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useHandoffs } from '../../context/HandoffsContext';
 import { newActivity, stepNumber } from '../../constants/content';
 import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
@@ -22,6 +23,7 @@ export default function ScheduleScreen({ navigation, route }) {
   // A new round of the Loop: the whole day gets audited again.
   const round = route.params?.round;
   const { onboarding, saveStep } = useOnboarding();
+  const { handoffs, fills } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
@@ -73,6 +75,20 @@ export default function ScheduleScreen({ navigation, route }) {
   }, []);
 
   const totalHours = items.reduce((sum, i) => sum + i.hours, 0);
+
+  // After onboarding, show the day as it is now: handed-off tasks marked, filled time from Fill added.
+  const live = editing && !round;
+  const handedOff = new Set(live ? handoffs.filter((h) => h.status === 'done').map((h) => h.activity.toLowerCase()) : []);
+  const fillFor = (name) => (live ? fills.filter((f) => f.activity.toLowerCase() === name.toLowerCase()) : []);
+  const newFills = live ? fills.filter((f) => !items.some((i) => i.activity.toLowerCase() === f.activity.toLowerCase())) : [];
+  const badgeFor = (it) => {
+    if (handedOff.has(it.activity.toLowerCase())) return { label: 'Handed off', tone: 'success' };
+    const extra = fillFor(it.activity).reduce((t, f) => t + f.hours, 0);
+    return extra ? { label: `+${formatHours(extra)} from Fill`, tone: 'primary' } : null;
+  };
+  const dayNowHours =
+    items.filter((i) => !handedOff.has(i.activity.toLowerCase())).reduce((t, i) => t + i.hours, 0) +
+    (live ? fills.reduce((t, f) => t + f.hours, 0) : 0);
 
   const openAdd = () => {
     setEditingIndex(null);
@@ -163,7 +179,9 @@ export default function ScheduleScreen({ navigation, route }) {
             <Text style={styles.sectionLabel}>
               {items.length} {items.length === 1 ? 'activity' : 'activities'}
             </Text>
-            <Text style={[styles.total, over && styles.totalOver]}>{formatHours(totalHours)} a day</Text>
+            <Text style={[styles.total, over && styles.totalOver]}>
+              {formatHours(live ? dayNowHours : totalHours)} a day{live && handedOff.size ? ' now' : ''}
+            </Text>
           </View>
           <DraggableList
             items={items}
@@ -180,10 +198,35 @@ export default function ScheduleScreen({ navigation, route }) {
                 Handle={Handle}
                 onEdit={() => openEdit(index)}
                 onRemove={() => remove(index)}
+                badge={badgeFor(item)}
+                muted={handedOff.has(item.activity.toLowerCase())}
               />
             )}
           />
           {items.length > 1 ? <Text style={styles.hint}>Hold ≡ and drag to reorder. Tap an activity to edit it.</Text> : null}
+        </>
+      ) : null}
+
+      {newFills.length ? (
+        <>
+          <Text style={[styles.sectionLabel, styles.fillLabel]}>New from Fill</Text>
+          {newFills.map((f) => (
+            <Pressable
+              key={f.activity}
+              onPress={() => navigation.navigate('Fill')}
+              accessibilityRole="button"
+              accessibilityLabel={`${f.activity}, ${formatHours(f.hours)} a day from Fill. Change it in Fill.`}
+              style={({ pressed }) => [styles.fillRow, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="sunny-outline" size={18} color={colors.primaryDark} />
+              <Text style={styles.fillName} numberOfLines={1}>
+                {f.activity}
+              </Text>
+              <Text style={styles.fillHours}>{formatHours(f.hours)}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </Pressable>
+          ))}
+          <Text style={styles.hint}>Change these in Fill. They join your day for good at the next round.</Text>
         </>
       ) : null}
 
@@ -221,6 +264,19 @@ const makeStyles = (colors) => ({
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.sm },
   total: { fontSize: 14, fontWeight: '700', color: colors.muted },
   totalOver: { color: colors.error },
+  fillLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
+  fillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+  },
+  fillName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
+  fillHours: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
   addButton: {
     flexDirection: 'row',
