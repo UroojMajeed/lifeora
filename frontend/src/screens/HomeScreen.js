@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -10,23 +9,21 @@ import Logo from '../components/Logo';
 import Wordmark from '../components/Wordmark';
 import DripMatrix from '../components/DripMatrix';
 import ThemeToggle from '../components/ThemeToggle';
-import MotivationCard from '../components/MotivationCard';
 import BuybackRingCard from '../components/BuybackRingCard';
 import LoopTracker from '../components/LoopTracker';
 import TodaysMoveCard from '../components/TodaysMoveCard';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
-import { loadMotivation } from '../storage/motivation';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
 import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
 import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
 import { dayNow, energyShare, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing, withAlpha } from '../theme';
+import { radius, spacing } from '../theme';
 
 // Home tab, built around one goal: buying back the hours that drain you.
-// Your why on top, then the headline ring, where you are in the Buyback Loop, and today's one move.
+// The headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
@@ -34,21 +31,15 @@ export default function HomeScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
-  const [motivation, setMotivation] = useState(null);
   const [streak, setStreak] = useState(null);
   const [celebrate, setCelebrate] = useState(0);
   const [startingRound, setStartingRound] = useState(false);
-  const hasPhoto = Boolean(motivation?.uri);
 
   const schedule = onboarding?.schedule || [];
   const currency = onboarding?.currency || 'USD';
   // The matrix shows the day as it is now: handed-off tasks out, filled time in.
   const drip = summarizeSchedule(scheduleNow(dayNow(schedule, handoffs, fills)), onboarding?.buybackRate);
   const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
-
-  useEffect(() => {
-    loadMotivation().then(setMotivation);
-  }, []);
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
@@ -97,18 +88,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <Screen edges={[]}>
-      {hasPhoto ? (
-        // The user's "why", softly blurred behind the top of Home and fading into the page.
-        <View style={[styles.backdrop, { height: insets.top + 320 }]} pointerEvents="none">
-          <Image source={{ uri: motivation.uri }} style={styles.backdropImage} blurRadius={28} resizeMode="cover" />
-          <LinearGradient
-            colors={[withAlpha(colors.background, 0.35), withAlpha(colors.background, 0.7), colors.background]}
-            locations={[0, 0.6, 1]}
-            style={styles.backdropImage}
-          />
-        </View>
-      ) : null}
-
       <View style={[styles.header, { marginTop: insets.top + spacing.sm }]}>
         <Logo size={44} />
         <View style={styles.brandText}>
@@ -117,8 +96,6 @@ export default function HomeScreen({ navigation }) {
         </View>
         <ThemeToggle />
       </View>
-
-      {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} style={styles.why} /> : null}
 
       <BuybackRingCard
         summary={handoffSummary}
@@ -179,9 +156,6 @@ export default function HomeScreen({ navigation }) {
 
 const makeStyles = (colors) => ({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  why: { marginBottom: spacing.md },
-  backdrop: { position: 'absolute', top: 0, left: -spacing.lg, right: -spacing.lg, overflow: 'hidden' },
-  backdropImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   brandText: { flex: 1, gap: 4 },
   greeting: { fontSize: 14, fontWeight: '600', color: colors.muted },
   gap: { marginTop: spacing.md },

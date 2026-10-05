@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
 import { Card } from '../components/Card';
+import MotivationCard from '../components/MotivationCard';
+import { loadMotivation } from '../storage/motivation';
 import { useOnboarding } from '../context/OnboardingContext';
 import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
@@ -42,6 +45,13 @@ export default function MeScreen({ navigation }) {
   const saved = user && !user.isGuest;
   const { type } = useTheme();
   const [deleting, setDeleting] = useState(false);
+  const [motivation, setMotivation] = useState(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadMotivation().then(setMotivation);
+    }, [])
+  );
 
   const deleteEverything = async () => {
     setDeleting(true);
@@ -89,6 +99,9 @@ export default function MeScreen({ navigation }) {
   return (
     <Screen edges={['top']}>
       <PageHeader eyebrow="Me" title="Your settings" />
+
+      <Text style={[type.label, styles.whyLabel]}>Your why</Text>
+      {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} /> : null}
 
       <Text style={[type.label, styles.section]}>Your numbers</Text>
       <Card style={styles.card}>
@@ -156,6 +169,7 @@ export default function MeScreen({ navigation }) {
 
 const makeStyles = (colors) => ({
   section: { marginTop: spacing.lg, marginBottom: spacing.sm },
+  whyLabel: { marginBottom: spacing.sm },
   card: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md - 2 },
   rowIcon: {

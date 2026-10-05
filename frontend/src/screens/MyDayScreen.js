@@ -53,11 +53,9 @@ export default function MyDayScreen({ navigation }) {
         />
       ) : null}
 
-      <DripMatrix summary={summary} />
-
       {rows.length ? (
         <>
-          <Text style={styles.section}>Your day now</Text>
+          <Text style={[styles.section, styles.first]}>Your day now</Text>
           <Card style={styles.list}>
             {rows.map((a, i) => {
               const q = a.quadrant ? DRIP[a.quadrant] : null;
@@ -89,6 +87,9 @@ export default function MyDayScreen({ navigation }) {
           </Card>
         </>
       ) : null}
+
+      <Text style={styles.section}>Your DRIP Matrix</Text>
+      <DripMatrix summary={summary} />
 
       {summary.drainingHours > 0 ? (
         <HeroCard style={styles.gap}>
@@ -124,6 +125,7 @@ const makeStyles = (colors) => ({
   gap: { marginTop: spacing.md },
   unsorted: { marginBottom: spacing.md },
   section: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm },
+  first: { marginTop: 0 },
   list: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, paddingVertical: spacing.sm + 2 },
   rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
