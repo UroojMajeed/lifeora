@@ -177,6 +177,12 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
         </View>
 
         <Text style={styles.value}>{valueLine}</Text>
+        {summary?.pastBoughtBackHours ? (
+          <Text style={styles.share}>
+            Since you started: {formatHours((summary.pastBoughtBackHours + bought) * WORKDAYS_PER_WEEK)} a week bought back over{' '}
+            {summary.round} rounds
+          </Text>
+        ) : null}
         {share && share.now !== share.start ? (
           <Text style={styles.share}>
             {share.now}% of your day now energizes you (was {share.start}%)

@@ -75,6 +75,18 @@ const fillSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// One finished lap of the Buyback Loop (Audit → Transfer → Fill), kept for lifetime totals.
+const roundSchema = new mongoose.Schema(
+  {
+    number: { type: Number, required: true },
+    completedAt: { type: Date, default: Date.now },
+    boughtBackHours: { type: Number, default: 0 }, // a day
+    filledHours: { type: Number, default: 0 }, // a day
+    handedOff: { type: [String], default: [] },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     // Guests start using the app right away; name, email and password come later if they sign up.
@@ -90,6 +102,7 @@ const userSchema = new mongoose.Schema(
     onboarding: { type: onboardingSchema, default: () => ({}) },
     handoffs: { type: [handoffSchema], default: [] },
     fills: { type: [fillSchema], default: [] },
+    rounds: { type: [roundSchema], default: [] },
   },
   { timestamps: true }
 );

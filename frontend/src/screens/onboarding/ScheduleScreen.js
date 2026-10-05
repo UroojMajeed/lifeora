@@ -19,6 +19,8 @@ const MAX_ACTIVITIES = 30;
 export default function ScheduleScreen({ navigation, route }) {
   // editing: changing your day after onboarding (from My day). Saves never move you back into onboarding.
   const editing = Boolean(route.params?.editing);
+  // A new round of the Loop: the whole day gets audited again.
+  const round = route.params?.round;
   const { onboarding, saveStep } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
@@ -120,7 +122,9 @@ export default function ScheduleScreen({ navigation, route }) {
   const over = totalHours > 24;
   const ready = items.length > 0 && !over;
   const unsorted = items.filter((i) => !i.energy).length;
-  const nextTitle = editing
+  const nextTitle = round
+    ? 'Next: swipe your day'
+    : editing
     ? unsorted
       ? `Next: swipe ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`
       : 'Save my day'
@@ -142,10 +146,12 @@ export default function ScheduleScreen({ navigation, route }) {
       <StepHeader
         step={stepNumber('schedule')}
         editing={editing}
-        eyebrow={editing ? 'Edit your day' : 'Your day'}
-        title="What fills a normal day?"
+        eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your day' : 'Your day'}
+        title={round ? 'What fills your day now?' : 'What fills a normal day?'}
         subtitle={
-          editing
+          round
+            ? 'Handed-off tasks are gone and your new work is in. Add anything new, then swipe it all again.'
+            : editing
             ? 'Add, change or remove activities. Changes save as you go.'
             : 'Add what you do and roughly how long each takes. Order them however you like.'
         }

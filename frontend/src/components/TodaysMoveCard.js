@@ -7,7 +7,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 /** One small, specific next step (from todaysMove()), with a single button to do it. */
-export default function TodaysMoveCard({ move, onPress, style }) {
+export default function TodaysMoveCard({ move, onPress, loading, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   if (!move) return null;
@@ -16,7 +16,7 @@ export default function TodaysMoveCard({ move, onPress, style }) {
   return (
     <Card style={style}>
       <View style={styles.top}>
-        <Text style={styles.eyebrow}>Today's one move</Text>
+        <Text style={styles.eyebrow}>{move.action === 'nextRound' ? 'Next lap' : "Today's one move"}</Text>
         <Text style={styles.meta}>
           {stage?.label}
           {move.minutes ? ` · ${move.minutes} min` : ''}
@@ -31,7 +31,7 @@ export default function TodaysMoveCard({ move, onPress, style }) {
           <Text style={styles.text}>{move.body}</Text>
         </View>
       </View>
-      <Button title={move.cta} icon="arrow-forward" onPress={onPress} style={styles.button} />
+      <Button title={move.cta} icon="arrow-forward" onPress={onPress} loading={loading} style={styles.button} />
     </Card>
   );
 }

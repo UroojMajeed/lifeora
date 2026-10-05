@@ -7,7 +7,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
 /** The book's Buyback Loop as three steps, showing which one you're on. `status` comes from loopStatus(). */
-export default function LoopTracker({ status, style }) {
+export default function LoopTracker({ status, round = 1, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const current = LOOP_STEPS.find((s) => status[s.key] === 'current');
@@ -15,8 +15,8 @@ export default function LoopTracker({ status, style }) {
   return (
     <Card style={style}>
       <View style={styles.head}>
-        <Text style={styles.title}>Your Buyback Loop</Text>
-        {current ? <Text style={styles.now}>Now: {current.label}</Text> : null}
+        <Text style={styles.title}>Buyback Loop · Round {round}</Text>
+        {current ? <Text style={styles.now}>Now: {current.label}</Text> : <Text style={styles.now}>Complete</Text>}
       </View>
       <View style={styles.row} accessible accessibilityLabel={`Buyback Loop. Current step: ${current?.label || 'none'}`}>
         {LOOP_STEPS.map((step, i) => {

@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
-const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES } = require('../utils/buyback');
+const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 // Delegation first: the cheapest hours to buy back. Then Replacement, which needs a playbook first.
@@ -9,6 +9,7 @@ const QUADRANT_ORDER = { delegation: 0, replacement: 1 };
 const round2 = (n) => Math.round(n * 100) / 100;
 const MAX_PLAYBOOK_STEPS = 15;
 const MAX_FILLS = 20;
+const MAX_ACTIVITIES = 30;
 
 const emptyHandoff = (activity) => ({
   activity,
@@ -61,6 +62,11 @@ function buildHandoffs(user) {
       currency: o.currency || 'USD',
       // Fill: how much of the freed time already has a new, energizing job.
       filledHours: sum(fills),
+      // Kept for the next round: still draining, but not blocking this round.
+      later: items.filter((h) => h.status === 'later').length,
+      // Rounds of the Buyback Loop: which one this is, and hours bought back in finished rounds.
+      round: (user.rounds || []).length + 1,
+      pastBoughtBackHours: round2((user.rounds || []).reduce((t, r) => t + (r.boughtBackHours || 0), 0)),
     },
   };
 }
@@ -193,4 +199,46 @@ async function updateFills(req, res, next) {
   }
 }
 
-module.exports = { listHandoffs, updateHandoff, updateFills, buildHandoffs };
+// POST /api/rounds/next: closes this round of the Loop and starts the next with a fresh audit.
+// Handed-off tasks leave the day, filled hours join it, and every activity is swiped again
+// (what energized you before might drain you now). Tasks kept for later carry over.
+async function startNextRound(req, res, next) {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) throw new ApiError(404, 'User not found');
+    const { handoffs, fills, summary } = buildHandoffs(user);
+    if (handoffs.some((h) => h.status === 'mine' || h.status === 'in_progress')) {
+      throw new ApiError(400, 'Hand off (or keep for next round) every draining task first');
+    }
+
+    const done = new Set(handoffs.filter((h) => h.status === 'done').map((h) => h.activity.toLowerCase()));
+    const schedule = (user.onboarding?.schedule || [])
+      .filter((a) => !done.has(a.activity.toLowerCase()))
+      .map((a) => ({ activity: a.activity, hours: a.hours, value: a.value, energy: null, quadrant: null }));
+    fills.forEach((f) => {
+      const same = schedule.find((a) => a.activity.toLowerCase() === f.activity.toLowerCase());
+      if (same) same.hours = Math.min(24, round2(same.hours + f.hours));
+      else schedule.push({ activity: f.activity, hours: f.hours, value: f.quadrant === 'production' ? 'high' : 'low', energy: null, quadrant: null });
+    });
+
+    user.rounds.push({
+      number: summary.round,
+      boughtBackHours: summary.boughtBackHours,
+      filledHours: summary.filledHours,
+      handedOff: handoffs.filter((h) => h.status === 'done').map((h) => h.activity),
+    });
+    user.onboarding.schedule = schedule.slice(0, MAX_ACTIVITIES).map((a) => ({ ...a, quadrant: quadrantFor(a) }));
+    // Done handoffs live on in the round history; kept-for-later ones start the new round as "still mine".
+    user.handoffs = user.handoffs
+      .filter((h) => !done.has(h.activity.toLowerCase()))
+      .map((h) => (h.status === 'later' ? Object.assign(h, { status: 'mine' }) : h));
+    user.fills = [];
+    await user.save();
+
+    res.json({ onboarding: user.onboarding, ...buildHandoffs(user) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listHandoffs, updateHandoff, updateFills, startNextRound, buildHandoffs };

@@ -113,6 +113,21 @@ export default function HandoffDetailScreen({ route, navigation }) {
     setToast(`You just bought back ${formatHours(item.hours)} a day.`);
   };
 
+  // Some handoffs take months (a key hire): keep it for the next round so this one can finish.
+  const keepForLater = async () => {
+    Haptics.selectionAsync().catch(() => {});
+    const res = await save({ status: 'later' });
+    if (res) {
+      animate();
+      setOpen(null);
+      setToast('Kept for the next round.');
+    }
+  };
+  const bringBack = () => {
+    Haptics.selectionAsync().catch(() => {});
+    save({ status: item.who && item.startDate ? 'in_progress' : 'mine' }).then((res) => res && advance(res.handoff));
+  };
+
   const undoDone = () => {
     Haptics.selectionAsync().catch(() => {});
     save({ status: item.who && item.startDate ? 'in_progress' : 'mine' }).then((res) => res && advance(res.handoff));
@@ -407,6 +422,17 @@ export default function HandoffDetailScreen({ route, navigation }) {
               <Text style={styles.undo}>Undo</Text>
             </Pressable>
           </View>
+        ) : item.status === 'later' ? (
+          <View style={[styles.doneBanner, { backgroundColor: colors.surfaceAlt }]}>
+            <Ionicons name="time-outline" size={26} color={colors.muted} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.doneTitle}>Kept for the next round</Text>
+              <Text style={styles.doneText}>It won't hold up this round. Your progress on it is saved.</Text>
+            </View>
+            <Pressable onPress={bringBack} hitSlop={10} accessibilityRole="button" accessibilityLabel="Work on it this round">
+              <Text style={styles.undo}>Bring back</Text>
+            </Pressable>
+          </View>
         ) : (
           <View style={styles.progress}>
             <View style={styles.progressTop}>
@@ -460,6 +486,13 @@ export default function HandoffDetailScreen({ route, navigation }) {
           })}
         </View>
 
+        {!done && item.status !== 'later' ? (
+          <Pressable onPress={keepForLater} accessibilityRole="button" style={({ pressed }) => [styles.later, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="time-outline" size={16} color={colors.muted} />
+            <Text style={styles.laterText}>Not now? Keep it for the next round</Text>
+          </Pressable>
+        ) : null}
+
         <Text style={styles.label}>Notes</Text>
         <TextInput
           value={notes}
@@ -508,6 +541,8 @@ const makeStyles = (colors, isDark) => ({
   undo: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
 
   steps: { gap: spacing.sm },
+  later: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.md },
+  laterText: { fontSize: 14, fontWeight: '600', color: colors.muted },
   step: {
     borderRadius: radius.lg,
     backgroundColor: colors.surface,

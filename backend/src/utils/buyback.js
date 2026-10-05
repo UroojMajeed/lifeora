@@ -46,7 +46,8 @@ function summarizeSchedule(schedule = [], buybackRate = 0) {
 }
 
 // Handing off a draining task (the "Transfer" in the Buyback Loop: Audit → Transfer → Fill).
-const HANDOFF_STATUSES = ['mine', 'in_progress', 'done'];
+// 'later': kept for the next round of the Loop (e.g. a hire that takes months), so it doesn't block this one.
+const HANDOFF_STATUSES = ['mine', 'in_progress', 'done', 'later'];
 const HANDOFF_METHODS = ['hire', 'automate', 'team', 'drop'];
 const FILL_TIMES = ['morning', 'afternoon', 'evening'];
 

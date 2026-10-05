@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Alert, Image, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import MotivationCard from '../components/MotivationCard';
 import BuybackRingCard from '../components/BuybackRingCard';
 import LoopTracker from '../components/LoopTracker';
 import TodaysMoveCard from '../components/TodaysMoveCard';
+import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { loadMotivation } from '../storage/motivation';
@@ -27,7 +28,7 @@ import { radius, spacing, withAlpha } from '../theme';
 // Home tab, built around one goal: buying back the hours that drain you.
 // Your why on top, then the headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
-  const { user, onboarding } = useOnboarding();
+  const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
@@ -36,6 +37,7 @@ export default function HomeScreen({ navigation }) {
   const [motivation, setMotivation] = useState(null);
   const [streak, setStreak] = useState(null);
   const [celebrate, setCelebrate] = useState(0);
+  const [startingRound, setStartingRound] = useState(false);
   const hasPhoto = Boolean(motivation?.uri);
 
   const schedule = onboarding?.schedule || [];
@@ -67,6 +69,27 @@ export default function HomeScreen({ navigation }) {
   }, [isFocused, boughtBack]);
 
   const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
+
+  // Round complete: close it, then re-audit the day (edit it, then swipe everything again).
+  const doMove = async () => {
+    if (!move) return;
+    if (move.action !== 'nextRound') {
+      navigation.navigate(...move.go);
+      return;
+    }
+    setStartingRound(true);
+    try {
+      const res = await api.startNextRound();
+      replaceOnboarding(res.onboarding);
+      await refreshHandoffs();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      navigation.navigate(...move.go);
+    } catch (err) {
+      Alert.alert("Couldn't start the next round", err.message);
+    } finally {
+      setStartingRound(false);
+    }
+  };
   const loop = loopStatus({ schedule, summary: handoffSummary });
   // Once there's real progress to lose, invite guests to save it (never before: no sign-up wall).
   const askToSave = user?.isGuest && (handoffSummary?.done || 0) > 0;
@@ -107,9 +130,9 @@ export default function HomeScreen({ navigation }) {
         onPress={() => navigation.navigate('Handoffs')}
       />
 
-      <LoopTracker status={loop} style={styles.gap} />
+      <LoopTracker status={loop} round={handoffSummary?.round} style={styles.gap} />
 
-      <TodaysMoveCard move={move} onPress={() => move && navigation.navigate(...move.go)} style={styles.gap} />
+      <TodaysMoveCard move={move} onPress={doMove} loading={startingRound} style={styles.gap} />
 
       {askToSave ? (
         <Pressable

@@ -113,6 +113,7 @@ export function OnboardingProvider({ children }) {
       saveAccount,
       signIn,
       signOut: forgetThisPhone,
+      replaceOnboarding: setOnboarding,
     }),
     [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, signIn, forgetThisPhone]
   );

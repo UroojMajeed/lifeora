@@ -12,11 +12,23 @@ export const LOOP_STEPS = [
   { key: 'fill', label: 'Fill', caption: 'Do what you love' },
 ];
 
+/** Every draining task is handed off, or kept for the next round. */
+const transferDone = (summary) => Boolean(summary) && summary.done + (summary.later || 0) === summary.total;
+
+/**
+ * This lap of the Loop is finished: audited, everything transferred (or kept for later) and every
+ * freed hour filled. Time for the next round's fresh audit.
+ */
+export function roundComplete({ schedule = [], summary }) {
+  const audited = schedule.length > 0 && schedule.every((a) => a.energy);
+  return audited && transferDone(summary) && unfilledHours(summary) < 0.25;
+}
+
 /** Where the user is in the Loop: { audit, transfer, fill } each 'done' | 'current' | 'next'. */
 export function loopStatus({ schedule = [], summary }) {
   const audited = schedule.length > 0 && schedule.every((a) => a.energy);
-  const transferred = audited && Boolean(summary) && summary.done === summary.total;
-  const filled = transferred && summary.boughtBackHours > 0 && unfilledHours(summary) < 0.25;
+  const transferred = audited && transferDone(summary);
+  const filled = transferred && unfilledHours(summary) < 0.25;
   return {
     audit: audited ? 'done' : 'current',
     transfer: transferred ? 'done' : audited ? 'current' : 'next',
@@ -44,7 +56,7 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
 
   // Transfer: the next checklist step of the first draining task that has something to do today.
   // (A task in its first week after handover just waits, so we move on to the next one.)
-  const open = handoffs.filter((h) => h.status !== 'done');
+  const open = handoffs.filter((h) => h.status !== 'done' && h.status !== 'later');
   const next = open.find((h) => !waitingForCheckIn(h)) || open[0];
   if (next) {
     const name = next.activity.toLowerCase();
@@ -106,6 +118,22 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
 
   // Everything draining is handed off: give the freed hours a new, energizing job.
   const left = unfilledHours(summary);
+  if (roundComplete({ schedule, summary })) {
+    const round = summary?.round || 1;
+    const bought = summary?.boughtBackHours || 0;
+    return {
+      stage: 'fill',
+      icon: 'trophy-outline',
+      title: summary?.total ? `Round ${round} complete` : 'Nothing drains you',
+      body: bought
+        ? `You bought back ${formatHours(bought * WORKDAYS_PER_WEEK)} a week and gave it a new job. Your day has changed, so look at it again: new drains show up as you grow.`
+        : 'Your day changes as the business grows. Look at it again to find what drains you now.',
+      minutes: 3,
+      cta: `Start round ${round + 1}`,
+      action: 'nextRound',
+      go: ['Schedule', { editing: true, round: round + 1 }],
+    };
+  }
   if (left >= 0.25) {
     const filledSome = (summary?.filledHours || 0) > 0;
     return {

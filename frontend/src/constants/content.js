@@ -152,6 +152,7 @@ export const HANDOFF_STATUSES = [
   { key: 'mine', label: 'Still mine', short: 'Still mine', icon: 'person-outline', color: 'muted' },
   { key: 'in_progress', label: 'Handing off', short: 'Handing off', icon: 'swap-horizontal', color: 'warm' },
   { key: 'done', label: 'Handed off', short: 'Handed off', icon: 'checkmark-circle', color: 'success' },
+  { key: 'later', label: 'Next round', short: 'Next round', icon: 'time-outline', color: 'muted' },
 ];
 export const statusInfo = (key) => HANDOFF_STATUSES.find((s) => s.key === key) || HANDOFF_STATUSES[0];
 

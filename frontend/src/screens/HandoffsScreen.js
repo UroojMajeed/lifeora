@@ -53,6 +53,7 @@ export default function HandoffsScreen({ navigation }) {
           </View>
           <Text style={styles.summaryMeta}>
             {summary.done} of {summary.total} handed off
+            {summary.later ? ` · ${summary.later} for next round` : ''}
             {summary.inProgressHours ? ` · ${formatHours(summary.inProgressHours)} on the way` : ''}
           </Text>
         </Card>
@@ -75,7 +76,7 @@ export default function HandoffsScreen({ navigation }) {
       ) : null}
 
       {SECTIONS.map(({ key, hint }) => {
-        const items = handoffs.filter((h) => h.quadrant === key);
+        const items = handoffs.filter((h) => h.quadrant === key && h.status !== 'later');
         if (!items.length) return null;
         const q = DRIP[key];
         return (
@@ -93,6 +94,22 @@ export default function HandoffsScreen({ navigation }) {
           </View>
         );
       })}
+      {handoffs.some((h) => h.status === 'later') ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Ionicons name="time-outline" size={14} color={colors.muted} />
+            <Text style={[styles.sectionTitle, { color: colors.muted }]}>Next round</Text>
+          </View>
+          <Text style={styles.sectionHint}>Kept for later, so they don't hold up this round.</Text>
+          <View style={styles.list}>
+            {handoffs
+              .filter((h) => h.status === 'later')
+              .map((item) => (
+                <HandoffRow key={item.activity} item={item} onPress={() => open(item)} />
+              ))}
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
