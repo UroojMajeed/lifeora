@@ -13,26 +13,38 @@ export default function PageHeader({ eyebrow, title, subtitle }) {
   // Tab pages are top-level: no back button there (the tab bar is the way around).
   const showBack = navigation.getState()?.type !== 'tab' && navigation.canGoBack();
 
-  return (
-    <View style={styles.wrap}>
-      <View style={styles.topRow}>
-        {showBack ? (
-          <Pressable
-            onPress={() => navigation.goBack()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-          </Pressable>
-        ) : (
-          <View />
-        )}
-        <ThemeToggle />
-      </View>
+  const heading = (
+    <>
       {eyebrow ? <Text style={[type.label, styles.eyebrow]}>{eyebrow}</Text> : null}
       <Text style={type.title}>{title}</Text>
+    </>
+  );
+
+  return (
+    <View style={styles.wrap}>
+      {showBack ? (
+        <>
+          <View style={styles.topRow}>
+            <Pressable
+              onPress={() => navigation.goBack()}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
+            </Pressable>
+            <ThemeToggle />
+          </View>
+          {heading}
+        </>
+      ) : (
+        // Tab pages have no back button, so the theme toggle sits beside the title (no empty row on top).
+        <View style={styles.titleRow}>
+          <View style={{ flex: 1 }}>{heading}</View>
+          <ThemeToggle />
+        </View>
+      )}
       {subtitle ? <Text style={[type.subtitle, styles.subtitle]}>{subtitle}</Text> : null}
     </View>
   );
@@ -40,6 +52,7 @@ export default function PageHeader({ eyebrow, title, subtitle }) {
 
 const makeStyles = (colors) => ({
   wrap: { paddingTop: spacing.sm, marginBottom: spacing.lg },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
   iconButton: {
     width: 40,
