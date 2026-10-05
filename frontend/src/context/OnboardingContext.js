@@ -58,6 +58,14 @@ export function OnboardingProvider({ children }) {
   // Changes made after onboarding (from My day or Me) keep the user in the app.
   const saveEdit = useCallback((data) => saveStep(data, 'done'), [saveStep]);
 
+  // Wipes what this phone keeps for the signed-in person: token, photo, streak.
+  const forgetThisPhone = useCallback(async () => {
+    await tokenStore.clear();
+    await removeMotivation(await loadMotivation());
+    await clearProgress();
+    applyUser(null);
+  }, [applyUser]);
+
   // Deletes this account and everything in it, photo included, so the app starts over.
   const startOver = useCallback(async () => {
     try {
@@ -65,15 +73,48 @@ export function OnboardingProvider({ children }) {
     } catch (err) {
       if (err.status !== 401 && err.status !== 404) throw err; // already gone is fine
     }
-    await tokenStore.clear();
-    await removeMotivation(await loadMotivation());
-    await clearProgress();
-    applyUser(null);
-  }, [applyUser]);
+    await forgetThisPhone();
+  }, [forgetThisPhone]);
+
+  // "Save your progress": the guest becomes a real account and keeps everything.
+  const saveAccount = useCallback(
+    async (details) => {
+      const { token, user: u } = await api.saveAccount(details);
+      await tokenStore.set(token);
+      applyUser(u);
+    },
+    [applyUser]
+  );
+
+  // Signs in to an existing account. A guest on this phone is replaced (and deleted, so nothing is
+  // left behind). Returns the screen to land on.
+  const signIn = useCallback(
+    async (credentials) => {
+      const { token, user: u } = await api.login(credentials);
+      if (user?.isGuest) await api.deleteMe().catch(() => {});
+      await forgetThisPhone();
+      await tokenStore.set(token);
+      applyUser(u);
+      return screenForStep(u.onboarding?.currentStep);
+    },
+    [user, applyUser, forgetThisPhone]
+  );
 
   const value = useMemo(
-    () => ({ user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver }),
-    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver]
+    () => ({
+      user,
+      onboarding,
+      bootstrap,
+      startAsGuest,
+      saveStep,
+      saveEdit,
+      complete,
+      startOver,
+      saveAccount,
+      signIn,
+      signOut: forgetThisPhone,
+    }),
+    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, signIn, forgetThisPhone]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

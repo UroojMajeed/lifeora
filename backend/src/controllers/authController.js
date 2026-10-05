@@ -2,11 +2,21 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 
-// A guest's token is their only way back to their data, so it lasts much longer.
+// Phones stay signed in: a guest's token is their only way back to their data, and a saved
+// account shouldn't be signed out every week either.
 const signToken = (user) =>
   jwt.sign({ sub: user.id }, process.env.JWT_SECRET, {
-    expiresIn: user.isGuest ? '365d' : process.env.JWT_EXPIRES_IN || '7d',
+    expiresIn: user.isGuest ? '365d' : process.env.JWT_EXPIRES_IN || '365d',
   });
+
+function validateAccount({ name, email, password }, { nameRequired }) {
+  const errors = [];
+  if (nameRequired && (!name || !String(name).trim())) errors.push('Name is required');
+  if (name && String(name).trim().length > 80) errors.push('Name must be 80 characters or fewer');
+  if (!email || !/^\S+@\S+\.\S+$/.test(String(email).trim())) errors.push('A valid email is required');
+  if (!password || String(password).length < 8) errors.push('Password must be at least 8 characters');
+  if (errors.length) throw new ApiError(400, 'Validation failed', errors);
+}
 
 async function createGuest(req, res, next) {
   try {
@@ -20,14 +30,31 @@ async function createGuest(req, res, next) {
 async function register(req, res, next) {
   try {
     const { name, email, password } = req.body || {};
-    const errors = [];
-    if (!name || !String(name).trim()) errors.push('Name is required');
-    if (!email || !/^\S+@\S+\.\S+$/.test(String(email))) errors.push('A valid email is required');
-    if (!password || String(password).length < 8) errors.push('Password must be at least 8 characters');
-    if (errors.length) throw new ApiError(400, 'Validation failed', errors);
+    validateAccount({ name, email, password }, { nameRequired: true });
 
     const user = await User.create({ name: String(name), email: String(email), password: String(password) });
     res.status(201).json({ token: signToken(user), user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// "Save your progress": turns the signed-in guest into a real account. Everything they've done stays.
+async function saveAccount(req, res, next) {
+  try {
+    const { name, email, password } = req.body || {};
+    validateAccount({ name, email, password }, { nameRequired: false });
+
+    const user = await User.findById(req.userId);
+    if (!user) throw new ApiError(404, 'User not found');
+    if (!user.isGuest) throw new ApiError(400, 'Your progress is already saved to an account');
+
+    user.isGuest = false;
+    user.email = String(email).toLowerCase().trim();
+    user.password = String(password);
+    if (name && String(name).trim()) user.name = String(name).trim();
+    await user.save(); // a taken email fails here with 409 (unique index)
+    res.json({ token: signToken(user), user });
   } catch (err) {
     next(err);
   }
@@ -69,4 +96,4 @@ async function deleteMe(req, res, next) {
   }
 }
 
-module.exports = { createGuest, register, login, me, deleteMe };
+module.exports = { createGuest, register, saveAccount, login, me, deleteMe };

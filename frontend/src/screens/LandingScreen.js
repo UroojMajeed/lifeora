@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -108,6 +108,17 @@ export default function LandingScreen({ navigation }) {
               </View>
               <Button title="Get started" icon="arrow-forward" onPress={getStarted} loading={starting} />
               {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Pressable
+                onPress={() => navigation.navigate('Account', { mode: 'signin' })}
+                disabled={starting}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={({ pressed }) => [styles.signIn, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.signInText}>
+                  I already have an account. <Text style={styles.signInLink}>Sign in</Text>
+                </Text>
+              </Pressable>
             </Animated.View>
           ) : (
             <ActivityIndicator color={colors.primary} />
@@ -151,4 +162,7 @@ const makeStyles = (colors, isDark) => ({
   },
   perkText: { fontSize: 13, fontWeight: '600', color: colors.text },
   error: { color: colors.error, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  signIn: { alignItems: 'center', paddingVertical: spacing.xs },
+  signInText: { fontSize: 14, color: colors.muted },
+  signInLink: { color: colors.primaryDark, fontWeight: '700' },
 });

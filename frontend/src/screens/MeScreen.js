@@ -38,7 +38,8 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
 
 /** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
 export default function MeScreen({ navigation }) {
-  const { onboarding, startOver } = useOnboarding();
+  const { user, onboarding, startOver, signOut } = useOnboarding();
+  const saved = user && !user.isGuest;
   const { type } = useTheme();
   const [deleting, setDeleting] = useState(false);
 
@@ -53,10 +54,27 @@ export default function MeScreen({ navigation }) {
     }
   };
 
+  const confirmSignOut = () =>
+    Alert.alert(
+      'Sign out?',
+      'Your progress stays safe in your account. Sign in again any time with your email.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          onPress: async () => {
+            await signOut();
+            navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+
   const confirmStartOver = () =>
     Alert.alert(
-      'Delete everything and start over?',
-      'Your Buyback Rate, your day, your handoffs and your photo will be deleted for good.',
+      saved ? 'Delete your account?' : 'Delete everything and start over?',
+      `Your ${saved ? 'account, ' : ''}Buyback Rate, your day, your handoffs and your photo will be deleted for good.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: deleteEverything },
@@ -91,17 +109,33 @@ export default function MeScreen({ navigation }) {
 
       <Text style={[type.label, styles.section]}>Account</Text>
       <Card style={styles.card}>
-        <Row
-          icon="cloud-upload-outline"
-          title="Save your progress"
-          value="Create an account so you never lose your data."
-          disabled
-          badge="Soon"
-        />
+        {saved ? (
+          <>
+            <Row icon="person-circle-outline" title={user.name || 'Signed in'} value={user.email} />
+            <View style={styles.divider} />
+            <Row icon="log-out-outline" title="Sign out" onPress={confirmSignOut} />
+          </>
+        ) : (
+          <>
+            <Row
+              icon="cloud-upload-outline"
+              title="Save your progress"
+              value="Create an account so you never lose your data."
+              onPress={() => navigation.navigate('Account', { mode: 'save' })}
+            />
+            <View style={styles.divider} />
+            <Row
+              icon="log-in-outline"
+              title="Sign in"
+              value="Already saved your progress? Sign in here."
+              onPress={() => navigation.navigate('Account', { mode: 'signin' })}
+            />
+          </>
+        )}
         <View style={styles.divider} />
         <Row
           icon="trash-outline"
-          title="Delete my data and start over"
+          title={saved ? 'Delete my account' : 'Delete my data and start over'}
           value="Removes everything and takes you back to the start."
           onPress={confirmStartOver}
           busy={deleting}

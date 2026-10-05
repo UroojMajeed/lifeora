@@ -26,7 +26,7 @@ import { radius, spacing, withAlpha } from '../theme';
 // Home tab, built around one goal: buying back the hours that drain you.
 // Your why on top, then the headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
-  const { onboarding } = useOnboarding();
+  const { user, onboarding } = useOnboarding();
   const { handoffs, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
@@ -67,6 +67,8 @@ export default function HomeScreen({ navigation }) {
 
   const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
   const loop = loopStatus({ schedule, summary: handoffSummary });
+  // Once there's real progress to lose, invite guests to save it (never before: no sign-up wall).
+  const askToSave = user?.isGuest && (handoffSummary?.done || 0) > 0;
 
   return (
     <Screen edges={[]}>
@@ -106,6 +108,21 @@ export default function HomeScreen({ navigation }) {
       <LoopTracker status={loop} style={styles.gap} />
 
       <TodaysMoveCard move={move} onPress={() => move && navigation.navigate(...move.go)} style={styles.gap} />
+
+      {askToSave ? (
+        <Pressable
+          onPress={() => navigation.navigate('Account', { mode: 'save' })}
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.save, pressed && { opacity: 0.85 }]}
+        >
+          <Ionicons name="cloud-upload-outline" size={22} color={colors.primaryDark} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.saveTitle}>Save your progress</Text>
+            <Text style={styles.saveText}>Keep your handoffs safe if you change phones. Takes 10 seconds.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+        </Pressable>
+      ) : null}
 
       <View style={styles.idea}>
         <Ionicons name="bulb" size={18} color={colors.accent} />
@@ -150,6 +167,19 @@ const makeStyles = (colors) => ({
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceAlt,
   },
+  save: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  saveTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  saveText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
   ideaLabel: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase', letterSpacing: 1 },
   ideaText: { fontSize: 15, lineHeight: 22, color: colors.text, marginTop: 4 },
   sectionRow: {

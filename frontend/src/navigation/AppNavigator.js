@@ -8,6 +8,7 @@ import ScheduleScreen from '../screens/onboarding/ScheduleScreen';
 import SwipeScreen from '../screens/onboarding/SwipeScreen';
 import DripScreen from '../screens/onboarding/DripScreen';
 import HandoffDetailScreen from '../screens/HandoffDetailScreen';
+import AccountScreen from '../screens/AccountScreen';
 import MainTabs from './MainTabs';
 
 const Stack = createNativeStackNavigator();
@@ -33,6 +34,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Drip" component={DripScreen} />
       <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
       <Stack.Screen name="HandoffDetail" component={HandoffDetailScreen} />
+      <Stack.Screen name="Account" component={AccountScreen} options={{ animation: 'slide_from_bottom' }} />
     </Stack.Navigator>
   );
 }
