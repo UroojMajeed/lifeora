@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { api, tokenStore } from '../api/client';
 import { screenForStep } from '../constants/content';
 import { loadMotivation, removeMotivation } from '../storage/motivation';
+import { clearProgress } from '../storage/progress';
 
 const OnboardingContext = createContext(null);
 
@@ -27,6 +28,7 @@ export function OnboardingProvider({ children }) {
       if (err.status === 401 || err.status === 404) {
         await tokenStore.clear();
         await removeMotivation(await loadMotivation());
+        await clearProgress();
       }
       return null;
     }
@@ -65,6 +67,7 @@ export function OnboardingProvider({ children }) {
     }
     await tokenStore.clear();
     await removeMotivation(await loadMotivation());
+    await clearProgress();
     applyUser(null);
   }, [applyUser]);
 

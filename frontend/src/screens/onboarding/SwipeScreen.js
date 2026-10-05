@@ -8,6 +8,7 @@ import ErrorBanner from '../../components/ErrorBanner';
 import SwipeDeck from '../../components/SwipeDeck';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { stepNumber } from '../../constants/content';
+import { recordMove } from '../../storage/progress';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
@@ -43,6 +44,7 @@ export default function SwipeScreen({ navigation, route }) {
             sorted.get(activity) || { activity, hours, value, energy: energy ?? null }
           );
           await saveStep({ schedule: day }, 'done');
+          recordMove();
           navigation.popTo('Main');
           return;
         }

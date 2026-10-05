@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client';
+import { recordMove } from '../storage/progress';
 
 const HandoffsContext = createContext(null);
 
@@ -34,6 +35,7 @@ export function HandoffsProvider({ children }) {
     }));
     try {
       const res = await api.updateHandoff(activity, patch);
+      recordMove();
       setData((d) => ({
         summary: res.summary,
         handoffs: d.handoffs.map((h) => (h.activity === activity ? { ...h, ...res.handoff } : h)),

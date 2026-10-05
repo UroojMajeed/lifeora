@@ -1,37 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import Logo from '../components/Logo';
 import Wordmark from '../components/Wordmark';
 import DripMatrix from '../components/DripMatrix';
 import ThemeToggle from '../components/ThemeToggle';
 import MotivationCard from '../components/MotivationCard';
-import BoughtBackCard from '../components/BoughtBackCard';
-import { Card, HeroCard } from '../components/Card';
+import BuybackRingCard from '../components/BuybackRingCard';
+import LoopTracker from '../components/LoopTracker';
+import TodaysMoveCard from '../components/TodaysMoveCard';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { loadMotivation } from '../storage/motivation';
-import { summarizeSchedule } from '../constants/content';
-import { formatHours, formatMoney } from '../utils/format';
+import { loadStreak, noticeBoughtBack } from '../storage/progress';
+import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
+import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { spacing, withAlpha } from '../theme';
+import { radius, spacing, withAlpha } from '../theme';
 
-// Home tab: your rate, progress, this week's move and your DRIP Matrix at a glance.
-// Settings live in the Me tab; the full matrix and day editing live in My day.
+// Home tab, built around one goal: buying back the hours that drain you.
+// Your why on top, then the headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
   const { onboarding } = useOnboarding();
   const { handoffs, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
-  const currency = onboarding?.currency || 'USD';
-  const summary = summarizeSchedule(onboarding?.schedule, onboarding?.buybackRate);
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const [motivation, setMotivation] = useState(null);
+  const [streak, setStreak] = useState(null);
+  const [celebrate, setCelebrate] = useState(0);
   const hasPhoto = Boolean(motivation?.uri);
+
+  const schedule = onboarding?.schedule || [];
+  const currency = onboarding?.currency || 'USD';
+  const drip = summarizeSchedule(schedule, onboarding?.buybackRate);
+  const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
 
   useEffect(() => {
     loadMotivation().then(setMotivation);
@@ -41,15 +50,23 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       refreshHandoffs();
+      loadStreak().then(setStreak);
     }, [refreshHandoffs])
   );
 
-  // This week's move: the next draining task that isn't handed off yet (Delegation first).
-  const nextMove = handoffs.find((h) => h.status !== 'done');
-  const allDone = handoffs.length > 0 && !nextMove;
-  const openHandoffs = () => navigation.navigate('Handoffs');
+  // More hours bought back since Home last showed them: celebrate (only while Home is on screen).
+  const boughtBack = handoffSummary?.boughtBackHours;
+  useEffect(() => {
+    if (!isFocused || boughtBack === undefined) return;
+    noticeBoughtBack(boughtBack).then((up) => {
+      if (!up) return;
+      setCelebrate((n) => n + 1);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    });
+  }, [isFocused, boughtBack]);
 
-  const whyCard = motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} style={styles.why} /> : null;
+  const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
+  const loop = loopStatus({ schedule, summary: handoffSummary });
 
   return (
     <Screen edges={[]}>
@@ -69,53 +86,34 @@ export default function HomeScreen({ navigation }) {
         <Logo size={44} />
         <View style={styles.brandText}>
           <Wordmark height={24} color={colors.text} />
-          <Text style={styles.greeting}>Buy back your time.</Text>
+          <Text style={styles.greeting}>{greeting()}. Let's buy back your time.</Text>
         </View>
         <ThemeToggle />
       </View>
 
-      {whyCard}
+      {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} style={styles.why} /> : null}
 
-      <HeroCard>
-        <Text style={styles.heroLabel}>Your Buyback Rate</Text>
-        <Text style={styles.rate} adjustsFontSizeToFit numberOfLines={1}>
-          {formatMoney(onboarding?.buybackRate, currency)}
-          <Text style={styles.per}>/hr</Text>
-        </Text>
-        <Text style={styles.heroBody}>If a draining task can be done for this or less, it shouldn't be yours.</Text>
-      </HeroCard>
+      <BuybackRingCard
+        summary={handoffSummary}
+        effectiveHourlyRate={effectiveHourlyRate}
+        buybackRate={onboarding?.buybackRate}
+        currency={currency}
+        streak={streak}
+        celebrate={celebrate}
+        onPress={() => navigation.navigate('Handoffs')}
+      />
 
-      <BoughtBackCard summary={handoffSummary} onPress={openHandoffs} style={styles.gap} />
+      <LoopTracker status={loop} style={styles.gap} />
 
-      {nextMove || allDone || summary.firstHandoff ? (
-        <Pressable
-          onPress={() => (nextMove ? navigation.navigate('HandoffDetail', { activity: nextMove.activity }) : openHandoffs())}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.gap, pressed && { opacity: 0.9 }]}
-        >
-          <Card>
-            <View style={styles.cardRow}>
-              <View style={styles.iconWrap}>
-                <Ionicons name={allDone ? 'trophy-outline' : 'flag-outline'} size={20} color={colors.accentText} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardLabel}>{allDone ? 'All handed off' : "This week's move"}</Text>
-                <Text style={styles.cardTitle}>
-                  {allDone
-                    ? 'Every draining task is off your plate'
-                    : `${nextMove?.status === 'in_progress' ? 'Finish handing off' : 'Hand off'} ${(nextMove || summary.firstHandoff).activity.toLowerCase()}`}
-                </Text>
-                <Text style={styles.cardBody}>
-                  {allDone
-                    ? 'Fill those hours with work that energizes you.'
-                    : `Buys back ${formatHours((nextMove || summary.firstHandoff).hours)} a day.`}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-            </View>
-          </Card>
-        </Pressable>
-      ) : null}
+      <TodaysMoveCard move={move} onPress={() => move && navigation.navigate(...move.go)} style={styles.gap} />
+
+      <View style={styles.idea}>
+        <Ionicons name="bulb" size={18} color={colors.accent} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.ideaLabel}>Buyback idea</Text>
+          <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
+        </View>
+      </View>
 
       <Pressable
         onPress={() => navigation.navigate('MyDay')}
@@ -130,7 +128,7 @@ export default function HomeScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </View>
         </View>
-        <DripMatrix summary={summary} compact />
+        <DripMatrix summary={drip} compact />
       </Pressable>
     </Screen>
   );
@@ -142,24 +140,18 @@ const makeStyles = (colors) => ({
   backdrop: { position: 'absolute', top: 0, left: -spacing.lg, right: -spacing.lg, overflow: 'hidden' },
   backdropImage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   brandText: { flex: 1, gap: 4 },
-  greeting: { fontSize: 15, fontWeight: '600', color: colors.muted },
-  heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  rate: { color: colors.heroText, fontSize: 44, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
-  per: { fontSize: 20, fontWeight: '600', color: colors.heroMuted },
-  heroBody: { color: colors.heroMuted, fontSize: 14, lineHeight: 20, marginTop: spacing.xs },
+  greeting: { fontSize: 14, fontWeight: '600', color: colors.muted },
   gap: { marginTop: spacing.md },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentSoft,
+  idea: {
+    flexDirection: 'row',
+    gap: spacing.sm + 4,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
   },
-  cardLabel: { fontSize: 12, fontWeight: '700', color: colors.accentText, textTransform: 'uppercase', letterSpacing: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginTop: 2 },
-  cardBody: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 2 },
+  ideaLabel: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase', letterSpacing: 1 },
+  ideaText: { fontSize: 15, lineHeight: 22, color: colors.text, marginTop: 4 },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
