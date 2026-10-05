@@ -7,6 +7,7 @@ const WORKDAYS_PER_WEEK = 5;
 const QUADRANT_ORDER = { delegation: 0, replacement: 1 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
+const MAX_PLAYBOOK_STEPS = 15;
 
 const emptyHandoff = (activity) => ({
   activity,
@@ -14,6 +15,9 @@ const emptyHandoff = (activity) => ({
   plan: '',
   method: null,
   who: '',
+  doneLooksLike: '',
+  playbook: [],
+  startDate: null,
   notes: '',
   doneAt: null,
 });
@@ -78,6 +82,25 @@ function sanitize(body = {}) {
     const who = String(body.who ?? '').trim();
     if (who.length > 60) errors.push('who must be 60 characters or fewer');
     else out.who = who;
+  }
+  if (body.doneLooksLike !== undefined) {
+    const d = String(body.doneLooksLike ?? '').trim();
+    if (d.length > 200) errors.push('doneLooksLike must be 200 characters or fewer');
+    else out.doneLooksLike = d;
+  }
+  if (body.playbook !== undefined) {
+    const steps = Array.isArray(body.playbook) ? body.playbook.map((s) => String(s ?? '').trim()).filter(Boolean) : null;
+    if (!steps || steps.length > MAX_PLAYBOOK_STEPS || steps.some((s) => s.length > 120)) {
+      errors.push(`playbook must be a list of up to ${MAX_PLAYBOOK_STEPS} steps of 120 characters or fewer`);
+    } else out.playbook = steps;
+  }
+  if (body.startDate !== undefined) {
+    if (body.startDate === null || body.startDate === '') out.startDate = undefined;
+    else {
+      const d = new Date(body.startDate);
+      if (Number.isNaN(d.getTime())) errors.push('startDate must be a date');
+      else out.startDate = d;
+    }
   }
   if (body.notes !== undefined) {
     const notes = String(body.notes ?? '').trim();

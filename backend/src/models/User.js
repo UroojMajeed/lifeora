@@ -52,6 +52,10 @@ const handoffSchema = new mongoose.Schema(
     plan: { type: String, trim: true, maxlength: 140, default: '' },
     method: { type: String, enum: [...HANDOFF_METHODS, null], default: null },
     who: { type: String, trim: true, maxlength: 60, default: '' },
+    // The handoff checklist: what a good result looks like, the playbook steps, and when it starts.
+    doneLooksLike: { type: String, trim: true, maxlength: 200, default: '' },
+    playbook: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
+    startDate: Date,
     notes: { type: String, trim: true, maxlength: 1000, default: '' },
     doneAt: Date,
   },

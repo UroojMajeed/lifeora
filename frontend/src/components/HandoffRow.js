@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DRIP, HANDOFF_METHODS, statusInfo } from '../constants/content';
 import { formatHours } from '../utils/format';
+import { handoffSteps } from '../constants/handoffSteps';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -13,6 +14,8 @@ export default function HandoffRow({ item, onPress }) {
   const method = HANDOFF_METHODS.find((m) => m.key === item.method);
   const quadrant = DRIP[item.quadrant];
   const done = item.status === 'done';
+  const steps = handoffSteps(item);
+  const stepsDone = steps.filter((s) => s.done).length;
 
   return (
     <Pressable
@@ -33,6 +36,14 @@ export default function HandoffRow({ item, onPress }) {
           <Text style={[styles.tag, { color: colors[quadrant.color] }]}>{quadrant.name}</Text>
           <Text style={styles.dot}>·</Text>
           <Text style={styles.metaText}>{formatHours(item.hours)} a day</Text>
+          {!done ? (
+            <>
+              <Text style={styles.dot}>·</Text>
+              <Text style={styles.metaText}>
+                {stepsDone}/{steps.length} steps
+              </Text>
+            </>
+          ) : null}
         </View>
         {item.plan ? (
           <View style={styles.planRow}>
