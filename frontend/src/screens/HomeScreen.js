@@ -3,6 +3,7 @@ import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
@@ -129,23 +130,34 @@ export default function HomeScreen({ navigation }) {
           accessibilityLabel={`Your DRIP Matrix${zone ? `. You live in ${zone.name}` : ''}. Open My day`}
           style={({ pressed }) => pressed && styles.pressed}
         >
-          <Card>
-            <View style={styles.cardHead}>
-              <Text style={type.label}>Your DRIP Matrix</Text>
-              <View style={styles.link}>
-                <Text style={styles.linkText}>My day</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          <Card style={styles.dripCard}>
+            {/* Your zone's pastel at the top, fading to the card so the four squares stay easy to tell apart. */}
+            <LinearGradient
+              colors={[zone ? colors[zone.soft] : colors.surfaceAlt, colors.surface]}
+              locations={[0, 0.55]}
+              style={styles.dripTint}
+            >
+              <View style={styles.cardHead}>
+                <Text style={type.label}>Your DRIP Matrix</Text>
+                <View style={styles.link}>
+                  <Text style={styles.linkText}>My day</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                </View>
               </View>
-            </View>
-            {zone ? (
-              <View style={styles.zone}>
-                <Text style={styles.zoneTitle}>
-                  You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>
-                </Text>
-                <Text style={styles.zoneAdvice}>{zone.advice}</Text>
-              </View>
-            ) : null}
-            <DripMatrix summary={drip} compact />
+              {zone ? (
+                <View style={styles.zone}>
+                  <View style={[styles.zonePill, { backgroundColor: colors.surface }]}>
+                    <View style={[styles.zoneDot, { backgroundColor: colors[zone.color] }]} />
+                    <Text style={[styles.zonePillText, { color: colors[zone.color] }]}>{zone.axes}</Text>
+                  </View>
+                  <Text style={styles.zoneTitle}>
+                    You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>
+                  </Text>
+                  <Text style={styles.zoneAdvice}>{zone.advice}</Text>
+                </View>
+              ) : null}
+              <DripMatrix summary={drip} compact />
+            </LinearGradient>
           </Card>
         </Pressable>
       </Appear>
@@ -235,7 +247,21 @@ const makeStyles = (colors) => ({
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  dripCard: { padding: 0 },
+  dripTint: { borderRadius: radius.lg, padding: spacing.md + 4 },
   zone: { marginBottom: spacing.md },
+  zonePill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  zoneDot: { width: 8, height: 8, borderRadius: 4 },
+  zonePillText: { fontSize: 12, fontWeight: '700' },
   zoneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   zoneAdvice: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
   section: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginTop: spacing.xl, marginBottom: spacing.md },
