@@ -10,8 +10,9 @@ import { ROLES, stepNumber } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../../theme';
 
-export default function ProfileScreen({ navigation }) {
-  const { onboarding, saveStep } = useOnboarding();
+export default function ProfileScreen({ navigation, route }) {
+  const editing = Boolean(route.params?.editing);
+  const { onboarding, saveStep, saveEdit } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [role, setRole] = useState(onboarding?.role || null);
@@ -26,10 +27,17 @@ export default function ProfileScreen({ navigation }) {
     setError('');
     setLoading(true);
     try {
+      const pause = new Promise((r) => setTimeout(r, 250));
+      if (editing) {
+        // After onboarding, changing the role only relabels you: your day stays as it is.
+        await Promise.all([saveEdit({ role: key }), pause]);
+        navigation.goBack();
+        return;
+      }
       const data = { role: key };
       // A different role means different suggestions, so start their day fresh.
       if (onboarding?.role && key !== onboarding.role) data.schedule = [];
-      await Promise.all([saveStep(data, 'buyback_rate'), new Promise((r) => setTimeout(r, 250))]);
+      await Promise.all([saveStep(data, 'buyback_rate'), pause]);
       navigation.navigate('BuybackRate');
     } catch (err) {
       setError(err.message);
@@ -42,9 +50,14 @@ export default function ProfileScreen({ navigation }) {
     <Screen>
       <StepHeader
         step={stepNumber('profile')}
-        eyebrow="Let's begin"
+        editing={editing}
+        eyebrow={editing ? 'Your profile' : "Let's begin"}
         title="What best describes you?"
-        subtitle="Tap one. We'll suggest the activities people like you usually do."
+        subtitle={
+          editing
+            ? 'Tap one to change it. Your day stays the same.'
+            : "Tap one. We'll suggest the activities people like you usually do."
+        }
       />
 
       <View style={styles.grid}>

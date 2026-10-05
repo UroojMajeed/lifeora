@@ -211,7 +211,7 @@ export const STEPS = [
 export const TOTAL_STEPS = STEPS.length;
 
 export function screenForStep(stepKey) {
-  if (stepKey === 'done') return 'Home';
+  if (stepKey === 'done') return 'Main';
   return STEPS.find((s) => s.key === stepKey)?.screen || 'Profile';
 }
 

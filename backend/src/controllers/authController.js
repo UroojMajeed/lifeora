@@ -58,4 +58,15 @@ async function me(req, res, next) {
   }
 }
 
-module.exports = { createGuest, register, login, me };
+// Permanently deletes the signed-in account and everything in it ("Start over" / delete account).
+async function deleteMe(req, res, next) {
+  try {
+    const { deletedCount } = await User.deleteOne({ _id: req.userId });
+    if (!deletedCount) throw new ApiError(404, 'User not found');
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createGuest, register, login, me, deleteMe };

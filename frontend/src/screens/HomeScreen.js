@@ -8,7 +8,6 @@ import Screen from '../components/Screen';
 import Logo from '../components/Logo';
 import Wordmark from '../components/Wordmark';
 import DripMatrix from '../components/DripMatrix';
-import Segmented from '../components/Segmented';
 import ThemeToggle from '../components/ThemeToggle';
 import MotivationCard from '../components/MotivationCard';
 import BoughtBackCard from '../components/BoughtBackCard';
@@ -21,17 +20,12 @@ import { formatHours, formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing, withAlpha } from '../theme';
 
-const THEME_OPTIONS = [
-  { key: 'system', label: 'Auto' },
-  { key: 'light', label: 'Light' },
-  { key: 'dark', label: 'Dark' },
-];
-
-// Home dashboard. More tools (Time & Energy Audit, Perfect Week) come next.
+// Home tab: your rate, progress, this week's move and your DRIP Matrix at a glance.
+// Settings live in the Me tab; the full matrix and day editing live in My day.
 export default function HomeScreen({ navigation }) {
   const { onboarding } = useOnboarding();
   const { handoffs, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
-  const { colors, type, mode, setMode } = useTheme();
+  const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
   const currency = onboarding?.currency || 'USD';
   const summary = summarizeSchedule(onboarding?.schedule, onboarding?.buybackRate);
@@ -58,7 +52,7 @@ export default function HomeScreen({ navigation }) {
   const whyCard = motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} style={styles.why} /> : null;
 
   return (
-    <Screen edges={['bottom']}>
+    <Screen edges={[]}>
       {hasPhoto ? (
         // The user's "why", softly blurred behind the top of Home and fading into the page.
         <View style={[styles.backdrop, { height: insets.top + 320 }]} pointerEvents="none">
@@ -123,24 +117,21 @@ export default function HomeScreen({ navigation }) {
         </Pressable>
       ) : null}
 
-      <Text style={[type.label, styles.section]}>Your DRIP Matrix</Text>
-      <DripMatrix summary={summary} compact />
-
-      <Card style={styles.gap}>
-        <View style={styles.cardRow}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primarySoft }]}>
-            <Ionicons name="sparkles-outline" size={20} color={colors.primaryDark} />
+      <Pressable
+        onPress={() => navigation.navigate('MyDay')}
+        accessibilityRole="button"
+        accessibilityLabel="Your DRIP Matrix. Open My day"
+        style={({ pressed }) => pressed && { opacity: 0.9 }}
+      >
+        <View style={styles.sectionRow}>
+          <Text style={type.label}>Your DRIP Matrix</Text>
+          <View style={styles.link}>
+            <Text style={styles.linkText}>My day</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </View>
-          <Text style={[styles.cardBody, { flex: 1, marginTop: 0 }]}>
-            Coming next: daily Time & Energy check-ins, your Replacement Ladder, and your Perfect Week.
-          </Text>
         </View>
-      </Card>
-
-      <Text style={[type.label, styles.section]}>Appearance</Text>
-      <View style={styles.themeRow}>
-        <Segmented options={THEME_OPTIONS} value={mode} onChange={setMode} accessibilityLabel="App theme" />
-      </View>
+        <DripMatrix summary={summary} compact />
+      </Pressable>
     </Screen>
   );
 }
@@ -169,6 +160,13 @@ const makeStyles = (colors) => ({
   cardLabel: { fontSize: 12, fontWeight: '700', color: colors.accentText, textTransform: 'uppercase', letterSpacing: 1 },
   cardTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginTop: 2 },
   cardBody: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 2 },
-  section: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  themeRow: { flexDirection: 'row' },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
 });

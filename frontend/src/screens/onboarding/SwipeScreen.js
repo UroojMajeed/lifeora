@@ -11,13 +11,17 @@ import { stepNumber } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
-export default function SwipeScreen({ navigation }) {
+export default function SwipeScreen({ navigation, route }) {
+  // editing: after changing your day, only the new (unsorted) activities get a card.
+  const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
   const [items, setItems] = useState(() =>
-    (onboarding?.schedule || []).map(({ activity, hours, value, energy }) => ({ activity, hours, value, energy: energy ?? null }))
+    (onboarding?.schedule || [])
+      .map(({ activity, hours, value, energy }) => ({ activity, hours, value, energy: energy ?? null }))
+      .filter((it) => !editing || !it.energy)
   );
   // Resume at the first card they haven't swiped yet.
   const [index, setIndex] = useState(() => {
@@ -32,6 +36,16 @@ export default function SwipeScreen({ navigation }) {
       setError('');
       setSaving(true);
       try {
+        if (editing) {
+          // Put the newly sorted cards back into the full day, in its original order.
+          const sorted = new Map(list.map((it) => [it.activity, it]));
+          const day = (onboarding?.schedule || []).map(({ activity, hours, value, energy }) =>
+            sorted.get(activity) || { activity, hours, value, energy: energy ?? null }
+          );
+          await saveStep({ schedule: day }, 'done');
+          navigation.popTo('Main');
+          return;
+        }
         await saveStep({ schedule: list }, 'drip');
         navigation.navigate('Drip');
       } catch (err) {
@@ -40,7 +54,7 @@ export default function SwipeScreen({ navigation }) {
         setSaving(false);
       }
     },
-    [saveStep, navigation]
+    [saveStep, navigation, editing, onboarding]
   );
 
   const onSwipe = useCallback(
@@ -68,15 +82,25 @@ export default function SwipeScreen({ navigation }) {
       scroll={false}
       footer={
         done ? (
-          <Button title="See my DRIP Matrix" icon="arrow-forward" onPress={() => save(items)} loading={saving} />
+          <Button
+            title={editing ? 'Save my day' : 'See my DRIP Matrix'}
+            icon={editing ? 'checkmark' : 'arrow-forward'}
+            onPress={() => save(items)}
+            loading={saving}
+          />
         ) : null
       }
     >
       <StepHeader
         step={stepNumber('swipe')}
+        editing={editing}
         eyebrow={done ? 'All sorted' : `Card ${index + 1} of ${items.length}`}
         title={done ? 'Nice, that was quick.' : 'Swipe your day'}
-        subtitle={done ? 'Your DRIP Matrix is ready.' : 'Right if it energizes you, left if it drains you.'}
+        subtitle={
+          done
+            ? `Your DRIP Matrix is ${editing ? 'updated' : 'ready'}.`
+            : 'Right if it energizes you, left if it drains you.'
+        }
       />
 
       {done ? (

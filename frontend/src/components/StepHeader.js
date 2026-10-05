@@ -6,15 +6,18 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 import { STEPS, TOTAL_STEPS } from '../constants/content';
 
-/** Back button, segmented progress, theme toggle, and the step's heading. */
-export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true, onBack }) {
+/**
+ * Back button, segmented progress, theme toggle, and the step's heading.
+ * With `editing` (changing an answer after onboarding) there is no progress bar and back just closes.
+ */
+export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true, onBack, editing = false }) {
   const navigation = useNavigation();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
   // After resuming straight onto a later step there is nothing behind it, so go to the previous step instead.
   const previous = step > 1 ? STEPS[step - 2]?.screen : null;
   const goBack = onBack || (() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate(previous)));
-  const canGoBack = Boolean(onBack) || (showBack && (navigation.canGoBack() || Boolean(previous)));
+  const canGoBack = Boolean(onBack) || editing || (showBack && (navigation.canGoBack() || Boolean(previous)));
 
   return (
     <View style={styles.wrap}>
@@ -33,16 +36,20 @@ export default function StepHeader({ step, eyebrow, title, subtitle, showBack = 
           <View style={styles.spacer} />
         )}
 
-        <View
-          style={styles.segments}
-          accessibilityRole="progressbar"
-          accessibilityLabel={`Step ${step} of ${TOTAL_STEPS}`}
-          accessibilityValue={{ now: step, min: 0, max: TOTAL_STEPS }}
-        >
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <View key={i} style={[styles.segment, i < step && styles.segmentOn]} />
-          ))}
-        </View>
+        {editing ? (
+          <View style={styles.segments} />
+        ) : (
+          <View
+            style={styles.segments}
+            accessibilityRole="progressbar"
+            accessibilityLabel={`Step ${step} of ${TOTAL_STEPS}`}
+            accessibilityValue={{ now: step, min: 0, max: TOTAL_STEPS }}
+          >
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+              <View key={i} style={[styles.segment, i < step && styles.segmentOn]} />
+            ))}
+          </View>
+        )}
 
         <ThemeToggle />
       </View>

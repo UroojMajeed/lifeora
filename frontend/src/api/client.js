@@ -39,6 +39,7 @@ async function request(path, { method = 'GET', body } = {}) {
 export const api = {
   createGuest: () => request('/auth/guest', { method: 'POST' }),
   me: () => request('/auth/me'),
+  deleteMe: () => request('/auth/me', { method: 'DELETE' }),
   updateOnboarding: (payload) => request('/onboarding', { method: 'PUT', body: payload }),
   completeOnboarding: () => request('/onboarding/complete', { method: 'POST' }),
   getHandoffs: () => request('/handoffs'),

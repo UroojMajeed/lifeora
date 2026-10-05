@@ -19,6 +19,7 @@ export default function MyDayScreen({ navigation }) {
   const summary = summarizeSchedule(onboarding?.schedule, rate);
   const home = summary.dominant ? DRIP[summary.dominant] : null;
   const count = (onboarding?.schedule || []).length;
+  const unsorted = (onboarding?.schedule || []).filter((i) => !i.energy).length;
 
   return (
     <Screen edges={['top']}>
@@ -27,6 +28,15 @@ export default function MyDayScreen({ navigation }) {
         title={home ? `You live in ${home.name}.` : 'Your DRIP Matrix'}
         subtitle={`${formatHours(summary.totalHours)} across ${count} ${count === 1 ? 'activity' : 'activities'}. ${home ? home.advice : ''}`}
       />
+
+      {unsorted ? (
+        <Button
+          title={`Swipe ${unsorted} unsorted ${unsorted === 1 ? 'activity' : 'activities'}`}
+          icon="swap-horizontal"
+          onPress={() => navigation.navigate('Swipe', { editing: true })}
+          style={styles.unsorted}
+        />
+      ) : null}
 
       <DripMatrix summary={summary} />
 
@@ -55,6 +65,7 @@ export default function MyDayScreen({ navigation }) {
 
 const makeStyles = (colors) => ({
   gap: { marginTop: spacing.md },
+  unsorted: { marginBottom: spacing.md },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   heroBig: { color: colors.heroText, fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginTop: 4 },
   heroBody: { color: colors.heroMuted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },

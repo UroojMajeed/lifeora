@@ -5,16 +5,18 @@ import ThemeToggle from './ThemeToggle';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
-/** Header for in-app screens (after onboarding): back, theme toggle, then an eyebrow + title. */
+/** Header for in-app screens (after onboarding): back (not on tabs), theme toggle, then an eyebrow + title. */
 export default function PageHeader({ eyebrow, title, subtitle }) {
   const navigation = useNavigation();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
+  // Tab pages are top-level: no back button there (the tab bar is the way around).
+  const showBack = navigation.getState()?.type !== 'tab' && navigation.canGoBack();
 
   return (
     <View style={styles.wrap}>
       <View style={styles.topRow}>
-        {navigation.canGoBack() ? (
+        {showBack ? (
           <Pressable
             onPress={() => navigation.goBack()}
             hitSlop={12}

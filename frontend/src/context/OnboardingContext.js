@@ -53,9 +53,24 @@ export function OnboardingProvider({ children }) {
     return res;
   }, []);
 
+  // Changes made after onboarding (from My day or Me) keep the user in the app.
+  const saveEdit = useCallback((data) => saveStep(data, 'done'), [saveStep]);
+
+  // Deletes this account and everything in it, photo included, so the app starts over.
+  const startOver = useCallback(async () => {
+    try {
+      await api.deleteMe();
+    } catch (err) {
+      if (err.status !== 401 && err.status !== 404) throw err; // already gone is fine
+    }
+    await tokenStore.clear();
+    await removeMotivation(await loadMotivation());
+    applyUser(null);
+  }, [applyUser]);
+
   const value = useMemo(
-    () => ({ user, onboarding, bootstrap, startAsGuest, saveStep, complete }),
-    [user, onboarding, bootstrap, startAsGuest, saveStep, complete]
+    () => ({ user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver }),
+    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

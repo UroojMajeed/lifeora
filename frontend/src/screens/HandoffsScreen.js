@@ -33,7 +33,7 @@ export default function HandoffsScreen({ navigation }) {
   const open = (item) => navigation.navigate('HandoffDetail', { activity: item.activity });
 
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <PageHeader
         eyebrow="Transfer"
         title="Your handoffs"

@@ -14,8 +14,9 @@ import { formatMoney, sanitizeAmount } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
-export default function BuybackRateScreen({ navigation }) {
-  const { onboarding, saveStep } = useOnboarding();
+export default function BuybackRateScreen({ navigation, route }) {
+  const editing = Boolean(route.params?.editing);
+  const { onboarding, saveStep, saveEdit } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   // A brand-new account has the server default (USD); prefer the phone's region then.
@@ -33,6 +34,11 @@ export default function BuybackRateScreen({ navigation }) {
     setError('');
     setLoading(true);
     try {
+      if (editing) {
+        await saveEdit({ annualIncome: amount, currency });
+        navigation.goBack();
+        return;
+      }
       await saveStep({ annualIncome: amount, currency }, 'schedule');
       navigation.navigate('Schedule');
     } catch (err) {
@@ -43,9 +49,10 @@ export default function BuybackRateScreen({ navigation }) {
   };
 
   return (
-    <Screen footer={<Button title="Continue" icon="arrow-forward" onPress={next} loading={loading} disabled={amount <= 0} />}>
+    <Screen footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
       <StepHeader
         step={stepNumber('buyback_rate')}
+        editing={editing}
         eyebrow="Your Buyback Rate"
         title="What does your business pay you a year?"
         subtitle="Salary, profit and perks together. A rough number is fine."

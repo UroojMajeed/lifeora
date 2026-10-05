@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Screen from '../components/Screen';
@@ -17,7 +18,7 @@ const THEME_OPTIONS = [
   { key: 'dark', label: 'Dark' },
 ];
 
-function Row({ icon, title, value, onPress, disabled, badge }) {
+function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   return (
@@ -28,23 +29,47 @@ function Row({ icon, title, value, onPress, disabled, badge }) {
       accessibilityLabel={`${title}${value ? `: ${value}` : ''}`}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
     >
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color={colors.primaryDark} />
+      <View style={[styles.rowIcon, danger && styles.rowIconDanger]}>
+        <Ionicons name={icon} size={18} color={danger ? colors.error : colors.primaryDark} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.rowTitle, disabled && { color: colors.muted }]}>{title}</Text>
+        <Text style={[styles.rowTitle, disabled && { color: colors.muted }, danger && { color: colors.error }]}>{title}</Text>
         {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       </View>
       {badge ? <Text style={styles.badge}>{badge}</Text> : null}
-      {onPress && !disabled ? <Ionicons name="chevron-forward" size={18} color={colors.muted} /> : null}
+      {busy ? <ActivityIndicator size="small" color={colors.muted} /> : null}
+      {onPress && !disabled && !busy ? <Ionicons name="chevron-forward" size={18} color={colors.muted} /> : null}
     </Pressable>
   );
 }
 
 /** Settings and profile: Buyback Rate, business type, appearance, account (later), about. */
 export default function MeScreen({ navigation }) {
-  const { onboarding } = useOnboarding();
+  const { onboarding, startOver } = useOnboarding();
   const { type, mode, setMode } = useTheme();
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteEverything = async () => {
+    setDeleting(true);
+    try {
+      await startOver();
+      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+    } catch (err) {
+      setDeleting(false);
+      Alert.alert("Couldn't delete your data", err.message);
+    }
+  };
+
+  const confirmStartOver = () =>
+    Alert.alert(
+      'Delete everything and start over?',
+      'Your Buyback Rate, your day, your handoffs and your photo will be deleted for good.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: deleteEverything },
+      ],
+      { cancelable: true }
+    );
   const styles = useStyles(makeStyles);
   const currency = onboarding?.currency || 'USD';
   const role = ROLES.find((r) => r.key === onboarding?.role);
@@ -85,6 +110,16 @@ export default function MeScreen({ navigation }) {
           disabled
           badge="Soon"
         />
+        <View style={styles.divider} />
+        <Row
+          icon="trash-outline"
+          title="Delete my data and start over"
+          value="Removes everything and takes you back to the start."
+          onPress={confirmStartOver}
+          busy={deleting}
+          disabled={deleting}
+          danger
+        />
       </Card>
 
       <Text style={[type.label, styles.section]}>About</Text>
@@ -109,6 +144,7 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primarySoft,
   },
+  rowIconDanger: { backgroundColor: colors.errorSoft },
   rowTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   rowValue: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
   divider: { height: 1, backgroundColor: colors.border, marginLeft: 52 },

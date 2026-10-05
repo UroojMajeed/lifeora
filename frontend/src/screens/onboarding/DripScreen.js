@@ -38,7 +38,7 @@ export default function DripScreen({ navigation }) {
     setLoading(true);
     try {
       await complete();
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
     } catch (err) {
       setError(err.message);
     } finally {

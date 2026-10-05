@@ -16,7 +16,9 @@ import { radius, spacing } from '../../theme';
 
 const MAX_ACTIVITIES = 30;
 
-export default function ScheduleScreen({ navigation }) {
+export default function ScheduleScreen({ navigation, route }) {
+  // editing: changing your day after onboarding (from My day). Saves never move you back into onboarding.
+  const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
@@ -42,10 +44,10 @@ export default function ScheduleScreen({ navigation }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saveStep({ schedule: items }, 'schedule').catch(() => {});
+      saveStep({ schedule: items }, editing ? 'done' : 'schedule').catch(() => {});
     }, 600);
     return () => clearTimeout(autosave.current);
-  }, [items, saveStep]);
+  }, [items, saveStep, editing]);
 
   // First visit: open the picker as soon as the screen has finished sliding in, so the two
   // animations don't overlap. (If we resumed straight onto this screen there is no transition.)
@@ -99,6 +101,13 @@ export default function ScheduleScreen({ navigation }) {
     setError('');
     setLoading(true);
     try {
+      if (editing) {
+        await saveStep({ schedule: items }, 'done');
+        // Only the new activities need a swipe; otherwise the change is already done.
+        if (unsorted) navigation.navigate('Swipe', { editing: true });
+        else navigation.goBack();
+        return;
+      }
       await saveStep({ schedule: items }, 'swipe');
       navigation.navigate('Swipe');
     } catch (err) {
@@ -110,14 +119,20 @@ export default function ScheduleScreen({ navigation }) {
 
   const over = totalHours > 24;
   const ready = items.length > 0 && !over;
+  const unsorted = items.filter((i) => !i.energy).length;
+  const nextTitle = editing
+    ? unsorted
+      ? `Next: swipe ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`
+      : 'Save my day'
+    : 'Next: swipe your day';
 
   return (
     <Screen
       scrollEnabled={!dragging}
       footer={
         <Button
-          title={over ? 'That is more than 24 hours' : items.length ? 'Next: swipe your day' : 'Add your first activity'}
-          icon={ready ? 'arrow-forward' : undefined}
+          title={over ? 'That is more than 24 hours' : items.length ? nextTitle : 'Add your first activity'}
+          icon={ready ? (editing && !unsorted ? 'checkmark' : 'arrow-forward') : undefined}
           onPress={items.length ? next : openAdd}
           loading={loading}
           disabled={over}
@@ -126,9 +141,14 @@ export default function ScheduleScreen({ navigation }) {
     >
       <StepHeader
         step={stepNumber('schedule')}
-        eyebrow="Your day"
+        editing={editing}
+        eyebrow={editing ? 'Edit your day' : 'Your day'}
         title="What fills a normal day?"
-        subtitle="Add what you do and roughly how long each takes. Order them however you like."
+        subtitle={
+          editing
+            ? 'Add, change or remove activities. Changes save as you go.'
+            : 'Add what you do and roughly how long each takes. Order them however you like.'
+        }
       />
 
       {items.length ? (
