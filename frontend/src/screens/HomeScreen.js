@@ -20,6 +20,7 @@ import { loadMotivation } from '../storage/motivation';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
 import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
 import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
+import { energyShare } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing, withAlpha } from '../theme';
 
@@ -97,6 +98,7 @@ export default function HomeScreen({ navigation }) {
 
       <BuybackRingCard
         summary={handoffSummary}
+        share={handoffSummary ? energyShare(schedule, handoffSummary) : null}
         effectiveHourlyRate={effectiveHourlyRate}
         buybackRate={onboarding?.buybackRate}
         currency={currency}

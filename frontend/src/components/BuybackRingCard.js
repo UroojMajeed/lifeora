@@ -23,6 +23,10 @@ const RING = 184;
 const STROKE = 14;
 const R = (RING - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * R;
+// Inner ring: how much of the bought-back time has a new job (Fill).
+const INNER_STROKE = 8;
+const R_IN = R - STROKE / 2 - 6 - INNER_STROKE / 2;
+const C_IN = 2 * Math.PI * R_IN;
 
 const BURST_COLORS = [brand.apricot, brand.mint, brand.white];
 const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
@@ -49,12 +53,14 @@ function Particle({ t, angle, color, size }) {
 }
 
 /**
- * Home's headline (one number, like a readiness score): hours bought back a week, as a ring that
- * fills toward all the hours that drain you. `celebrate` bumps when the number goes up.
+ * Home's headline (one number, like a readiness score): hours bought back a week, as an apricot ring
+ * that fills toward all the hours that drain you. The inner mint ring shows how much of that time has
+ * a new job (Fill). `share` is energyShare(); `celebrate` bumps when the number goes up.
  */
-export default function BuybackRingCard({ summary, effectiveHourlyRate = 0, buybackRate = 0, currency, streak, celebrate, onPress }) {
+export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 0, buybackRate = 0, currency, streak, celebrate, onPress }) {
   const styles = useStyles(makeStyles);
   const progress = useSharedValue(0);
+  const filledProgress = useSharedValue(0);
   const pulse = useSharedValue(1);
   const burst = useSharedValue(0);
 
@@ -62,10 +68,15 @@ export default function BuybackRingCard({ summary, effectiveHourlyRate = 0, buyb
   const bought = summary?.boughtBackHours || 0;
   const target = summary ? (draining ? bought / draining : 1) : 0;
   const nothingDrains = Boolean(summary) && !summary.total;
+  const filledTarget = bought ? Math.min(1, (summary?.filledHours || 0) / bought) : 0;
 
   useEffect(() => {
     progress.value = withTiming(target, { duration: 1100, easing: Easing.out(Easing.cubic) });
   }, [target, progress]);
+
+  useEffect(() => {
+    filledProgress.value = withTiming(filledTarget, { duration: 1100, easing: Easing.out(Easing.cubic) });
+  }, [filledTarget, filledProgress]);
 
   useEffect(() => {
     if (!celebrate) return;
@@ -77,6 +88,7 @@ export default function BuybackRingCard({ summary, effectiveHourlyRate = 0, buyb
   }, [celebrate, pulse, burst]);
 
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRCUMFERENCE * (1 - progress.value) }));
+  const innerProps = useAnimatedProps(() => ({ strokeDashoffset: C_IN * (1 - filledProgress.value) }));
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   const perWeek = bought * WORKDAYS_PER_WEEK;
@@ -129,6 +141,24 @@ export default function BuybackRingCard({ summary, effectiveHourlyRate = 0, buyb
                 rotation={-90}
                 origin={`${RING / 2}, ${RING / 2}`}
               />
+              {bought > 0 ? (
+                <>
+                  <Circle cx={RING / 2} cy={RING / 2} r={R_IN} stroke="rgba(255,255,255,0.08)" strokeWidth={INNER_STROKE} fill="none" />
+                  <AnimatedCircle
+                    cx={RING / 2}
+                    cy={RING / 2}
+                    r={R_IN}
+                    stroke={brand.mint}
+                    strokeWidth={INNER_STROKE}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeDasharray={`${C_IN} ${C_IN}`}
+                    animatedProps={innerProps}
+                    rotation={-90}
+                    origin={`${RING / 2}, ${RING / 2}`}
+                  />
+                </>
+              ) : null}
             </Svg>
             {nothingDrains ? (
               <>
@@ -147,6 +177,19 @@ export default function BuybackRingCard({ summary, effectiveHourlyRate = 0, buyb
         </View>
 
         <Text style={styles.value}>{valueLine}</Text>
+        {share && share.now !== share.start ? (
+          <Text style={styles.share}>
+            {share.now}% of your day now energizes you (was {share.start}%)
+          </Text>
+        ) : null}
+        {bought > 0 ? (
+          <View style={styles.legend}>
+            <View style={[styles.legendDot, { backgroundColor: brand.apricot }]} />
+            <Text style={styles.legendText}>Bought back</Text>
+            <View style={[styles.legendDot, { backgroundColor: brand.mint, marginLeft: spacing.md }]} />
+            <Text style={styles.legendText}>Filled {formatHours(summary?.filledHours || 0)} of {formatHours(bought)} a day</Text>
+          </View>
+        ) : null}
 
         <View style={styles.stats}>
           <View style={styles.stat}>
@@ -191,6 +234,10 @@ const makeStyles = (colors) => ({
   ringWrap: { alignItems: 'center', justifyContent: 'center', marginVertical: spacing.md, height: RING },
   ring: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center', paddingHorizontal: STROKE + 12 },
   ringBig: { color: colors.heroText, fontSize: 44, fontWeight: '800', letterSpacing: -1 },
+  share: { color: colors.heroMuted, fontSize: 13, fontWeight: '600', textAlign: 'center', marginTop: spacing.xs },
+  legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.sm },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { color: colors.heroFaint, fontSize: 12, fontWeight: '600' },
   ringSub: { color: colors.heroMuted, fontSize: 13, fontWeight: '600', marginTop: 2 },
   value: { color: colors.heroText, fontSize: 15, lineHeight: 22, fontWeight: '600', textAlign: 'center' },
   stats: {

@@ -48,6 +48,7 @@ function summarizeSchedule(schedule = [], buybackRate = 0) {
 // Handing off a draining task (the "Transfer" in the Buyback Loop: Audit → Transfer → Fill).
 const HANDOFF_STATUSES = ['mine', 'in_progress', 'done'];
 const HANDOFF_METHODS = ['hire', 'automate', 'team', 'drop'];
+const FILL_TIMES = ['morning', 'afternoon', 'evening'];
 
 const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip', 'done'];
 
@@ -55,6 +56,7 @@ const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip'
 const ROLES = ['agency', 'coach', 'ecommerce', 'saas', 'freelancer', 'other'];
 
 module.exports = {
+  FILL_TIMES,
   WORK_HOURS_PER_YEAR,
   BUYBACK_DIVISOR,
   calculateBuybackRate,

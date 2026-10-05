@@ -1,6 +1,7 @@
 // Home's "what now?" logic, built on the book's Buyback Loop: Audit → Transfer → Fill.
 import { formatHours } from '../utils/format';
 import { checkInDate, formatDay, nextStep, waitingForCheckIn } from './handoffSteps';
+import { unfilledHours } from './fill';
 
 export const WORKDAYS_PER_WEEK = 5;
 export const WORKDAYS_PER_YEAR = 250; // 2,000 working hours ÷ 8 a day
@@ -15,10 +16,11 @@ export const LOOP_STEPS = [
 export function loopStatus({ schedule = [], summary }) {
   const audited = schedule.length > 0 && schedule.every((a) => a.energy);
   const transferred = audited && Boolean(summary) && summary.done === summary.total;
+  const filled = transferred && summary.boughtBackHours > 0 && unfilledHours(summary) < 0.25;
   return {
     audit: audited ? 'done' : 'current',
     transfer: transferred ? 'done' : audited ? 'current' : 'next',
-    fill: transferred ? 'current' : 'next',
+    fill: filled ? 'done' : transferred ? 'current' : 'next',
   };
 }
 
@@ -102,21 +104,32 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
     return { stage: 'transfer', go, ...MOVES[nextStep(next)?.key || 'checkin'] };
   }
 
-  // Everything draining is handed off (or nothing drains): Fill the freed hours with Production work.
-  const production = schedule
-    .filter((a) => a.quadrant === 'production')
-    .sort((a, b) => b.hours - a.hours)[0];
-  const freed = summary?.boughtBackPerWeek || 0;
+  // Everything draining is handed off: give the freed hours a new, energizing job.
+  const left = unfilledHours(summary);
+  if (left >= 0.25) {
+    const filledSome = (summary?.filledHours || 0) > 0;
+    return {
+      stage: 'fill',
+      icon: 'sunny-outline',
+      title: `Give ${formatHours(left)} a day a new job`,
+      body: filledSome
+        ? 'Some of your freed time still has no job. Grow the business or invest in yourself.'
+        : 'You bought this time back. Spend it on work you love, or on yourself, before it fills up with busywork.',
+      minutes: 2,
+      cta: 'Fill my time',
+      go: ['Fill'],
+    };
+  }
   return {
     stage: 'fill',
-    icon: 'sunny-outline',
-    title: freed ? `Fill your ${formatHours(freed)} a week` : 'Protect your best hours',
-    body: production
-      ? `Put the time into ${production.activity.toLowerCase()}: the work that energizes you and grows the business.`
-      : 'Put the time into work that energizes you and grows the business.',
+    icon: 'shield-checkmark-outline',
+    title: summary?.boughtBackHours ? 'Protect your filled hours' : 'Protect your best hours',
+    body: summary?.boughtBackHours
+      ? 'Every freed hour has a job. Guard that time like your most important meeting.'
+      : 'Nothing in your day drains you. Keep it that way as the business grows.',
     minutes: null,
-    cta: 'Plan my day',
-    go: ['MyDay'],
+    cta: summary?.boughtBackHours ? 'See my fills' : 'See my day',
+    go: summary?.boughtBackHours ? ['Fill'] : ['MyDay'],
   };
 }
 

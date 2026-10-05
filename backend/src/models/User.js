@@ -6,6 +6,7 @@ const {
   ROLES,
   HANDOFF_STATUSES,
   HANDOFF_METHODS,
+  FILL_TIMES,
 } = require('../utils/buyback');
 
 // One activity from the user's typical day, placed on the DRIP Matrix.
@@ -62,6 +63,18 @@ const handoffSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Fill (the last step of the Buyback Loop): freed hours given to energizing work.
+// Kept apart from the audited day until the next round's re-audit folds them in.
+const fillSchema = new mongoose.Schema(
+  {
+    activity: { type: String, required: true, trim: true, maxlength: 60 },
+    hours: { type: Number, required: true, min: 0.25, max: 24 },
+    quadrant: { type: String, enum: ['production', 'investment'], required: true },
+    when: { type: String, enum: [...FILL_TIMES, null], default: null },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     // Guests start using the app right away; name, email and password come later if they sign up.
@@ -76,6 +89,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, minlength: 8, select: false },
     onboarding: { type: onboardingSchema, default: () => ({}) },
     handoffs: { type: [handoffSchema], default: [] },
+    fills: { type: [fillSchema], default: [] },
   },
   { timestamps: true }
 );

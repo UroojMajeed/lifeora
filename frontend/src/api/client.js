@@ -45,6 +45,7 @@ export const api = {
   updateOnboarding: (payload) => request('/onboarding', { method: 'PUT', body: payload }),
   completeOnboarding: () => request('/onboarding/complete', { method: 'POST' }),
   getHandoffs: () => request('/handoffs'),
+  updateFills: (fills) => request('/fills', { method: 'PUT', body: { fills } }),
   updateHandoff: (activity, patch) =>
     request(`/handoffs/${encodeURIComponent(activity)}`, { method: 'PUT', body: patch }),
 };

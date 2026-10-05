@@ -4,9 +4,9 @@ import { recordMove } from '../storage/progress';
 
 const HandoffsContext = createContext(null);
 
-const EMPTY = { handoffs: [], summary: null };
+const EMPTY = { handoffs: [], fills: [], summary: null };
 
-/** Shared handoff list + totals for Home, the handoff list, and each handoff's detail screen. */
+/** Shared handoffs, fills and totals for Home, Handoffs, each handoff's detail screen and Fill. */
 export function HandoffsProvider({ children }) {
   const [data, setData] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
@@ -37,6 +37,7 @@ export function HandoffsProvider({ children }) {
       const res = await api.updateHandoff(activity, patch);
       recordMove();
       setData((d) => ({
+        ...d,
         summary: res.summary,
         handoffs: d.handoffs.map((h) => (h.activity === activity ? { ...h, ...res.handoff } : h)),
       }));
@@ -47,7 +48,25 @@ export function HandoffsProvider({ children }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ ...data, loading, error, refresh, update }), [data, loading, error, refresh, update]);
+  /** Replaces the fills (Fill step). Shows right away, rolls back if the server says no. */
+  const updateFills = useCallback(async (fills) => {
+    const before = latest.current;
+    setData((d) => ({ ...d, fills }));
+    try {
+      const res = await api.updateFills(fills);
+      setData(res);
+      recordMove();
+      return res;
+    } catch (err) {
+      setData(before);
+      throw err;
+    }
+  }, []);
+
+  const value = useMemo(
+    () => ({ ...data, loading, error, refresh, update, updateFills }),
+    [data, loading, error, refresh, update, updateFills]
+  );
   return <HandoffsContext.Provider value={value}>{children}</HandoffsContext.Provider>;
 }
 

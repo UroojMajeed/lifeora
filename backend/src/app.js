@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/authRoutes');
 const onboardingRoutes = require('./routes/onboardingRoutes');
 const handoffsRoutes = require('./routes/handoffsRoutes');
+const fillsRoutes = require('./routes/fillsRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -25,6 +26,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'lifeora-
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/handoffs', handoffsRoutes);
+app.use('/api/fills', fillsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

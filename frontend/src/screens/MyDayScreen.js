@@ -5,6 +5,7 @@ import DripMatrix from '../components/DripMatrix';
 import Button from '../components/Button';
 import { HeroCard } from '../components/Card';
 import { useOnboarding } from '../context/OnboardingContext';
+import { useHandoffs } from '../context/HandoffsContext';
 import { DRIP, summarizeSchedule } from '../constants/content';
 import { formatHours, formatMoney } from '../utils/format';
 import { useStyles } from '../theme/ThemeContext';
@@ -13,6 +14,7 @@ import { spacing } from '../theme';
 /** Your DRIP Matrix, with a way to change your day after onboarding. */
 export default function MyDayScreen({ navigation }) {
   const { onboarding } = useOnboarding();
+  const { summary: handoffSummary } = useHandoffs();
   const styles = useStyles(makeStyles);
   const rate = onboarding?.buybackRate || 0;
   const currency = onboarding?.currency || 'USD';
@@ -49,6 +51,10 @@ export default function MyDayScreen({ navigation }) {
             {formatMoney(summary.dailyBuybackCost, currency, { decimals: 0 })} a day.
           </Text>
         </HeroCard>
+      ) : null}
+
+      {(handoffSummary?.boughtBackHours || 0) > 0 ? (
+        <Button title="Fill your freed time" icon="sunny-outline" onPress={() => navigation.navigate('Fill')} style={styles.gap} />
       ) : null}
 
       <Button

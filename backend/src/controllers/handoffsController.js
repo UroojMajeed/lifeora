@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
-const { HANDOFF_STATUSES, HANDOFF_METHODS } = require('../utils/buyback');
+const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 // Delegation first: the cheapest hours to buy back. Then Replacement, which needs a playbook first.
@@ -8,6 +8,7 @@ const QUADRANT_ORDER = { delegation: 0, replacement: 1 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const MAX_PLAYBOOK_STEPS = 15;
+const MAX_FILLS = 20;
 
 const emptyHandoff = (activity) => ({
   activity,
@@ -41,9 +42,11 @@ function buildHandoffs(user) {
   const drainingHours = sum(items);
   const boughtBackHours = sum(items.filter((h) => h.status === 'done'));
   const o = user.onboarding || {};
+  const fills = (user.fills || []).map((f) => (f.toObject ? f.toObject() : f));
 
   return {
     handoffs: items,
+    fills,
     summary: {
       drainingHours,
       boughtBackHours,
@@ -56,6 +59,8 @@ function buildHandoffs(user) {
       valuePerDay: round2(boughtBackHours * (o.effectiveHourlyRate || 0)),
       costPerDay: round2(boughtBackHours * (o.buybackRate || 0)),
       currency: o.currency || 'USD',
+      // Fill: how much of the freed time already has a new, energizing job.
+      filledHours: sum(fills),
     },
   };
 }
@@ -150,4 +155,42 @@ async function updateHandoff(req, res, next) {
   }
 }
 
-module.exports = { listHandoffs, updateHandoff, buildHandoffs };
+// PUT /api/fills: replaces the list of fills. You can't fill more time than you've bought back.
+async function updateFills(req, res, next) {
+  try {
+    const list = req.body?.fills;
+    const errors = [];
+    if (!Array.isArray(list) || list.length > MAX_FILLS) {
+      throw new ApiError(400, 'Validation failed', [`fills must be a list of up to ${MAX_FILLS}`]);
+    }
+    const fills = list.map((f, i) => {
+      const activity = String(f?.activity ?? '').trim().slice(0, 60);
+      const hours = Number(f?.hours);
+      if (!activity) errors.push(`fills[${i}]: activity is required`);
+      if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) errors.push(`fills[${i}]: hours must be between 0.25 and 24`);
+      if (!['production', 'investment'].includes(f?.quadrant)) errors.push(`fills[${i}]: quadrant must be production or investment`);
+      const when = f?.when ?? null;
+      if (when !== null && !FILL_TIMES.includes(when)) errors.push(`fills[${i}]: when must be one of ${FILL_TIMES.join(', ')}`);
+      return { activity, hours, quadrant: f?.quadrant, when };
+    });
+    const names = fills.map((f) => f.activity.toLowerCase());
+    if (new Set(names).size !== names.length) errors.push('Each activity can only be filled once');
+    if (errors.length) throw new ApiError(400, 'Validation failed', errors);
+
+    const user = await User.findById(req.userId);
+    if (!user) throw new ApiError(404, 'User not found');
+    const freed = buildHandoffs(user).summary.boughtBackHours;
+    const filled = fills.reduce((t, f) => t + f.hours, 0);
+    if (filled > freed + 0.001) {
+      throw new ApiError(400, `You've bought back ${freed}h a day, so you can fill up to ${freed}h.`);
+    }
+
+    user.fills = fills;
+    await user.save();
+    res.json(buildHandoffs(user));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listHandoffs, updateHandoff, updateFills, buildHandoffs };
