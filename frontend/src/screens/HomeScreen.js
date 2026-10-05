@@ -21,7 +21,7 @@ import { loadMotivation } from '../storage/motivation';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
 import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
 import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
-import { energyShare } from '../constants/fill';
+import { dayNow, energyShare, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing, withAlpha } from '../theme';
 
@@ -29,7 +29,7 @@ import { radius, spacing, withAlpha } from '../theme';
 // Your why on top, then the headline ring, where you are in the Buyback Loop, and today's one move.
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
@@ -42,7 +42,8 @@ export default function HomeScreen({ navigation }) {
 
   const schedule = onboarding?.schedule || [];
   const currency = onboarding?.currency || 'USD';
-  const drip = summarizeSchedule(schedule, onboarding?.buybackRate);
+  // The matrix shows the day as it is now: handed-off tasks out, filled time in.
+  const drip = summarizeSchedule(scheduleNow(dayNow(schedule, handoffs, fills)), onboarding?.buybackRate);
   const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
 
   useEffect(() => {

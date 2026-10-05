@@ -69,3 +69,34 @@ export function energyShare(schedule = [], summary) {
 /** Freed hours still waiting for a job. */
 export const unfilledHours = (summary) =>
   Math.max(0, Math.round(((summary?.boughtBackHours || 0) - (summary?.filledHours || 0)) * 100) / 100);
+
+/**
+ * Your day as it is now: the audited day, with handed-off tasks marked (`handedOff`) and filled
+ * time added, either onto the same activity (`fillHours`) or as a new one (`isFill`).
+ * (Fills fold into the day for good when the next round starts.)
+ */
+export function dayNow(schedule = [], handoffs = [], fills = []) {
+  const handed = new Set(handoffs.filter((h) => h.status === 'done').map((h) => h.activity.toLowerCase()));
+  const list = schedule.map((a) => ({ ...a, handedOff: handed.has(a.activity.toLowerCase()), fillHours: 0 }));
+  fills.forEach((f) => {
+    const same = list.find((a) => !a.handedOff && a.activity.toLowerCase() === f.activity.toLowerCase());
+    if (same) same.fillHours += f.hours;
+    else {
+      list.push({
+        activity: f.activity,
+        hours: 0,
+        fillHours: f.hours,
+        value: f.quadrant === 'production' ? 'high' : 'low',
+        energy: 'energizing',
+        quadrant: f.quadrant,
+        isFill: true,
+        when: f.when,
+      });
+    }
+  });
+  return list;
+}
+
+/** What you actually spend the day on now (for the DRIP Matrix): no handed-off tasks, filled time in. */
+export const scheduleNow = (day) =>
+  day.filter((a) => !a.handedOff).map((a) => ({ ...a, hours: a.hours + a.fillHours }));
