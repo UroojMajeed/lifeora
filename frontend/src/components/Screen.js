@@ -19,14 +19,14 @@ function useKeyboardOpen() {
   return open;
 }
 
-/** Standard onboarding screen: scrollable content with a pinned footer (for the CTA), hidden while typing. */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle }) {
+/** Standard screen: scrollable content (optionally pull-to-refresh) with a pinned footer (for the CTA), hidden while typing. */
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl }) {
   const { isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const keyboardOpen = useKeyboardOpen();
   const Body = scroll ? ScrollView : View;
   const bodyProps = scroll
-    ? { contentContainerStyle: [styles.content, contentStyle], keyboardShouldPersistTaps: 'handled', scrollEnabled }
+    ? { contentContainerStyle: [styles.content, contentStyle], keyboardShouldPersistTaps: 'handled', scrollEnabled, refreshControl }
     : { style: [styles.content, styles.fill, contentStyle] };
 
   return (

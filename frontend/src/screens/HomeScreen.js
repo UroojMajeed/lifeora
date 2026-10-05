@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import Logo from '../components/Logo';
-import Wordmark from '../components/Wordmark';
 import DripMatrix from '../components/DripMatrix';
 import ThemeToggle from '../components/ThemeToggle';
 import BuybackRingCard from '../components/BuybackRingCard';
 import LoopTracker from '../components/LoopTracker';
 import TodaysMoveCard from '../components/TodaysMoveCard';
+import { Card } from '../components/Card';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
@@ -23,7 +24,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 // Home tab, built around one goal: buying back the hours that drain you.
-// Your DRIP Matrix first, then the headline ring, where you are in the Buyback Loop, and today's one move.
+// A personal greeting, your DRIP Matrix, then progress (ring + Buyback Loop), your next move and a daily idea.
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
@@ -34,6 +35,7 @@ export default function HomeScreen({ navigation }) {
   const [streak, setStreak] = useState(null);
   const [celebrate, setCelebrate] = useState(0);
   const [startingRound, setStartingRound] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const schedule = onboarding?.schedule || [];
   const currency = onboarding?.currency || 'USD';
@@ -86,96 +88,158 @@ export default function HomeScreen({ navigation }) {
   const loop = loopStatus({ schedule, summary: handoffSummary });
   // Once there's real progress to lose, invite guests to save it (never before: no sign-up wall).
   const askToSave = user?.isGuest && (handoffSummary?.done || 0) > 0;
+  const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : '';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshHandoffs(), loadStreak().then(setStreak)]);
+    setRefreshing(false);
+  };
 
   return (
-    <Screen edges={[]}>
-      <View style={[styles.header, { marginTop: insets.top + spacing.sm }]}>
-        <Logo size={44} />
-        <View style={styles.brandText}>
-          <Wordmark height={24} color={colors.text} />
-          <Text style={styles.greeting}>{greeting()}. Let's buy back your time.</Text>
+    <Screen
+      edges={[]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+          progressViewOffset={insets.top}
+        />
+      }
+    >
+      <Appear index={0} style={[styles.header, { marginTop: insets.top + spacing.md }]}>
+        <Logo size={40} />
+        <View style={styles.headerText}>
+          <Text style={styles.date}>{today}</Text>
+          <Text style={styles.hello} numberOfLines={1} adjustsFontSizeToFit>
+            {greeting()}
+            {firstName ? `, ${firstName}` : ''}
+          </Text>
         </View>
         <ThemeToggle />
-      </View>
+      </Appear>
 
-      <Pressable
-        onPress={() => navigation.navigate('MyDay')}
-        accessibilityRole="button"
-        accessibilityLabel="Your DRIP Matrix. Open My day"
-        style={({ pressed }) => [styles.drip, pressed && { opacity: 0.9 }]}
-      >
-        <View style={[styles.sectionRow, styles.topRow]}>
-          <Text style={type.label}>Your DRIP Matrix</Text>
-          <View style={styles.link}>
-            <Text style={styles.linkText}>My day</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </View>
-        </View>
-        {zone ? (
-          <View style={styles.zone}>
-            <Text style={styles.zoneTitle}>
-              You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>.
-            </Text>
-            <Text style={styles.zoneAdvice}>{zone.advice}</Text>
-          </View>
-        ) : null}
-        <DripMatrix summary={drip} compact />
-      </Pressable>
-      <BuybackRingCard
-        summary={handoffSummary}
-        share={handoffSummary ? energyShare(schedule, handoffSummary) : null}
-        effectiveHourlyRate={effectiveHourlyRate}
-        buybackRate={onboarding?.buybackRate}
-        currency={currency}
-        streak={streak}
-        celebrate={celebrate}
-        onPress={() => navigation.navigate('Handoffs')}
-      />
-
-      <LoopTracker status={loop} round={handoffSummary?.round} style={styles.gap} />
-
-      <TodaysMoveCard move={move} onPress={doMove} loading={startingRound} style={styles.gap} />
-
-      {askToSave ? (
+      <Appear index={1}>
         <Pressable
-          onPress={() => navigation.navigate('Account', { mode: 'save' })}
+          onPress={() => navigation.navigate('MyDay')}
           accessibilityRole="button"
-          style={({ pressed }) => [styles.save, pressed && { opacity: 0.85 }]}
+          accessibilityLabel={`Your DRIP Matrix${zone ? `. You live in ${zone.name}` : ''}. Open My day`}
+          style={({ pressed }) => pressed && styles.pressed}
         >
-          <Ionicons name="cloud-upload-outline" size={22} color={colors.primaryDark} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.saveTitle}>Save your progress</Text>
-            <Text style={styles.saveText}>Keep your handoffs safe if you change phones. Takes 10 seconds.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          <Card>
+            <View style={styles.cardHead}>
+              <Text style={type.label}>Your DRIP Matrix</Text>
+              <View style={styles.link}>
+                <Text style={styles.linkText}>My day</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              </View>
+            </View>
+            {zone ? (
+              <View style={styles.zone}>
+                <Text style={styles.zoneTitle}>
+                  You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>
+                </Text>
+                <Text style={styles.zoneAdvice}>{zone.advice}</Text>
+              </View>
+            ) : null}
+            <DripMatrix summary={drip} compact />
+          </Card>
         </Pressable>
-      ) : null}
+      </Appear>
 
-      <View style={styles.idea}>
-        <Ionicons name="bulb" size={18} color={colors.accent} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.ideaLabel}>Buyback idea</Text>
-          <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
+      <Appear index={2}>
+        <Text style={styles.section}>Your progress</Text>
+        {handoffSummary ? (
+          <BuybackRingCard
+            summary={handoffSummary}
+            share={energyShare(schedule, handoffSummary)}
+            effectiveHourlyRate={effectiveHourlyRate}
+            buybackRate={onboarding?.buybackRate}
+            currency={currency}
+            streak={streak}
+            celebrate={celebrate}
+            onPress={() => navigation.navigate('Handoffs')}
+          />
+        ) : (
+          <Placeholder height={380} />
+        )}
+        <LoopTracker status={loop} round={handoffSummary?.round} style={styles.gap} />
+      </Appear>
+
+      <Appear index={3}>
+        <Text style={styles.section}>Your next move</Text>
+        {move ? <TodaysMoveCard move={move} onPress={doMove} loading={startingRound} /> : <Placeholder height={190} />}
+
+        {askToSave ? (
+          <Pressable
+            onPress={() => navigation.navigate('Account', { mode: 'save' })}
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.save, pressed && styles.pressed]}
+          >
+            <View style={styles.saveIcon}>
+              <Ionicons name="cloud-upload-outline" size={20} color={colors.primaryDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.saveTitle}>Save your progress</Text>
+              <Text style={styles.saveText}>Keep your handoffs safe if you change phones. Takes 10 seconds.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+        ) : null}
+      </Appear>
+
+      <Appear index={4}>
+        <View style={styles.idea}>
+          <View style={styles.ideaIcon}>
+            <Ionicons name="bulb" size={18} color={colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ideaLabel}>Buyback idea of the day</Text>
+            <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
+          </View>
         </View>
-      </View>
-
+      </Appear>
     </Screen>
   );
 }
 
+/** Sections fade up one after another when Home first opens. */
+function Appear({ index, style, children }) {
+  return (
+    <Animated.View entering={FadeInDown.duration(420).delay(index * 70)} style={style}>
+      {children}
+    </Animated.View>
+  );
+}
+
+/** A soft pulsing block while numbers load, so the layout doesn't jump. */
+function Placeholder({ height }) {
+  const { colors } = useTheme();
+  const pulse = useSharedValue(0.5);
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
+  }, [pulse]);
+  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  return <Animated.View style={[{ height, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }, style]} />;
+}
+
 const makeStyles = (colors) => ({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  brandText: { flex: 1, gap: 4 },
-  greeting: { fontSize: 14, fontWeight: '600', color: colors.muted },
+  headerText: { flex: 1 },
+  date: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1 },
+  hello: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginTop: 2 },
+  pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
+  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  zone: { marginBottom: spacing.md },
+  zoneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
+  zoneAdvice: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
+  section: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginTop: spacing.xl, marginBottom: spacing.md },
   gap: { marginTop: spacing.md },
-  idea: {
-    flexDirection: 'row',
-    gap: spacing.sm + 4,
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceAlt,
-  },
   save: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,22 +251,18 @@ const makeStyles = (colors) => ({
     borderColor: colors.primary,
     backgroundColor: colors.surface,
   },
+  saveIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   saveTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
   saveText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
-  ideaLabel: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase', letterSpacing: 1 },
-  ideaText: { fontSize: 15, lineHeight: 22, color: colors.text, marginTop: 4 },
-  sectionRow: {
+  idea: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    padding: spacing.md + 4,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceAlt,
   },
-  topRow: { marginTop: 0 },
-  zone: { marginBottom: spacing.sm + 2 },
-  zoneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
-  zoneAdvice: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 2 },
-  drip: { marginBottom: spacing.md },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  ideaIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
+  ideaLabel: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase', letterSpacing: 1 },
+  ideaText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.text, marginTop: 6 },
 });
