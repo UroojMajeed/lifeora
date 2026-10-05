@@ -45,6 +45,14 @@
         "projectId": "5f67c32c-54c0-44e1-9171-9031cf7f86db"
       }
     },
-    "owner": "uroojmajeed"
+    "owner": "uroojmajeed",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5f67c32c-54c0-44e1-9171-9031cf7f86db",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
