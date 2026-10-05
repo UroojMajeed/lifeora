@@ -16,7 +16,7 @@ import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
-import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
+import { DRIP, calculateBuybackRate, summarizeSchedule } from '../constants/content';
 import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
 import { dayNow, energyShare, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -40,6 +40,7 @@ export default function HomeScreen({ navigation }) {
   // The matrix shows the day as it is now: handed-off tasks out, filled time in.
   const drip = summarizeSchedule(scheduleNow(dayNow(schedule, handoffs, fills)), onboarding?.buybackRate);
   const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
+  const zone = drip.dominant ? DRIP[drip.dominant] : null; // where most of your day goes
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
@@ -110,6 +111,14 @@ export default function HomeScreen({ navigation }) {
             <Ionicons name="chevron-forward" size={14} color={colors.primary} />
           </View>
         </View>
+        {zone ? (
+          <View style={styles.zone}>
+            <Text style={styles.zoneTitle}>
+              You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>.
+            </Text>
+            <Text style={styles.zoneAdvice}>{zone.advice}</Text>
+          </View>
+        ) : null}
         <DripMatrix summary={drip} compact />
       </Pressable>
       <BuybackRingCard
@@ -190,6 +199,9 @@ const makeStyles = (colors) => ({
     marginBottom: spacing.sm,
   },
   topRow: { marginTop: 0 },
+  zone: { marginBottom: spacing.sm + 2 },
+  zoneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
+  zoneAdvice: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 2 },
   drip: { marginBottom: spacing.md },
   link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
