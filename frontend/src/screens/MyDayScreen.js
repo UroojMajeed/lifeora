@@ -2,7 +2,6 @@ import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
-import DripMatrix from '../components/DripMatrix';
 import Button from '../components/Button';
 import { Card, HeroCard } from '../components/Card';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -16,7 +15,7 @@ import { radius, spacing } from '../theme';
 // Active activities first, then new ones from Fill, then what you've handed off.
 const order = (a) => (a.handedOff ? 2 : a.isFill ? 1 : 0);
 
-/** Your day as it is now (handed-off tasks out, filled time in), its DRIP Matrix, and ways to change it. */
+/** Your day as it is now: what still drains you, every activity (handed-off tasks marked, filled time in), and ways to change it. */
 export default function MyDayScreen({ navigation }) {
   const { onboarding } = useOnboarding();
   const { handoffs, fills, summary: handoffSummary } = useHandoffs();
@@ -53,9 +52,20 @@ export default function MyDayScreen({ navigation }) {
         />
       ) : null}
 
+      {summary.drainingHours > 0 ? (
+        <HeroCard>
+          <Text style={styles.heroLabel}>Still draining you</Text>
+          <Text style={styles.heroBig}>{formatHours(summary.drainingHours)} a day</Text>
+          <Text style={styles.heroBody}>
+            Handing them off at your {formatMoney(rate, currency)}/hr Buyback Rate costs about{' '}
+            {formatMoney(summary.dailyBuybackCost, currency, { decimals: 0 })} a day.
+          </Text>
+        </HeroCard>
+      ) : null}
+
       {rows.length ? (
         <>
-          <Text style={[styles.section, styles.first]}>Your day now</Text>
+          <Text style={[styles.section, !summary.drainingHours && styles.first]}>Your day now</Text>
           <Card style={styles.list}>
             {rows.map((a, i) => {
               const q = a.quadrant ? DRIP[a.quadrant] : null;
@@ -86,20 +96,6 @@ export default function MyDayScreen({ navigation }) {
             })}
           </Card>
         </>
-      ) : null}
-
-      <Text style={styles.section}>Your DRIP Matrix</Text>
-      <DripMatrix summary={summary} />
-
-      {summary.drainingHours > 0 ? (
-        <HeroCard style={styles.gap}>
-          <Text style={styles.heroLabel}>Still draining you</Text>
-          <Text style={styles.heroBig}>{formatHours(summary.drainingHours)} a day</Text>
-          <Text style={styles.heroBody}>
-            Handing them off at your {formatMoney(rate, currency)}/hr Buyback Rate costs about{' '}
-            {formatMoney(summary.dailyBuybackCost, currency, { decimals: 0 })} a day.
-          </Text>
-        </HeroCard>
       ) : null}
 
       {(handoffSummary?.boughtBackHours || 0) > 0 ? (
