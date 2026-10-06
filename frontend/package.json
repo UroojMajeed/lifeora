@@ -6,6 +6,7 @@
   "scripts": {
     "start": "expo start --go",
     "start:online": "cross-env EXPO_PUBLIC_API_URL=https://lifeora-nine.vercel.app/api expo start --go --tunnel --clear",
+    "start:wifi": "cross-env EXPO_PUBLIC_API_URL=https://lifeora-nine.vercel.app/api expo start --go --clear",
     "start:dev-client": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
