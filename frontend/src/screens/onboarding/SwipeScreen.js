@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { LayoutAnimation, Modal, Pressable, Text, View } from 'react-native';
+import { LayoutAnimation, Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { FadeInUp, FadeOut } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
@@ -16,7 +18,8 @@ import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
-const FLASH_MS = 1600; // how long the pop-up graph stays after a swipe
+const CHIP_MS = 1100; // how long the "Email → Delegation" chip shows after a swipe
+const REVEAL_STAGGER = 140; // ms between dots flying in on the final reveal
 
 // One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
 const INFO = {
@@ -37,6 +40,8 @@ export default function SwipeScreen({ navigation, route }) {
   const { onboarding, saveStep, complete } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
+  const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
 
   const [items, setItems] = useState(() =>
     (onboarding?.schedule || []).map(({ activity, hours, value, money, per, energy }) => ({
@@ -74,20 +79,24 @@ export default function SwipeScreen({ navigation, route }) {
     const list = items.map((it) =>
       it.activity === item.activity ? { ...it, money: next.money, value: valueForMoney(next.money), energy: next.energy } : it
     );
+    const changing = Boolean(selected);
     setItems(list);
     setSelected(null);
     persist(list);
     const quadrant = quadrantFor({ value: valueForMoney(next.money), energy: next.energy });
-    setFlash({ activity: item.activity, quadrant, at: Date.now() });
+    setChip({ activity: item.activity, quadrant, at: Date.now() });
+    // The last rating (not a later change) opens the big reveal.
+    if (!changing && !list.some(needsRating)) setTimeout(() => setReveal(true), CHIP_MS / 2);
   };
 
-  // The pop-up graph closes by itself after a moment (or on a tap).
-  const [flash, setFlash] = useState(null);
+  // The result chip fades away by itself; it never blocks the next swipe.
+  const [chip, setChip] = useState(null);
   useEffect(() => {
-    if (!flash) return undefined;
-    const t = setTimeout(() => setFlash(null), FLASH_MS);
+    if (!chip) return undefined;
+    const t = setTimeout(() => setChip(null), CHIP_MS);
     return () => clearTimeout(t);
-  }, [flash]);
+  }, [chip]);
+  const [reveal, setReveal] = useState(false);
 
   const [nudge, setNudge] = useState(false);
   const pickMoney = (money) => {
@@ -188,61 +197,77 @@ export default function SwipeScreen({ navigation, route }) {
   );
 
   return (
-    <Screen footer={card}>
-      <StepHeader
-        step={stepNumber('swipe')}
-        editing={editing}
-        title={done ? 'Your DRIP Matrix' : 'Rate your routine'}
-        subtitle="Sort each task by the money it makes and how it makes you feel."
-      />
+    // A wrapper so the result chip floats above the screen (it stays put while the page scrolls).
+    <View style={{ flex: 1 }}>
+      <Screen footer={card}>
+        <StepHeader
+          step={stepNumber('swipe')}
+          editing={editing}
+          title={done ? 'Your DRIP Matrix' : 'Rate your routine'}
+          subtitle="Sort each task by the money it makes and how it makes you feel."
+        />
 
-      {/* A short "what is this?" for the DRIP Matrix, closed by default so the screen stays calm. */}
-      <Pressable
-        onPress={() => {
-          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          setShowInfo((v) => !v);
-        }}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: showInfo }}
-        style={styles.infoToggle}
-      >
-        <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-        <Text style={styles.infoToggleText}>What is the DRIP Matrix?</Text>
-        <Ionicons name={showInfo ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
-      </Pressable>
-      {showInfo ? (
-        <View style={styles.info}>
-          {['production', 'replacement', 'investment', 'delegation'].map((key) => (
-            <View key={key} style={styles.infoRow}>
-              <View style={[styles.infoDot, { backgroundColor: colors[DRIP[key].color] }]} />
-              <Text style={styles.infoText}>
-                <Text style={[styles.infoName, { color: colors[DRIP[key].color] }]}>{DRIP[key].name}</Text>
-                {'  '}
-                {INFO[key]}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
-      <ErrorBanner message={error} />
-
-      <Modal visible={Boolean(flash)} transparent animationType="fade" onRequestClose={() => setFlash(null)} statusBarTranslucent>
-        <Pressable style={styles.flashBackdrop} onPress={() => setFlash(null)} accessibilityLabel="Close">
-          {flash ? (
-            <View style={styles.flashCard}>
-              <Text style={styles.flashTitle} numberOfLines={2}>
-                {flash.activity}
-                <Text style={styles.flashArrow}>  →  </Text>
-                <Text style={{ color: colors[DRIP[flash.quadrant].color] }}>{DRIP[flash.quadrant].name}</Text>
-              </Text>
-              <DripGraph key={flash.at} items={items} selected={flash.activity} flyIn={flash.activity} height={300} />
-            </View>
-          ) : null}
+        {/* A short "what is this?" for the DRIP Matrix, closed by default so the screen stays calm. */}
+        <Pressable
+          onPress={() => {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setShowInfo((v) => !v);
+          }}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showInfo }}
+          style={styles.infoToggle}
+        >
+          <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+          <Text style={styles.infoToggleText}>What is the DRIP Matrix?</Text>
+          <Ionicons name={showInfo ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
         </Pressable>
-      </Modal>
-    </Screen>
+        {showInfo ? (
+          <View style={styles.info}>
+            {['production', 'replacement', 'investment', 'delegation'].map((key) => (
+              <View key={key} style={styles.infoRow}>
+                <View style={[styles.infoDot, { backgroundColor: colors[DRIP[key].color] }]} />
+                <Text style={styles.infoText}>
+                  <Text style={[styles.infoName, { color: colors[DRIP[key].color] }]}>{DRIP[key].name}</Text>
+                  {'  '}
+                  {INFO[key]}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
+        <ErrorBanner message={error} />
+
+        {/* The big moment, once: after the last rating the whole matrix fills in, dot by dot. */}
+        <Modal visible={reveal} animationType="fade" onRequestClose={() => setReveal(false)} statusBarTranslucent>
+          <View style={[styles.reveal, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
+            <Text style={styles.revealEyebrow}>Your DRIP Matrix</Text>
+            <ZoneTitle summary={summary} style={styles.revealTitle} />
+            <Text style={styles.revealText}>Each dot is one task: higher makes more money, further right gives you energy.</Text>
+            <DripGraph items={items} stagger={REVEAL_STAGGER} height={Math.min(420, screenHeight * 0.48)} />
+            <Button title="Continue" icon="arrow-forward" onPress={() => setReveal(false)} style={styles.revealButton} />
+          </View>
+        </Modal>
+      </Screen>
+      {/* Where the task just went: a quick chip at the top, gone after a moment. */}
+      {chip ? (
+        <Animated.View
+          key={chip.at}
+          entering={FadeInUp.duration(220)}
+          exiting={FadeOut.duration(200)}
+          pointerEvents="none"
+          style={[styles.chip, { top: insets.top + spacing.sm, borderColor: colors[DRIP[chip.quadrant].color] }]}
+        >
+          <View style={[styles.chipDot, { backgroundColor: colors[DRIP[chip.quadrant].color] }]} />
+          <Text style={styles.chipText} numberOfLines={1}>
+            {chip.activity}
+            <Text style={styles.chipArrow}>  →  </Text>
+            <Text style={{ color: colors[DRIP[chip.quadrant].color] }}>{DRIP[chip.quadrant].name}</Text>
+          </Text>
+        </Animated.View>
+      ) : null}
+    </View>
   );
 }
 
@@ -255,10 +280,32 @@ const makeStyles = (colors) => ({
   infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
   infoName: { fontWeight: '800' },
-  flashBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.md, backgroundColor: 'rgba(2,6,23,0.55)' },
-  flashCard: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background },
-  flashTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
-  flashArrow: { color: colors.muted, fontWeight: '600' },
+  chip: {
+    position: 'absolute',
+    alignSelf: 'center',
+    maxWidth: '88%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    backgroundColor: colors.surface,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  chipDot: { width: 10, height: 10, borderRadius: 5 },
+  chipText: { fontSize: 14, fontWeight: '800', color: colors.text, flexShrink: 1 },
+  chipArrow: { color: colors.muted, fontWeight: '600' },
+  reveal: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center', backgroundColor: colors.background },
+  revealEyebrow: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
+  revealTitle: { fontSize: 24, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs },
+  revealText: { fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
+  revealButton: { marginTop: spacing.xl },
   firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   firstMoveText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
   firstMoveName: { fontWeight: '800' },

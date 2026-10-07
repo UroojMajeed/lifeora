@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { DRIP, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -10,7 +10,7 @@ const Y_AXIS = 28; // the money arrow on the left
 const X_AXIS = 30; // the energy arrow along the bottom
 const GAP = 6; // between the four boxes
 const LABEL = 34; // room for each box's name and meaning, above its dots
-const SPRING = { damping: 16, stiffness: 140, mass: 0.8 };
+const SPRING = { damping: 18, stiffness: 260, mass: 0.6 }; // quick, so a new dot lands within the short pop-up
 
 const dotSize = (hours) => Math.max(14, Math.min(30, 10 + hours * 5));
 
@@ -23,7 +23,7 @@ const BOXES = [
 ];
 
 /** One activity on the matrix. New dots fly in from the centre; changed ones glide to their new box. */
-function Dot({ item, x, y, origin, still, color, selected, onPress }) {
+function Dot({ item, x, y, origin, still, delay = 0, color, selected, onPress }) {
   const { colors } = useTheme();
   const size = dotSize(item.hours);
   const px = useSharedValue(still ? x : origin.x);
@@ -31,9 +31,9 @@ function Dot({ item, x, y, origin, still, color, selected, onPress }) {
   const scale = useSharedValue(still ? 1 : 0);
 
   useEffect(() => {
-    px.value = withSpring(x, SPRING);
-    py.value = withSpring(y, SPRING);
-    scale.value = withSpring(selected ? 1.15 : 1, SPRING);
+    px.value = withDelay(delay, withSpring(x, SPRING));
+    py.value = withDelay(delay, withSpring(y, SPRING));
+    scale.value = withDelay(delay, withSpring(selected ? 1.15 : 1, SPRING));
   }, [x, y, selected, px, py, scale]);
 
   const style = useAnimatedStyle(() => ({
@@ -75,10 +75,11 @@ function NameBubble({ name, x, y, plotW }) {
 }
 
 /**
+ * `stagger` (ms): dots fly in one after another in the routine's order (the end-of-rating reveal).
  * The DRIP Matrix drawn like the book: four equal boxes, money rising up the side and energy
  * growing to the right. Rated activities sit in their box as dots (higher = more $, size = hours).
  */
-export default function DripGraph({ items, selected, onSelect, flyIn, height = 320 }) {
+export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 0, height = 320 }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [width, setWidth] = useState(0);
@@ -157,6 +158,7 @@ export default function DripGraph({ items, selected, onSelect, flyIn, height = 3
                     y={y}
                     origin={{ x: plotW / 2, y: plotH / 2 }}
                     still={Boolean(flyIn) && flyIn !== it.activity}
+                    delay={stagger ? stagger * rated.indexOf(it) : 0}
                     color={colors[DRIP[quadrantFor({ value, energy: it.energy })].color]}
                     selected={selected === it.activity}
                     onPress={() => onSelect?.(it.activity)}
