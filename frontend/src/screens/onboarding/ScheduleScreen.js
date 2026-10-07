@@ -256,10 +256,11 @@ const makeStyles = (colors) => ({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
-  actionButton: { flex: 1 },
+  // Compact and sized to its label (not a full-width slab), centred above the chat sheet.
+  actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
 });
