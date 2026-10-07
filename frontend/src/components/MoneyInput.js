@@ -54,7 +54,8 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
 
   // Large mode: big digits that shrink as the number grows, so it never runs off the field.
   // Room for digits = screen - page padding - currency chip - "a year" - inner padding.
-  const largeFont = fitFontSize(value || placeholder, screenWidth - 48 - 104 - (suffix ? 56 : 0) - 28, 30, 14);
+  const [boxWidth, setBoxWidth] = useState(screenWidth - 48);
+  const largeFont = fitFontSize(value || placeholder, boxWidth - 104 - (suffix ? 56 : 0) - 28, 30, 14);
 
   const top = anchor ? anchor.y + anchor.height + 6 : 0;
   // Keep the list on screen: shrink it if the field sits low.
@@ -64,7 +65,12 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
     <View>
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
-      <View ref={boxRef} collapsable={false} style={[styles.box, large && styles.boxLarge, (focused || open) && styles.boxFocused]}>
+      <View
+        ref={boxRef}
+        collapsable={false}
+        onLayout={(e) => setBoxWidth(e.nativeEvent.layout.width)}
+        style={[styles.box, large && styles.boxLarge, (focused || open) && styles.boxFocused]}
+      >
         <Pressable
           onPress={toggle}
           accessibilityRole="button"

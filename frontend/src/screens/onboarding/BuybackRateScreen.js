@@ -16,6 +16,8 @@ import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../uti
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { brand, radius, spacing } from '../../theme';
 
+const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
+
 /** A number that counts up (or down) to its new value, so the result feels like a reveal. */
 function useCountUp(target, duration = 600) {
   const [shown, setShown] = useState(target);
@@ -63,9 +65,11 @@ export default function BuybackRateScreen({ navigation, route }) {
   const shownRate = useCountUp(buybackRate);
   const ready = amount > 0 && (editing || Boolean(role));
   // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const columnWidth = Math.min(screenWidth - 48, MAX_COLUMN);
+  const gap = screenHeight < 700 ? spacing.lg - 4 : spacing.xl - 4; // 20 on short phones, 28 otherwise
   const rateText = formatMoney(shownRate, currency);
-  const bigFont = fitFontSize(`${formatMoney(buybackRate, currency)}/h`, screenWidth - 48 - 48, 48, 22);
+  const bigFont = fitFontSize(`${formatMoney(buybackRate, currency)}/h`, columnWidth - 48, 48, 22);
 
   const next = async () => {
     if (!ready) return;
@@ -95,6 +99,7 @@ export default function BuybackRateScreen({ navigation, route }) {
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
     <Screen
       keyboardDismissMode="on-drag"
+      contentStyle={styles.column}
       footer={
         <Button
           title={buttonTitle}
@@ -102,6 +107,7 @@ export default function BuybackRateScreen({ navigation, route }) {
           onPress={next}
           loading={loading}
           disabled={!ready}
+          style={styles.button}
         />
       }
     >
@@ -113,13 +119,13 @@ export default function BuybackRateScreen({ navigation, route }) {
       />
 
       {!editing ? (
-        <Animated.View entering={FadeInDown.duration(380)}>
+        <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: gap - spacing.lg }}>
           <Text style={styles.lead}>I am a…</Text>
           <RolePicker value={role} onChange={setRole} soft />
         </Animated.View>
       ) : null}
 
-      <Animated.View entering={FadeInDown.duration(380).delay(80)} style={!editing && styles.section}>
+      <Animated.View entering={FadeInDown.duration(380).delay(80)} style={!editing && { marginTop: gap }}>
         {!editing ? <Text style={styles.lead}>My business pays me each year…</Text> : null}
         <MoneyInput
           large
@@ -135,7 +141,7 @@ export default function BuybackRateScreen({ navigation, route }) {
       {/* The answer: hidden until there's a number, then it fades in and counts up. */}
       {amount ? (
         <Animated.View entering={FadeIn.duration(350)}>
-          <HeroCard style={styles.hero}>
+          <HeroCard style={{ marginTop: gap }}>
             <View style={styles.heroTop}>
               <Text style={styles.heroLabel}>Your Buyback Rate</Text>
               <View style={styles.worth}>
@@ -159,7 +165,7 @@ export default function BuybackRateScreen({ navigation, route }) {
           </HeroCard>
         </Animated.View>
       ) : (
-        <View style={styles.placeholder}>
+        <View style={[styles.placeholder, { marginTop: gap }]}>
           <Ionicons name="sparkles-outline" size={22} color={colors.muted} />
           <Text style={styles.placeholderText}>
             Your Buyback Rate appears here: what you can afford to pay someone to take tasks off your plate.
@@ -173,9 +179,9 @@ export default function BuybackRateScreen({ navigation, route }) {
 }
 
 const makeStyles = (colors) => ({
-  lead: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.sm, letterSpacing: -0.2 },
-  section: { marginTop: spacing.lg },
-  hero: { marginTop: spacing.lg },
+  column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
+  button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
+  lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
   heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   worth: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.heroChip },
@@ -189,7 +195,6 @@ const makeStyles = (colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm + 2,
-    marginTop: spacing.lg,
     padding: spacing.md + 4,
     borderRadius: radius.lg,
     borderWidth: 1.5,
