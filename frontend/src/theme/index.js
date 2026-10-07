@@ -120,13 +120,17 @@ export function cardShadow(colors, isDark) {
   };
 }
 
+// Type tokens (see the type scale in theme/fonts.js).
 export function makeType(colors) {
   return {
     hero: { fontSize: 36, fontWeight: '800', color: colors.text, letterSpacing: -0.8 },
     title: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.6, lineHeight: 34 },
     subtitle: { fontSize: 16, lineHeight: 24, color: colors.muted },
+    heading: { fontSize: 20, fontWeight: '800', color: colors.text, letterSpacing: -0.3 }, // section headings
+    cardTitle: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 }, // always below a screen title
     label: { fontSize: 12, fontWeight: '700', color: colors.muted, letterSpacing: 1, textTransform: 'uppercase' },
     body: { fontSize: 15, lineHeight: 22, color: colors.text },
+    small: { fontSize: 13, lineHeight: 19, color: colors.muted },
   };
 }
 

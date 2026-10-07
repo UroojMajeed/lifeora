@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Dimensions, PanResponder, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { MONEY_LEVELS, dollars, timeText } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -104,148 +105,140 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
 
         <Animated.View
           {...responder.panHandlers}
-          style={[styles.card, { transform: [...position.getTranslateTransform(), { rotate }] }]}
+          style={[styles.cardShell, { transform: [...position.getTranslateTransform(), { rotate }] }]}
           accessibilityHint="Pick how much money it makes, then swipe right if it energizes you or left if it drains you"
         >
-          <Animated.View style={[styles.stamp, styles.stampYes, { opacity: yes }]}>
-            <Ionicons name="flash" size={14} color={colors.success} />
-            <Text style={[styles.stampText, { color: colors.success }]}>ENERGIZES</Text>
-          </Animated.View>
-          <Animated.View style={[styles.stamp, styles.stampNo, { opacity: no }]}>
-            <Ionicons name="battery-dead" size={14} color={colors.error} />
-            <Text style={[styles.stampText, { color: colors.error }]}>DRAINS</Text>
-          </Animated.View>
+          {/* A soft tint: white into aqua (dark: surface into a deeper surface). */}
+          <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+            <Animated.View style={[styles.stamp, styles.stampYes, { opacity: yes }]}>
+              <Ionicons name="flash" size={13} color={colors.success} />
+              <Text style={[styles.stampText, { color: colors.success }]}>ENERGIZES</Text>
+            </Animated.View>
+            <Animated.View style={[styles.stamp, styles.stampNo, { opacity: no }]}>
+              <Ionicons name="battery-dead" size={13} color={colors.error} />
+              <Text style={[styles.stampText, { color: colors.error }]}>DRAINS</Text>
+            </Animated.View>
 
-          <View style={styles.top}>
-            {topLeft || <View />}
-            {topRight || <View />}
-          </View>
+            <View style={styles.top}>
+              {topLeft || <View />}
+              {topRight || <View />}
+            </View>
 
-          <Text style={styles.name} numberOfLines={2}>
-            {item.activity}
-          </Text>
-          <View style={styles.hours}>
-            <Ionicons name="time-outline" size={13} color={colors.muted} />
+            <Text style={styles.name} numberOfLines={1}>
+              {item.activity}
+            </Text>
             <Text style={styles.hoursText}>{timeText(item)}</Text>
-          </View>
 
-          <View style={styles.moneyRow}>
-            {MONEY_LEVELS.map((m) => {
-              const on = money === m;
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    onMoney(m);
-                  }}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: on }}
-                  accessibilityLabel={`${m} of 5: ${MONEY_CAPTION[m]}`}
-                  style={({ pressed }) => [styles.money, on && styles.moneyOn, pressed && { transform: [{ scale: 0.94 }] }]}
-                >
-                  <Text style={[styles.moneyText, on && styles.moneyTextOn]} numberOfLines={1} adjustsFontSizeToFit>
-                    {dollars(m)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={[styles.caption, ready && styles.captionOn]}>
-            {ready ? MONEY_CAPTION[money] : 'How much money does it make?'}
-          </Text>
+            <View style={styles.moneyRow}>
+              {MONEY_LEVELS.map((m) => {
+                const on = money === m;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      onMoney(m);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on }}
+                    accessibilityLabel={`${m} of 5: ${MONEY_CAPTION[m]}`}
+                    style={({ pressed }) => [styles.money, on && styles.moneyOn, pressed && { transform: [{ scale: 0.94 }] }]}
+                  >
+                    <Text style={[styles.moneyText, on && styles.moneyTextOn]} numberOfLines={1} adjustsFontSizeToFit>
+                      {dollars(m)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.caption, ready && styles.captionOn]}>
+              {ready ? MONEY_CAPTION[money] : 'How much money does it make?'}
+            </Text>
+
+            {/* Same as swiping; off until a $ is picked. */}
+            <View style={[styles.controls, !ready && styles.controlsOff]}>
+              <Pressable
+                onPress={() => flyOut(-1)}
+                accessibilityRole="button"
+                accessibilityLabel="Drains me"
+                accessibilityState={{ disabled: !ready }}
+                style={({ pressed }) => [styles.energy, { backgroundColor: colors.errorSoft }, pressed && ready && styles.pressed]}
+              >
+                <Ionicons name="arrow-back" size={14} color={colors.error} />
+                <Ionicons name="battery-dead" size={16} color={colors.error} />
+                <Text style={[styles.energyText, { color: colors.error }]}>Drains me</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => flyOut(1)}
+                accessibilityRole="button"
+                accessibilityLabel="Energizes me"
+                accessibilityState={{ disabled: !ready }}
+                style={({ pressed }) => [styles.energy, { backgroundColor: colors.successSoft }, pressed && ready && styles.pressed]}
+              >
+                <Ionicons name="flash" size={16} color={colors.success} />
+                <Text style={[styles.energyText, { color: colors.success }]}>Energizes me</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.success} />
+              </Pressable>
+            </View>
+          </LinearGradient>
         </Animated.View>
-      </View>
-
-      {/* Same as swiping; off until a $ is picked. */}
-      <View style={[styles.controls, !ready && styles.controlsOff]}>
-        <Pressable
-          onPress={() => flyOut(-1)}
-          accessibilityRole="button"
-          accessibilityLabel="Drains me"
-          accessibilityState={{ disabled: !ready }}
-          style={({ pressed }) => [styles.round, { backgroundColor: colors.errorSoft }, pressed && ready && styles.pressed]}
-        >
-          <Ionicons name="battery-dead" size={24} color={colors.error} />
-        </Pressable>
-        <View style={styles.swipeHint}>
-          <Ionicons name="arrow-back" size={14} color={colors.muted} />
-          <Text style={styles.swipeText}>{ready ? 'swipe' : 'pick $ first'}</Text>
-          <Ionicons name="arrow-forward" size={14} color={colors.muted} />
-        </View>
-        <Pressable
-          onPress={() => flyOut(1)}
-          accessibilityRole="button"
-          accessibilityLabel="Energizes me"
-          accessibilityState={{ disabled: !ready }}
-          style={({ pressed }) => [styles.round, { backgroundColor: colors.successSoft }, pressed && ready && styles.pressed]}
-        >
-          <Ionicons name="flash" size={24} color={colors.success} />
-        </Pressable>
-      </View>
-      <View style={styles.legend}>
-        <Text style={[styles.legendText, { color: colors.error }]}>Drains me</Text>
-        <Text style={[styles.legendText, { color: colors.success }]}>Energizes me</Text>
       </View>
     </View>
   );
 }
 
 const makeStyles = (colors, isDark) => ({
+  // The shell carries the shadow; the gradient inside carries the tint and rounded corners.
+  cardShell: { borderRadius: radius.lg, ...cardShadow(colors, isDark) },
   card: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm + 2,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md - 2,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: isDark ? colors.border : 'transparent',
-    ...cardShadow(colors, isDark),
+    backgroundColor: colors.surface,
   },
-  behind: { position: 'absolute', left: 10, right: 10, top: -8, bottom: 8, opacity: 0.55 },
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 28 },
-  name: { fontSize: 24, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.4, marginTop: 2 },
-  hours: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 4 },
-  hoursText: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  moneyRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: spacing.md },
+  behind: { position: 'absolute', left: 10, right: 10, top: -6, bottom: 6, opacity: 0.5 },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 26 },
+  name: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 2 },
+  hoursText: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 2 },
+  moneyRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: spacing.sm + 4 },
   money: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
-    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 3,
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
     borderColor: colors.border,
   },
-  moneyOn: { backgroundColor: colors.primary, borderColor: colors.primary, transform: [{ scale: 1.08 }] },
-  moneyText: { fontSize: 14, fontWeight: '800', color: colors.primaryDark },
+  moneyOn: { backgroundColor: colors.primary, borderColor: colors.primary, transform: [{ scale: 1.06 }] },
+  moneyText: { fontSize: 13, fontWeight: '800', color: colors.primaryDark },
   moneyTextOn: { color: colors.onColor },
-  caption: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
+  caption: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 6 },
   captionOn: { color: colors.primaryDark, fontWeight: '800' },
   stamp: {
     position: 'absolute',
-    top: 12,
+    top: 10,
     zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 2.5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 2,
     borderRadius: 8,
     backgroundColor: colors.surface,
   },
-  stampYes: { left: 12, borderColor: colors.success, transform: [{ rotate: '-8deg' }] },
-  stampNo: { right: 12, borderColor: colors.error, transform: [{ rotate: '8deg' }] },
-  stampText: { fontSize: 13, fontWeight: '800', letterSpacing: 1 },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, paddingHorizontal: spacing.lg },
+  stampYes: { left: 10, borderColor: colors.success, transform: [{ rotate: '-8deg' }] },
+  stampNo: { right: 10, borderColor: colors.error, transform: [{ rotate: '8deg' }] },
+  stampText: { fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  controls: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 4 },
   controlsOff: { opacity: 0.4 },
-  round: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
-  pressed: { transform: [{ scale: 0.92 }] },
-  swipeHint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  swipeText: { fontSize: 13, fontWeight: '700', color: colors.muted },
-  legend: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.md, marginTop: 4 },
-  legendText: { fontSize: 12, fontWeight: '700', width: 92, textAlign: 'center' },
+  energy: { flex: 1, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: radius.pill },
+  energyText: { fontSize: 14, fontWeight: '800' },
+  pressed: { transform: [{ scale: 0.96 }] },
 });

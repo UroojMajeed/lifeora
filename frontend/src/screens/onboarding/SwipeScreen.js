@@ -303,7 +303,7 @@ const makeStyles = (colors) => ({
   chipArrow: { color: colors.muted, fontWeight: '600' },
   reveal: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center', backgroundColor: colors.background },
   revealEyebrow: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
-  revealTitle: { fontSize: 24, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs },
+  revealTitle: { fontSize: 28, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs, letterSpacing: -0.6 },
   revealText: { fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
   revealButton: { marginTop: spacing.xl },
   firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },

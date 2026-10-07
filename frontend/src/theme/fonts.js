@@ -31,13 +31,23 @@ const FAMILY_BY_WEIGHT = {
 export const fontFamilyFor = (weight = '400') => FAMILY_BY_WEIGHT[weight] || FAMILY_BY_WEIGHT[400];
 
 /**
+ * The app's type scale. Text sizes snap to these steps so every screen uses the same few sizes:
+ *   28 screen title · 20 section heading · 18 card title · 16 large body · 15 body · 14 secondary
+ *   13 small · 12 caption/label · 10 tiny graph labels. Big numbers (24 and up) are left as they are.
+ */
+const SNAP = { 9: 10, 11: 12, 17: 18, 19: 18, 21: 20, 22: 20, 23: 24 };
+export const snapFontSize = (size) => SNAP[size] ?? size;
+
+/**
  * Custom fonts pick their weight by file, not by `fontWeight` (Android ignores fontWeight for them).
- * Any text style (one with fontSize or fontWeight) gets the matching Plus Jakarta Sans file instead.
+ * Any text style (one with fontSize or fontWeight) gets the matching Plus Jakarta Sans file instead,
+ * and its size snaps to the type scale above.
  */
 export function withFont(style) {
   if (!style || typeof style !== 'object' || style.fontFamily) return style;
   if (!('fontSize' in style) && !('fontWeight' in style)) return style;
   const { fontWeight, ...rest } = style;
+  if (typeof rest.fontSize === 'number') rest.fontSize = snapFontSize(rest.fontSize);
   return { ...rest, fontFamily: fontFamilyFor(fontWeight) };
 }
 
