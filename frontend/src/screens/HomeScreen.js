@@ -66,7 +66,7 @@ export default function HomeScreen({ navigation }) {
 
   const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
 
-  // Round complete: close it, then re-audit the day (edit it, then swipe everything again).
+  // Round complete: close it, then re-audit the day (edit it, then rate everything again).
   const doMove = async () => {
     if (!move) return;
     if (move.action !== 'nextRound') {

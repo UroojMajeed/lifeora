@@ -3,6 +3,7 @@ const ApiError = require('../utils/ApiError');
 const {
   calculateBuybackRate,
   quadrantFor,
+  valueForMoney,
   summarizeSchedule,
   ONBOARDING_STEPS,
   ROLES,
@@ -28,14 +29,19 @@ function sanitizeSchedule(schedule, errors) {
     if (!Number.isFinite(hours) || hours < 0.25 || hours > 24) {
       errors.push(`schedule[${i}]: hours must be between 0.25 and 24`);
     }
-    const value = item?.value;
+    // Money is rated $ to $$$$$ (1-5); $$$ and up means it makes money ("high" value).
+    const money = item?.money ?? null;
+    if (money !== null && !(Number.isInteger(money) && money >= 1 && money <= 5)) {
+      errors.push(`schedule[${i}]: money must be a whole number from 1 to 5`);
+    }
+    const value = money !== null ? valueForMoney(money) : item?.value;
     if (!['high', 'low'].includes(value)) errors.push(`schedule[${i}]: value must be high or low`);
     const energy = item?.energy ?? null;
     if (![null, 'energizing', 'draining'].includes(energy)) {
       errors.push(`schedule[${i}]: energy must be energizing, draining or null`);
     }
     // The quadrant is always derived here, never trusted from the client.
-    return { activity, hours, value, energy, quadrant: quadrantFor({ value, energy }) };
+    return { activity, hours, value, money, energy, quadrant: quadrantFor({ value, energy }) };
   });
 
   const total = items.reduce((sum, item) => sum + (Number.isFinite(item.hours) ? item.hours : 0), 0);

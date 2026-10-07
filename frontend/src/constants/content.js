@@ -47,6 +47,14 @@ export const DRIP_GRID = [
   ['delegation', 'investment'],
 ];
 
+// Money is rated $ to $$$$$ (1-5), like the dollar signs in the book's audit; $$$ and up makes money.
+export const MONEY_LEVELS = [1, 2, 3, 4, 5];
+export const MONEY_SPLIT = 3;
+export const valueForMoney = (money) => (money >= MONEY_SPLIT ? 'high' : 'low');
+/** An activity's $ rating. Days audited before the $ scale get a stand-in from their high/low value. */
+export const moneyOf = (a) => a.money ?? (a.value === 'high' ? 4 : 2);
+export const dollars = (money) => '$'.repeat(money);
+
 export function quadrantFor({ value, energy }) {
   if (value === 'high') return energy === 'energizing' ? 'production' : 'replacement';
   return energy === 'energizing' ? 'investment' : 'delegation';
@@ -137,9 +145,9 @@ export function suggestionsFor(role) {
   return [...first, ...COMMON.filter((n) => !first.includes(n))];
 }
 
-/** A day-list entry. Typed activities default to "only you" (high); the swipe card lets them change it. */
+/** A day-list entry. Typed activities default to "only you" (high); the rating card sets their $ value. */
 export function newActivity(name, hours) {
-  return { activity: name, hours, value: ACTIVITIES[name]?.value || 'high', energy: null };
+  return { activity: name, hours, value: ACTIVITIES[name]?.value || 'high', money: null, energy: null };
 }
 
 /** Hour choices in the picker; the activity's usual hours are highlighted. */
@@ -206,13 +214,14 @@ export const STEPS = [
   { key: 'buyback_rate', screen: 'BuybackRate' },
   { key: 'schedule', screen: 'Schedule' },
   { key: 'swipe', screen: 'Swipe' },
-  { key: 'drip', screen: 'Drip' },
 ];
 
 export const TOTAL_STEPS = STEPS.length;
 
 export function screenForStep(stepKey) {
   if (stepKey === 'done') return 'Main';
+  // The DRIP Matrix now builds live on the rating screen, so the old reveal step lands there too.
+  if (stepKey === 'drip') return 'Swipe';
   return STEPS.find((s) => s.key === stepKey)?.screen || 'Profile';
 }
 

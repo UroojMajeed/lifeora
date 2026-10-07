@@ -215,11 +215,14 @@ async function startNextRound(req, res, next) {
     const done = new Set(handoffs.filter((h) => h.status === 'done').map((h) => h.activity.toLowerCase()));
     const schedule = (user.onboarding?.schedule || [])
       .filter((a) => !done.has(a.activity.toLowerCase()))
-      .map((a) => ({ activity: a.activity, hours: a.hours, value: a.value, energy: null, quadrant: null }));
+      .map((a) => ({ activity: a.activity, hours: a.hours, value: a.value, money: a.money ?? null, energy: null, quadrant: null }));
     fills.forEach((f) => {
       const same = schedule.find((a) => a.activity.toLowerCase() === f.activity.toLowerCase());
       if (same) same.hours = Math.min(24, round2(same.hours + f.hours));
-      else schedule.push({ activity: f.activity, hours: f.hours, value: f.quadrant === 'production' ? 'high' : 'low', energy: null, quadrant: null });
+      else {
+        const money = f.quadrant === 'production' ? 4 : 2; // a starting guess; it gets rated again in the new audit
+        schedule.push({ activity: f.activity, hours: f.hours, value: money >= 3 ? 'high' : 'low', money, energy: null, quadrant: null });
+      }
     });
 
     user.rounds.push({

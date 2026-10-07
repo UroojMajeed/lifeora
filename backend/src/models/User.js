@@ -15,6 +15,8 @@ const activitySchema = new mongoose.Schema(
     activity: { type: String, required: true, trim: true, maxlength: 60 },
     hours: { type: Number, required: true, min: 0.25, max: 24 },
     value: { type: String, enum: ['high', 'low'], required: true },
+    // $ to $$$$$ (1-5); sets value ($$$ and up = high). Empty for days audited before the $ rating.
+    money: { type: Number, min: 1, max: 5, default: null },
     // Empty until the user swipes the activity.
     energy: { type: String, enum: ['energizing', 'draining', null], default: null },
     quadrant: { type: String, enum: [...DRIP_QUADRANTS, null], default: null },

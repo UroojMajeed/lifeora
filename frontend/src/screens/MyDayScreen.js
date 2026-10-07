@@ -33,8 +33,8 @@ export default function MyDayScreen({ navigation }) {
     <Screen edges={['top']} contentStyle={styles.top}>
       {unsorted ? (
         <Button
-          title={`Swipe ${unsorted} unsorted ${unsorted === 1 ? 'activity' : 'activities'}`}
-          icon="swap-horizontal"
+          title={`Rate ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`}
+          icon="stats-chart"
           onPress={() => navigation.navigate('Swipe', { editing: true })}
           style={styles.unsorted}
         />
@@ -75,7 +75,7 @@ export default function MyDayScreen({ navigation }) {
                         </Text>
                       ) : null}
                       {when ? <Text style={styles.when}>{when}</Text> : null}
-                      {!a.energy && !a.isFill ? <Text style={styles.when}>Not swiped yet</Text> : null}
+                      {!a.energy && !a.isFill ? <Text style={styles.when}>Not rated yet</Text> : null}
                     </View>
                   </View>
                   <Text style={[styles.hours, a.handedOff && styles.nameOff]}>{formatHours(a.hours + a.fillHours)}</Text>

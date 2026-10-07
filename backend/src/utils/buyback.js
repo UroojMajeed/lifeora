@@ -20,6 +20,10 @@ function calculateBuybackRate(annualIncome) {
 const DRIP_QUADRANTS = ['delegation', 'replacement', 'investment', 'production'];
 
 // Null until the user has said how the activity makes them feel.
+// Money rating ($ to $$$$$, 1-5): $$$ and up counts as work that makes money.
+const MONEY_SPLIT = 3;
+const valueForMoney = (money) => (money >= MONEY_SPLIT ? 'high' : 'low');
+
 function quadrantFor({ value, energy }) {
   if (!energy) return null;
   if (value === 'high') return energy === 'energizing' ? 'production' : 'replacement';
@@ -63,6 +67,7 @@ module.exports = {
   calculateBuybackRate,
   DRIP_QUADRANTS,
   quadrantFor,
+  valueForMoney,
   summarizeSchedule,
   ONBOARDING_STEPS,
   ROLES,

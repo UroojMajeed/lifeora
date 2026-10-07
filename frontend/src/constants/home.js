@@ -49,11 +49,11 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
   if (unsorted) {
     return {
       stage: 'audit',
-      icon: 'swap-horizontal',
-      title: `Sort ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`,
-      body: 'Swipe each one: does it give you energy or drain it?',
+      icon: 'stats-chart',
+      title: `Rate ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`,
+      body: 'Rate each one: how much money it makes, and does it give you energy or drain it?',
       minutes: 1,
-      cta: 'Swipe now',
+      cta: 'Rate now',
       go: ['Swipe', { editing: true }],
     };
   }

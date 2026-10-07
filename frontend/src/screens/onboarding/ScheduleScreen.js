@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutAnimation, Pressable, Text, View } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
@@ -7,7 +7,7 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import ActivityRow, { ACTIVITY_ROW_HEIGHT } from '../../components/ActivityRow';
 import DraggableList from '../../components/DraggableList';
-import AddActivitySheet from '../../components/AddActivitySheet';
+import DayComposer from '../../components/DayComposer';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
 import { newActivity, stepNumber } from '../../constants/content';
@@ -30,10 +30,10 @@ export default function ScheduleScreen({ navigation, route }) {
   const [items, setItems] = useState(() =>
     (onboarding?.schedule || [])
       .filter((i) => i.hours)
-      .map(({ activity, hours, value, energy }) => ({ activity, hours, value, energy: energy ?? null }))
+      .map(({ activity, hours, value, money, energy }) => ({ activity, hours, value, money: money ?? null, energy: energy ?? null }))
   );
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
+  const listRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -53,27 +53,6 @@ export default function ScheduleScreen({ navigation, route }) {
     return () => clearTimeout(autosave.current);
   }, [items, saveStep, editing]);
 
-  // First visit: open the picker as soon as the screen has finished sliding in, so the two
-  // animations don't overlap. (If we resumed straight onto this screen there is no transition.)
-  useEffect(() => {
-    if (items.length) return undefined;
-    let opened = false;
-    const open = () => {
-      if (opened) return;
-      opened = true;
-      setSheetOpen(true);
-    };
-    const unsubscribe = navigation.addListener('transitionEnd', (e) => {
-      if (!e.data?.closing) open();
-    });
-    const fallback = setTimeout(open, 600);
-    return () => {
-      unsubscribe();
-      clearTimeout(fallback);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const totalHours = items.reduce((sum, i) => sum + i.hours, 0);
 
   // After onboarding, show the day as it is now: handed-off tasks marked, filled time from Fill added.
@@ -90,27 +69,25 @@ export default function ScheduleScreen({ navigation, route }) {
     items.filter((i) => !handedOff.has(i.activity.toLowerCase())).reduce((t, i) => t + i.hours, 0) +
     (live ? fills.reduce((t, f) => t + f.hours, 0) : 0);
 
-  const openAdd = () => {
-    setEditingIndex(null);
-    setSheetOpen(true);
-  };
-
-  const openEdit = (index) => {
-    setEditingIndex(index);
-    setSheetOpen(true);
-  };
+  const openEdit = (index) => setEditingIndex((cur) => (cur === index ? null : index));
 
   const add = (name, hours) => {
     if (items.length >= MAX_ACTIVITIES) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => [...list, newActivity(name, hours)]);
+    // Like a chat: the newest one shows at the bottom of the list.
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
   };
 
-  const save = (updated) => setItems((list) => list.map((it, i) => (i === editingIndex ? updated : it)));
+  const save = (updated) => {
+    setItems((list) => list.map((it, i) => (i === editingIndex ? updated : it)));
+    setEditingIndex(null);
+  };
 
   const remove = (index) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((_, i) => i !== index));
+    setEditingIndex(null);
   };
 
   const next = async () => {
@@ -121,7 +98,7 @@ export default function ScheduleScreen({ navigation, route }) {
     try {
       if (editing) {
         await saveStep({ schedule: items }, 'done');
-        // Only the new activities need a swipe; otherwise the change is already done.
+        // Only the new activities need rating; otherwise the change is already done.
         if (unsorted) navigation.navigate('Swipe', { editing: true });
         else navigation.goBack();
         return;
@@ -139,122 +116,128 @@ export default function ScheduleScreen({ navigation, route }) {
   const ready = items.length > 0 && !over;
   const unsorted = items.filter((i) => !i.energy).length;
   const nextTitle = round
-    ? 'Next: swipe your day'
+    ? 'Next: rate your day'
     : editing
     ? unsorted
-      ? `Next: swipe ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`
-      : 'Save my day'
-    : 'Next: swipe your day';
+      ? `Rate ${unsorted} new`
+      : 'Save'
+    : 'Next: rate your day';
+
+  // Shown above the suggestion cards: the day's total and the way forward.
+  const action = items.length ? (
+    <View style={styles.actionRow}>
+      <Text style={[styles.actionTotal, over && styles.totalOver]} numberOfLines={1}>
+        {over ? 'More than 24 hours' : `${items.length} · ${formatHours(live ? dayNowHours : totalHours)} a day`}
+      </Text>
+      <Button
+        title={nextTitle}
+        icon={editing && !unsorted && !round ? 'checkmark' : 'arrow-forward'}
+        onPress={next}
+        loading={loading}
+        disabled={!ready}
+        style={styles.actionButton}
+      />
+    </View>
+  ) : null;
 
   return (
-    <Screen
-      scrollEnabled={!dragging}
-      footer={
-        <Button
-          title={over ? 'That is more than 24 hours' : items.length ? nextTitle : 'Add your first activity'}
-          icon={ready ? (editing && !unsorted ? 'checkmark' : 'arrow-forward') : undefined}
-          onPress={items.length ? next : openAdd}
-          loading={loading}
-          disabled={over}
-        />
-      }
-    >
-      <StepHeader
-        step={stepNumber('schedule')}
-        editing={editing}
-        eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your day' : 'Your day'}
-        title={round ? 'What fills your day now?' : 'What fills a normal day?'}
-        subtitle={
-          round
-            ? 'Handed-off tasks are gone and your new work is in. Add anything new, then swipe it all again.'
-            : editing
-            ? 'Add, change or remove activities. Changes save as you go.'
-            : 'Add what you do and roughly how long each takes. Order them however you like.'
-        }
-      />
-
-      {items.length ? (
-        <>
-          <View style={styles.listHeader}>
-            <Text style={styles.sectionLabel}>
-              {items.length} {items.length === 1 ? 'activity' : 'activities'}
-            </Text>
-            <Text style={[styles.total, over && styles.totalOver]}>
-              {formatHours(live ? dayNowHours : totalHours)} a day{live && handedOff.size ? ' now' : ''}
-            </Text>
-          </View>
-          <DraggableList
-            items={items}
-            keyOf={(it) => it.activity}
-            rowHeight={ACTIVITY_ROW_HEIGHT}
-            gap={spacing.sm}
-            onReorder={setItems}
-            onDragStart={() => setDragging(true)}
-            onDragEnd={() => setDragging(false)}
-            renderItem={({ item, index, isActive, Handle }) => (
-              <ActivityRow
-                item={item}
-                isActive={isActive}
-                Handle={Handle}
-                onEdit={() => openEdit(index)}
-                onRemove={() => remove(index)}
-                badge={badgeFor(item)}
-                muted={handedOff.has(item.activity.toLowerCase())}
-              />
-            )}
-          />
-          {items.length > 1 ? <Text style={styles.hint}>Hold ≡ and drag to reorder. Tap an activity to edit it.</Text> : null}
-        </>
-      ) : null}
-
-      {newFills.length ? (
-        <>
-          <Text style={[styles.sectionLabel, styles.fillLabel]}>New from Fill</Text>
-          {newFills.map((f) => (
-            <Pressable
-              key={f.activity}
-              onPress={() => navigation.navigate('Fill')}
-              accessibilityRole="button"
-              accessibilityLabel={`${f.activity}, ${formatHours(f.hours)} a day from Fill. Change it in Fill.`}
-              style={({ pressed }) => [styles.fillRow, pressed && { opacity: 0.7 }]}
-            >
-              <Ionicons name="sunny-outline" size={18} color={colors.primaryDark} />
-              <Text style={styles.fillName} numberOfLines={1}>
-                {f.activity}
-              </Text>
-              <Text style={styles.fillHours}>{formatHours(f.hours)}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
-            </Pressable>
-          ))}
-          <Text style={styles.hint}>Change these in Fill. They join your day for good at the next round.</Text>
-        </>
-      ) : null}
-
-      {items.length < MAX_ACTIVITIES ? (
-        <Pressable
-          onPress={openAdd}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.addButton, pressed && { opacity: 0.7 }]}
+    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+      <View style={styles.body}>
+        <ScrollView
+          ref={listRef}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          scrollEnabled={!dragging}
         >
-          <Ionicons name="add-circle" size={22} color={colors.primaryDark} />
-          <Text style={styles.addText}>Add activity</Text>
-        </Pressable>
-      ) : null}
+          <StepHeader
+            step={stepNumber('schedule')}
+            editing={editing}
+            eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your day' : 'Your day'}
+            title={round ? 'What fills your day now?' : 'What fills a normal day?'}
+            subtitle={
+              round
+                ? 'Handed-off tasks are gone and your new work is in. Add anything new.'
+                : editing
+                ? 'Tap an activity to change it. Changes save as you go.'
+                : 'Tap a suggestion below or type your own.'
+            }
+          />
 
-      <ErrorBanner message={error} />
+          {items.length ? (
+            <>
+              <DraggableList
+                items={items}
+                keyOf={(it) => it.activity}
+                rowHeight={ACTIVITY_ROW_HEIGHT}
+                gap={spacing.sm}
+                onReorder={setItems}
+                onDragStart={() => setDragging(true)}
+                onDragEnd={() => setDragging(false)}
+                renderItem={({ item, index, isActive, Handle }) => (
+                  <ActivityRow
+                    item={item}
+                    isActive={isActive || editingIndex === index}
+                    Handle={Handle}
+                    onEdit={() => openEdit(index)}
+                    onRemove={() => remove(index)}
+                    badge={badgeFor(item)}
+                    muted={handedOff.has(item.activity.toLowerCase())}
+                  />
+                )}
+              />
+              {items.length > 1 ? <Text style={styles.hint}>Tap one to change it · hold ≡ to reorder</Text> : null}
+            </>
+          ) : (
+            <View style={styles.empty}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="chatbubbles-outline" size={26} color={colors.primaryDark} />
+              </View>
+              <Text style={styles.emptyText}>Your day shows up here. Start with the first thing you do in the morning.</Text>
+            </View>
+          )}
 
-      <AddActivitySheet
-        visible={sheetOpen}
-        role={onboarding?.role}
-        items={items}
-        editing={editingIndex !== null ? items[editingIndex] : null}
-        onAdd={add}
-        onSave={save}
-        onClose={() => {
-          setSheetOpen(false);
-          setEditingIndex(null);
-        }}
-      />
+          {newFills.length ? (
+            <>
+              <Text style={[styles.sectionLabel, styles.fillLabel]}>New from Fill</Text>
+              {newFills.map((f) => (
+                <Pressable
+                  key={f.activity}
+                  onPress={() => navigation.navigate('Fill')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${f.activity}, ${formatHours(f.hours)} a day from Fill. Change it in Fill.`}
+                  style={({ pressed }) => [styles.fillRow, pressed && { opacity: 0.7 }]}
+                >
+                  <Ionicons name="sunny-outline" size={18} color={colors.primaryDark} />
+                  <Text style={styles.fillName} numberOfLines={1}>
+                    {f.activity}
+                  </Text>
+                  <Text style={styles.fillHours}>{formatHours(f.hours)}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                </Pressable>
+              ))}
+              <Text style={styles.hint}>Change these in Fill. They join your day for good at the next round.</Text>
+            </>
+          ) : null}
+
+          <ErrorBanner message={error} />
+        </ScrollView>
+
+        {items.length < MAX_ACTIVITIES || editingIndex !== null ? (
+          <DayComposer
+            role={onboarding?.role}
+            items={items}
+            editing={editingIndex !== null ? items[editingIndex] : null}
+            onAdd={add}
+            onSave={save}
+            onRemove={() => remove(editingIndex)}
+            onCancelEdit={() => setEditingIndex(null)}
+            action={action}
+          />
+        ) : (
+          action
+        )}
+      </View>
     </Screen>
   );
 }
@@ -278,18 +261,12 @@ const makeStyles = (colors) => ({
   fillName: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.text },
   fillHours: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    minHeight: 56,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
-  },
-  addText: { fontSize: 16, fontWeight: '700', color: colors.primaryDark },
+  body: { flex: 1 },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+  emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  emptyText: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', maxWidth: 280 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
+  actionTotal: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.muted },
+  actionButton: { minHeight: 44, paddingHorizontal: spacing.md },
 });
