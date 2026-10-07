@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Keyboard, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +17,7 @@ import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../uti
 import { useStyles } from '../../theme/ThemeContext';
 import { brand, radius, spacing } from '../../theme';
 
+const SETTLE_MS = 220; // pause after the keyboard closes, before the rate card rises in
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /** A number that counts up (or down) to its new value, so the result feels like a reveal. */
@@ -64,11 +65,31 @@ export default function BuybackRateScreen({ navigation, route }) {
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
   // Revealed when typing is done (or straight away when editing a pay you already gave).
   const [revealed, setRevealed] = useState(editing && onboarding?.annualIncome != null);
+  // Typing done: wait for the keyboard to finish closing (and the button to come back) so the card
+  // rises into a still screen instead of while everything is moving.
+  const [waiting, setWaiting] = useState(false);
   const reveal = () => {
-    if (!amount || revealed) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setRevealed(true);
+    if (amount && !revealed) setWaiting(true);
   };
+  useEffect(() => {
+    if (!waiting) return undefined;
+    let timer;
+    const go = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setWaiting(false);
+        setRevealed(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }, SETTLE_MS);
+    };
+    // If the keyboard is still up, start counting once it's gone; otherwise start now.
+    const sub = Keyboard.addListener('keyboardDidHide', go);
+    if (!Keyboard.isVisible()) go();
+    return () => {
+      sub.remove();
+      clearTimeout(timer);
+    };
+  }, [waiting]);
   // Counts from zero on the reveal, then to each new value.
   const shownRate = useCountUp(revealed ? buybackRate : 0);
   const ready = amount > 0 && (editing || Boolean(role));
