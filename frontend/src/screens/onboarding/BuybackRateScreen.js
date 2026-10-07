@@ -16,7 +16,7 @@ import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
 /**
- * About you (onboarding step 1): what describes you and your yearly pay, which gives the Buyback Rate.
+ * "What's your time worth?" (onboarding step 1): what describes you and your yearly pay, which gives the Buyback Rate.
  * With `editing` (from Me) it only changes the pay; the role has its own screen there.
  */
 export default function BuybackRateScreen({ navigation, route }) {
@@ -81,7 +81,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         step={stepNumber('buyback_rate')}
         editing={editing}
         eyebrow={editing ? 'Your Buyback Rate' : undefined}
-        title={editing ? 'What does your business pay you a year?' : 'About you'}
+        title={editing ? 'What does your business pay you a year?' : "What's your time worth?"}
         subtitle={editing ? 'A rough number is fine.' : undefined}
       />
 
