@@ -77,6 +77,7 @@ export default function SwipeScreen({ navigation, route }) {
   const previous = index > 0 ? items[index - 1] : null;
 
   const left = items.filter(needsRating).length;
+  const position = items.length - left + 1; // which card this is, e.g. 3 of 7
   const done = !item;
   const rated = items.filter((it) => it.energy);
   const summary = summarizeSchedule(
@@ -139,7 +140,11 @@ export default function SwipeScreen({ navigation, route }) {
         onMoney={pickMoney}
         onSwipe={(energy) => commit({ ...draft, energy })}
         onNeedMoney={() => setNudge(true)}
-        meta={selected ? 'changing it' : left ? `${left} to rate` : ''}
+        topLeft={
+          <View style={styles.progress}>
+            <Text style={styles.progressText}>{selected ? 'Changing' : `${position} of ${items.length}`}</Text>
+          </View>
+        }
         topRight={
           selected ? (
             <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
@@ -162,13 +167,7 @@ export default function SwipeScreen({ navigation, route }) {
       <StepHeader
         step={stepNumber('swipe')}
         editing={editing}
-        eyebrow="Your DRIP Matrix"
-        title={done ? 'Here is your routine' : 'Rate your routine'}
-        subtitle={
-          done
-            ? 'Each dot is an activity: higher makes more money, further right gives you more energy.'
-            : 'Each rating puts a dot on your matrix.'
-        }
+        title={done ? 'Your DRIP Matrix' : 'Rate your routine'}
       />
       <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
       <ErrorBanner message={error} />
@@ -178,6 +177,8 @@ export default function SwipeScreen({ navigation, route }) {
 
 const makeStyles = (colors) => ({
   card: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  progress: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
+  progressText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   backText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
   nudge: { fontSize: 13, color: colors.accentText, marginTop: spacing.sm, textAlign: 'center' },

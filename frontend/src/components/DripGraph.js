@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { DRIP, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -12,7 +12,6 @@ const GAP = 6; // between the four boxes
 const LABEL = 34; // room for each box's name and meaning, above its dots
 const SPRING = { damping: 16, stiffness: 140, mass: 0.8 };
 
-const shortName = (s) => (s.length > 12 ? `${s.slice(0, 11)}…` : s);
 const dotSize = (hours) => Math.max(14, Math.min(30, 10 + hours * 5));
 
 // The book's matrix: money up the side, energy across. Top row makes money, right column energizes.
@@ -24,7 +23,7 @@ const BOXES = [
 ];
 
 /** One activity on the matrix. New dots fly in from the centre; changed ones glide to their new box. */
-function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
+function Dot({ item, x, y, origin, color, selected, onPress }) {
   const { colors } = useTheme();
   const size = dotSize(item.hours);
   const px = useSharedValue(origin.x);
@@ -34,18 +33,18 @@ function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
   useEffect(() => {
     px.value = withSpring(x, SPRING);
     py.value = withSpring(y, SPRING);
-    scale.value = withSpring(1, SPRING);
-  }, [x, y, px, py, scale]);
+    scale.value = withSpring(selected ? 1.15 : 1, SPRING);
+  }, [x, y, selected, px, py, scale]);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateX: px.value - labelWidth / 2 }, { translateY: py.value - size / 2 }, { scale: scale.value }],
+    transform: [{ translateX: px.value - size / 2 }, { translateY: py.value - size / 2 }, { scale: scale.value }],
   }));
 
   return (
-    <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: labelWidth, alignItems: 'center' }, style]}>
+    <Animated.View style={[{ position: 'absolute', left: 0, top: 0, zIndex: selected ? 2 : 1 }, style]}>
       <Pressable
         onPress={onPress}
-        hitSlop={8}
+        hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel={`${item.activity}: ${dollars(moneyOf(item))}, ${item.energy === 'energizing' ? 'energizes you' : 'drains you'}. Tap to change.`}
         style={{
@@ -57,8 +56,19 @@ function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
           borderColor: selected ? colors.text : colors.surface,
         }}
       />
-      <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: selected ? '800' : '600', color: colors.text, marginTop: 1, maxWidth: labelWidth }}>
-        {shortName(item.activity)}
+    </Animated.View>
+  );
+}
+
+/** The name of the selected dot, in a small bubble just above it. */
+function NameBubble({ name, x, y, plotW }) {
+  const styles = useStyles(makeStyles);
+  const width = Math.min(150, Math.max(70, name.length * 7 + 20));
+  const left = Math.max(0, Math.min(plotW - width, x - width / 2));
+  return (
+    <Animated.View entering={FadeIn.duration(180)} pointerEvents="none" style={[styles.bubble, { left, top: Math.max(0, y - 46), width }]}>
+      <Text style={styles.bubbleText} numberOfLines={1}>
+        {name}
       </Text>
     </Animated.View>
   );
@@ -89,6 +99,8 @@ export default function DripGraph({ items, selected, onSelect, height = 320 }) {
     const room = boxH - LABEL - 6;
     return top + (pos + 0.5) * (room / levels.length);
   };
+
+  let bubble = null; // filled in while placing the dots
 
   // Spread dots that share a $ level and box across its width.
   const rated = items.filter((it) => it.energy && (it.money || it.value));
@@ -136,6 +148,7 @@ export default function DripGraph({ items, selected, onSelect, height = 320 }) {
                 const x = boxLeft(col) + slot * (k + 1);
                 const y = yFor(moneyOf(it));
                 const value = it.money ? valueForMoney(it.money) : it.value;
+                if (selected === it.activity) bubble = { name: it.activity, x, y };
                 return (
                   <Dot
                     key={it.activity}
@@ -145,13 +158,13 @@ export default function DripGraph({ items, selected, onSelect, height = 320 }) {
                     origin={{ x: plotW / 2, y: plotH / 2 }}
                     color={colors[DRIP[quadrantFor({ value, energy: it.energy })].color]}
                     selected={selected === it.activity}
-                    labelWidth={Math.min(80, Math.max(46, slot * 1.5))}
                     onPress={() => onSelect?.(it.activity)}
                   />
                 );
               })
             )
           : null}
+        {bubble ? <NameBubble key={bubble.name} {...bubble} plotW={plotW} /> : null}
       </View>
 
       {/* Energy axis: an arrow along the bottom */}
@@ -192,6 +205,16 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.background,
     transform: [{ translateY: -6 }, { rotate: '-90deg' }],
   },
+  bubble: {
+    position: 'absolute',
+    zIndex: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: colors.text,
+    alignItems: 'center',
+  },
+  bubbleText: { fontSize: 12, fontWeight: '700', color: colors.background },
   xAxis: { position: 'absolute' },
   xLineRow: { flexDirection: 'row', alignItems: 'center' },
   xLine: { flex: 1, height: 2, borderRadius: 1, backgroundColor: colors.border },
