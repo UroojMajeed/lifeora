@@ -10,7 +10,7 @@ import { radius, spacing, withAlpha } from '../theme';
  * Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000].
  * The list floats over the screen (a transparent modal under the field), so a tap anywhere outside closes it.
  */
-export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing }) {
+export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing, large = false, suffix }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -59,20 +59,20 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
     <View>
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
-      <View ref={boxRef} collapsable={false} style={[styles.box, (focused || open) && styles.boxFocused]}>
+      <View ref={boxRef} collapsable={false} style={[styles.box, large && styles.boxLarge, (focused || open) && styles.boxFocused]}>
         <Pressable
           onPress={toggle}
           accessibilityRole="button"
           accessibilityLabel={`Currency: ${current?.name || currency}. Tap to change.`}
           accessibilityState={{ expanded: open }}
-          style={({ pressed }) => [styles.currency, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.currency, large && styles.currencyLarge, pressed && { opacity: 0.7 }]}
         >
           <Text style={styles.flag}>{current?.flag}</Text>
           <Text style={styles.code}>{currency}</Text>
           <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
         </Pressable>
 
-        <View style={styles.divider} />
+        {large ? null : <View style={styles.divider} />}
 
         <TextInput
           value={value}
@@ -86,9 +86,10 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           keyboardAppearance={isDark ? 'dark' : 'light'}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          style={styles.input}
+          style={[styles.input, large && styles.inputLarge]}
           accessibilityLabel={accessibilityLabel || label}
         />
+        {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
       </View>
 
       <Modal visible={open && Boolean(anchor)} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
@@ -148,6 +149,18 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.surface,
   },
   boxFocused: { borderColor: colors.primary },
+  // Large: a big, calm amount field (soft fill, no hard border until focused).
+  boxLarge: { minHeight: 76, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, paddingRight: spacing.md },
+  currencyLarge: {
+    height: 40,
+    marginLeft: spacing.sm + 2,
+    paddingLeft: 10,
+    paddingRight: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+  },
+  inputLarge: { fontSize: 30, fontWeight: '800', letterSpacing: -0.5, paddingHorizontal: spacing.sm + 2 },
+  suffix: { fontSize: 15, fontWeight: '600', color: colors.muted },
   currency: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: spacing.md, paddingRight: spacing.sm, height: '100%' },
   flag: { fontSize: 20 },
   code: { fontSize: 16, fontWeight: '800', color: colors.text },

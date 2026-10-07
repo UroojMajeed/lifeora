@@ -28,3 +28,11 @@ export function sanitizeAmount(text) {
   const whole = digits.slice(0, 13);
   return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole;
 }
+
+/** Thousands separators for an amount being typed: "120000.5" → "120,000.5". */
+export function groupDigits(text) {
+  if (!text) return '';
+  const [whole, ...rest] = String(text).split('.');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return rest.length ? `${grouped}.${rest.join('')}` : grouped;
+}

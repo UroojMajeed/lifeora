@@ -31,7 +31,7 @@ function RoleIcon({ role, size = 36 }) {
  * "What describes you?" as a dropdown (like the currency picker): the field shows the chosen role
  * with its colour icon; the list floats over the screen and a tap outside closes it.
  */
-export default function RolePicker({ value, onChange }) {
+export default function RolePicker({ value, onChange, soft = false }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -71,7 +71,7 @@ export default function RolePicker({ value, onChange }) {
         accessibilityRole="button"
         accessibilityLabel={`What describes you: ${current?.label || 'not chosen'}. Tap to choose.`}
         accessibilityState={{ expanded: open }}
-        style={({ pressed }) => [styles.box, open && styles.boxOpen, pressed && { opacity: 0.85 }]}
+        style={({ pressed }) => [styles.box, soft && styles.boxSoft, open && styles.boxOpen, pressed && { opacity: 0.85 }]}
       >
         {current ? (
           <>
@@ -140,6 +140,8 @@ const makeStyles = (colors) => ({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
   },
+  // Soft: filled, no hard border (matches the large money field).
+  boxSoft: { minHeight: 68, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg },
   boxOpen: { borderColor: colors.primary },
   value: { fontSize: 16, fontWeight: '800', color: colors.text },
   line: { fontSize: 12, color: colors.muted, marginTop: 1 },
