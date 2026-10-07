@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -12,7 +12,7 @@ import { HeroCard } from '../../components/Card';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
-import { formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
+import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { brand, radius, spacing } from '../../theme';
 
@@ -62,6 +62,10 @@ export default function BuybackRateScreen({ navigation, route }) {
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
   const shownRate = useCountUp(buybackRate);
   const ready = amount > 0 && (editing || Boolean(role));
+  // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
+  const { width: screenWidth } = useWindowDimensions();
+  const rateText = formatMoney(shownRate, currency);
+  const bigFont = fitFontSize(`${formatMoney(buybackRate, currency)}/h`, screenWidth - 48 - 48, 48, 22);
 
   const next = async () => {
     if (!ready) return;
@@ -116,10 +120,9 @@ export default function BuybackRateScreen({ navigation, route }) {
       ) : null}
 
       <Animated.View entering={FadeInDown.duration(380).delay(80)} style={!editing && styles.section}>
-        {!editing ? <Text style={styles.lead}>My business pays me…</Text> : null}
+        {!editing ? <Text style={styles.lead}>My business pays me each year…</Text> : null}
         <MoneyInput
           large
-          suffix="a year"
           currency={currency}
           onCurrencyChange={setCurrency}
           value={groupDigits(income)}
@@ -137,12 +140,14 @@ export default function BuybackRateScreen({ navigation, route }) {
             <View style={styles.heroTop}>
               <Text style={styles.heroLabel}>Your Buyback Rate</Text>
               <View style={styles.worth}>
-                <Text style={styles.worthText}>Your time: {formatMoney(effectiveHourlyRate, currency, { decimals: 0 })}/hr</Text>
+                <Text style={styles.worthText} numberOfLines={1}>
+                  Your time: {formatMoney(effectiveHourlyRate, currency, { decimals: 0 })}/hr
+                </Text>
               </View>
             </View>
-            <Text style={styles.big} adjustsFontSizeToFit numberOfLines={1}>
-              {formatMoney(shownRate, currency)}
-              <Text style={styles.per}>/hr</Text>
+            <Text style={[styles.big, { fontSize: bigFont }]} numberOfLines={1}>
+              {rateText}
+              <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text>
             </Text>
             <View style={styles.divider} />
             <View style={styles.tip}>
@@ -173,7 +178,7 @@ const makeStyles = (colors) => ({
   section: { marginTop: spacing.lg },
   hint: { fontSize: 13, color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
   hero: { marginTop: spacing.lg },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   worth: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.heroChip },
   worthText: { color: colors.heroText, fontSize: 12, fontWeight: '700' },

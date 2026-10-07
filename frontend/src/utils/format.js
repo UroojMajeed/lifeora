@@ -29,6 +29,12 @@ export function sanitizeAmount(text) {
   return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole;
 }
 
+/** Font size that fits `text` on one line in `width` points, between `min` and `max`. */
+export function fitFontSize(text, width, max, min) {
+  const chars = Math.max(1, String(text || '').length);
+  return Math.floor(Math.max(min, Math.min(max, width / (chars * 0.62))));
+}
+
 /** Thousands separators for an amount being typed: "120000.5" → "120,000.5". */
 export function groupDigits(text) {
   if (!text) return '';

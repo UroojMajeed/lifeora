@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { CURRENCIES } from '../constants/currencies';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing, withAlpha } from '../theme';
+import { fitFontSize } from '../utils/format';
 
 /**
  * Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000].
@@ -18,7 +19,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
   const [query, setQuery] = useState('');
   const [anchor, setAnchor] = useState(null); // where the field is on screen: { x, y, width, height }
   const boxRef = useRef(null);
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const current = CURRENCIES.find((c) => c.code === currency);
 
   const q = query.trim().toLowerCase();
@@ -50,6 +51,10 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
     onCurrencyChange(code);
     close();
   };
+
+  // Large mode: big digits that shrink as the number grows, so it never runs off the field.
+  // Room for digits = screen - page padding - currency chip - "a year" - inner padding.
+  const largeFont = fitFontSize(value || placeholder, screenWidth - 48 - 104 - (suffix ? 56 : 0) - 28, 30, 14);
 
   const top = anchor ? anchor.y + anchor.height + 6 : 0;
   // Keep the list on screen: shrink it if the field sits low.
@@ -86,7 +91,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           keyboardAppearance={isDark ? 'dark' : 'light'}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          style={[styles.input, large && styles.inputLarge]}
+          style={[styles.input, large && styles.inputLarge, large && { fontSize: largeFont }]}
           accessibilityLabel={accessibilityLabel || label}
         />
         {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
@@ -160,7 +165,7 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.surface,
   },
   inputLarge: { fontSize: 30, fontWeight: '800', letterSpacing: -0.5, paddingHorizontal: spacing.sm + 2 },
-  suffix: { fontSize: 15, fontWeight: '600', color: colors.muted },
+  suffix: { fontSize: 15, fontWeight: '600', color: colors.muted, flexShrink: 0 },
   currency: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: spacing.md, paddingRight: spacing.sm, height: '100%' },
   flag: { fontSize: 20 },
   code: { fontSize: 16, fontWeight: '800', color: colors.text },
