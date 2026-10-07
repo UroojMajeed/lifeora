@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
+const updateUser = require('../utils/updateUser');
 const {
   calculateBuybackRate,
   quadrantFor,
@@ -106,17 +107,13 @@ async function getOnboarding(req, res, next) {
 async function updateOnboarding(req, res, next) {
   try {
     const data = sanitize(req.body);
-    const user = await User.findById(req.userId);
-    if (!user) throw new ApiError(404, 'User not found');
-
-    Object.assign(user.onboarding, data);
-
-    // Derived values are always computed on the server.
-    if (data.annualIncome !== undefined) {
-      Object.assign(user.onboarding, calculateBuybackRate(data.annualIncome));
-    }
-
-    await user.save();
+    const { user } = await updateUser(req.userId, (u) => {
+      Object.assign(u.onboarding, data);
+      // Derived values are always computed on the server.
+      if (data.annualIncome !== undefined) {
+        Object.assign(u.onboarding, calculateBuybackRate(data.annualIncome));
+      }
+    });
     res.json({ onboarding: user.onboarding });
   } catch (err) {
     next(err);

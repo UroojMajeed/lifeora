@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
+const updateUser = require('../utils/updateUser');
 const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
@@ -136,27 +137,24 @@ async function listHandoffs(req, res, next) {
 async function updateHandoff(req, res, next) {
   try {
     const data = sanitize(req.body);
-    const user = await User.findById(req.userId);
-    if (!user) throw new ApiError(404, 'User not found');
-
     const name = String(req.params.activity || '').trim();
-    const activity = (user.onboarding?.schedule || []).find(
-      (a) => a.activity.toLowerCase() === name.toLowerCase() && a.quadrant in QUADRANT_ORDER
-    );
-    if (!activity) throw new ApiError(404, 'That activity is not one of your draining tasks');
+    const { user, result: activityName } = await updateUser(req.userId, (u) => {
+      const activity = (u.onboarding?.schedule || []).find(
+        (a) => a.activity.toLowerCase() === name.toLowerCase() && a.quadrant in QUADRANT_ORDER
+      );
+      if (!activity) throw new ApiError(404, 'That activity is not one of your draining tasks');
 
-    let handoff = user.handoffs.find((h) => h.activity.toLowerCase() === activity.activity.toLowerCase());
-    if (!handoff) {
-      user.handoffs.push(emptyHandoff(activity.activity));
-      handoff = user.handoffs[user.handoffs.length - 1];
-    }
-
-    Object.assign(handoff, data);
-    handoff.doneAt = handoff.status === 'done' ? handoff.doneAt || new Date() : undefined;
-
-    await user.save();
+      let handoff = u.handoffs.find((h) => h.activity.toLowerCase() === activity.activity.toLowerCase());
+      if (!handoff) {
+        u.handoffs.push(emptyHandoff(activity.activity));
+        handoff = u.handoffs[u.handoffs.length - 1];
+      }
+      Object.assign(handoff, data);
+      handoff.doneAt = handoff.status === 'done' ? handoff.doneAt || new Date() : undefined;
+      return activity.activity;
+    });
     const result = buildHandoffs(user);
-    res.json({ handoff: result.handoffs.find((h) => h.activity === activity.activity), summary: result.summary });
+    res.json({ handoff: result.handoffs.find((h) => h.activity === activityName), summary: result.summary });
   } catch (err) {
     next(err);
   }
@@ -184,16 +182,14 @@ async function updateFills(req, res, next) {
     if (new Set(names).size !== names.length) errors.push('Each activity can only be filled once');
     if (errors.length) throw new ApiError(400, 'Validation failed', errors);
 
-    const user = await User.findById(req.userId);
-    if (!user) throw new ApiError(404, 'User not found');
-    const freed = buildHandoffs(user).summary.boughtBackHours;
-    const filled = fills.reduce((t, f) => t + f.hours, 0);
-    if (filled > freed + 0.001) {
-      throw new ApiError(400, `You've bought back ${freed}h a day, so you can fill up to ${freed}h.`);
-    }
-
-    user.fills = fills;
-    await user.save();
+    const { user } = await updateUser(req.userId, (u) => {
+      const freed = buildHandoffs(u).summary.boughtBackHours;
+      const filled = fills.reduce((t, f) => t + f.hours, 0);
+      if (filled > freed + 0.001) {
+        throw new ApiError(400, `You've bought back ${freed}h a day, so you can fill up to ${freed}h.`);
+      }
+      u.fills = fills;
+    });
     res.json(buildHandoffs(user));
   } catch (err) {
     next(err);

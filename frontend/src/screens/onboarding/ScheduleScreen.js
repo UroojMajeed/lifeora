@@ -49,6 +49,7 @@ export default function ScheduleScreen({ navigation, route }) {
   // Save the list as it changes (shortly after the last edit), so closing the app never loses it.
   const firstRender = useRef(true);
   const autosave = useRef(null);
+  const saving = useRef(null); // the autosave on its way to the server, if any
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -56,7 +57,7 @@ export default function ScheduleScreen({ navigation, route }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saveStep({ schedule: items }, editing ? 'done' : 'schedule').catch(() => {});
+      saving.current = saveStep({ schedule: items }, editing ? 'done' : 'schedule').catch(() => {});
     }, 600);
     return () => clearTimeout(autosave.current);
   }, [items, saveStep, editing]);
@@ -100,6 +101,8 @@ export default function ScheduleScreen({ navigation, route }) {
     setError('');
     setLoading(true);
     try {
+      // Let an autosave that's already on its way land first, so the two saves don't collide.
+      await saving.current;
       if (editing) {
         await saveStep({ schedule: items }, 'done');
         // Only the new activities need rating; otherwise the change is already done.
