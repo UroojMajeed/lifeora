@@ -26,6 +26,10 @@ export const lightColors = {
   accent: brand.apricot, // shapes only (dots, icons, glows), never text on light
   accentSoft: '#FDF1E0',
   accentText: '#9A5B12', // when an apricot-family label must be text, this reads on light
+  // Money (the $ rating): coin gold. Light text on light never uses apricot itself (too faint).
+  gold: ['#F7CB7E', '#E2A23C'], // picked $: a coin gradient
+  goldInk: '#4A2E06', // $ on the gold coin
+  goldLine: '#EBD3A8', // ring around an unpicked $
 
   // DRIP quadrants and status
   success: brand.teal, // Production
@@ -74,6 +78,9 @@ export const darkColors = {
   accent: brand.apricot,
   accentSoft: 'rgba(245,185,113,0.14)',
   accentText: brand.apricot, // apricot text is fine on dark
+  gold: ['#F5B971', '#D6923A'],
+  goldInk: '#2A1A04',
+  goldLine: 'rgba(245,185,113,0.4)',
 
   success: '#5FD3B8',
   successSoft: 'rgba(95,211,184,0.14)',

@@ -145,6 +145,7 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
                     accessibilityLabel={`${m} of 5: ${MONEY_CAPTION[m]}`}
                     style={({ pressed }) => [styles.money, on && styles.moneyOn, pressed && { transform: [{ scale: 0.94 }] }]}
                   >
+                    {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coin} /> : null}
                     <Text style={[styles.moneyText, on && styles.moneyTextOn]} numberOfLines={1} adjustsFontSizeToFit>
                       {dollars(m)}
                     </Text>
@@ -212,15 +213,18 @@ const makeStyles = (colors, isDark) => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
-    backgroundColor: colors.surface,
+    overflow: 'hidden',
+    backgroundColor: colors.accentSoft,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.goldLine,
   },
-  moneyOn: { backgroundColor: colors.primary, borderColor: colors.primary, transform: [{ scale: 1.06 }] },
-  moneyText: { fontSize: 13, fontWeight: '800', color: colors.primaryDark },
-  moneyTextOn: { color: colors.onColor },
+  // The picked $ looks like a gold coin.
+  moneyOn: { borderColor: colors.gold[1], transform: [{ scale: 1.08 }] },
+  coin: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  moneyText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
+  moneyTextOn: { color: colors.goldInk },
   caption: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 6 },
-  captionOn: { color: colors.primaryDark, fontWeight: '800' },
+  captionOn: { color: colors.accentText, fontWeight: '800' },
   stamp: {
     position: 'absolute',
     top: 10,
