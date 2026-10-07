@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LayoutAnimation, Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
-import Animated, { FadeInUp, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +18,7 @@ import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
-const CHIP_MS = 1100; // how long the "Email → Delegation" chip shows after a swipe
+const CHIP_MS = 1100; // how long the task just rated stays outlined on the board
 const REVEAL_STAGGER = 140; // ms between dots flying in on the final reveal
 
 // One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
@@ -90,7 +89,7 @@ export default function SwipeScreen({ navigation, route }) {
     if (!changing && !list.some(needsRating)) setTimeout(() => setReveal(true), CHIP_MS / 2);
   };
 
-  // The result chip fades away by itself; it never blocks the next swipe.
+  // The task just rated, outlined on the board for a moment.
   const [chip, setChip] = useState(null);
   useEffect(() => {
     if (!chip) return undefined;
@@ -198,7 +197,6 @@ export default function SwipeScreen({ navigation, route }) {
   );
 
   return (
-    // A wrapper so the result chip floats above the screen (it stays put while the page scrolls).
     <View style={{ flex: 1 }}>
       <Screen footer={card}>
         <StepHeader
@@ -252,23 +250,6 @@ export default function SwipeScreen({ navigation, route }) {
           </View>
         </Modal>
       </Screen>
-      {/* Where the task just went: a quick chip at the top, gone after a moment. */}
-      {chip ? (
-        <Animated.View
-          key={chip.at}
-          entering={FadeInUp.duration(220)}
-          exiting={FadeOut.duration(200)}
-          pointerEvents="none"
-          style={[styles.chip, { top: insets.top + spacing.sm, borderColor: colors[DRIP[chip.quadrant].color] }]}
-        >
-          <View style={[styles.chipDot, { backgroundColor: colors[DRIP[chip.quadrant].color] }]} />
-          <Text style={styles.chipText} numberOfLines={1}>
-            {chip.activity}
-            <Text style={styles.chipArrow}>  →  </Text>
-            <Text style={{ color: colors[DRIP[chip.quadrant].color] }}>{DRIP[chip.quadrant].name}</Text>
-          </Text>
-        </Animated.View>
-      ) : null}
     </View>
   );
 }
@@ -282,27 +263,6 @@ const makeStyles = (colors) => ({
   infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
   infoName: { fontWeight: '800' },
-  chip: {
-    position: 'absolute',
-    alignSelf: 'center',
-    maxWidth: '88%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    backgroundColor: colors.surface,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  chipDot: { width: 10, height: 10, borderRadius: 5 },
-  chipText: { fontSize: 14, fontWeight: '800', color: colors.text, flexShrink: 1 },
-  chipArrow: { color: colors.muted, fontWeight: '600' },
   reveal: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center', backgroundColor: colors.background },
   revealEyebrow: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
   revealTitle: { fontSize: 28, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs, letterSpacing: -0.6 },
