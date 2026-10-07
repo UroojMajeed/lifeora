@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { CURRENCIES } from '../constants/currencies';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { radius, spacing, withAlpha } from '../theme';
 
 /** Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000]. */
-export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder }) {
+export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -58,7 +58,8 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.muted}
+          // Lighter than typed text, so an example never looks like a real value.
+          placeholderTextColor={withAlpha(colors.muted, 0.45)}
           keyboardType="decimal-pad"
           returnKeyType="done"
           keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -68,7 +69,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           }}
           onBlur={() => setFocused(false)}
           style={styles.input}
-          accessibilityLabel={label}
+          accessibilityLabel={accessibilityLabel || label}
         />
       </View>
 
