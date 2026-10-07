@@ -12,6 +12,8 @@ const { extractSchedule: extractFromText } = require('../services/scheduleExtrac
 
 const MAX_ACTIVITIES = 30;
 const MAX_DAY_DESCRIPTION = 2000;
+// High enough for currencies with big numbers (10 billion Vietnamese dong is about $400k a year).
+const MAX_ANNUAL_INCOME = 1e13;
 
 function sanitizeSchedule(schedule, errors) {
   if (!Array.isArray(schedule) || schedule.length > MAX_ACTIVITIES) {
@@ -60,7 +62,8 @@ function sanitize(body = {}) {
     // Number(null) and Number('') are 0, so reject blanks explicitly instead of saving a zero income.
     const blank = body.annualIncome === null || String(body.annualIncome).trim() === '';
     const n = Number(body.annualIncome);
-    if (blank || !Number.isFinite(n) || n < 0 || n > 1e10) errors.push('annualIncome must be a positive number');
+    if (blank || !Number.isFinite(n) || n < 0) errors.push('Enter your yearly pay as a number.');
+    else if (n > MAX_ANNUAL_INCOME) errors.push('That yearly pay looks too large. Please check the number.');
     else out.annualIncome = n;
   }
 

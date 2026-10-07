@@ -20,9 +20,11 @@ export function formatHours(value) {
   return `${n}h`;
 }
 
-// Keep digits only (and one decimal point) for currency inputs.
+// Keep digits only (and one decimal point, 2 decimals) for currency inputs.
 export function sanitizeAmount(text) {
   const cleaned = text.replace(/[^0-9.]/g, '');
-  const [whole, ...rest] = cleaned.split('.');
+  const [digits, ...rest] = cleaned.split('.');
+  // 13 digits is plenty for any yearly pay in any currency (the server allows up to 10 trillion).
+  const whole = digits.slice(0, 13);
   return rest.length ? `${whole}.${rest.join('').slice(0, 2)}` : whole;
 }
