@@ -9,6 +9,7 @@ import Wordmark from '../components/Wordmark';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
 import { useOnboarding } from '../context/OnboardingContext';
+import { resetTo } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, radius, spacing } from '../theme';
 
@@ -38,7 +39,7 @@ export default function LandingScreen({ navigation }) {
     setStarting(true);
     try {
       const next = await startAsGuest();
-      navigation.reset({ index: 0, routes: [{ name: next }] });
+      navigation.reset(resetTo(next));
     } catch (err) {
       setError(err.message);
       setStarting(false);
@@ -56,7 +57,7 @@ export default function LandingScreen({ navigation }) {
       const [next] = await Promise.all([bootstrap(), new Promise((r) => setTimeout(r, MIN_SPLASH_MS))]);
       if (cancelled) return;
       if (next) {
-        navigation.reset({ index: 0, routes: [{ name: next }] });
+        navigation.reset(resetTo(next));
       } else {
         setReady(true);
         Animated.parallel([

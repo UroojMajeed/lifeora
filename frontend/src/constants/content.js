@@ -225,6 +225,16 @@ export function screenForStep(stepKey) {
   return STEPS.find((s) => s.key === stepKey)?.screen || 'Profile';
 }
 
+/**
+ * Navigation state for landing on a screen: an onboarding step comes with every step before it, so
+ * Back always goes to the previous step (even when the app resumes in the middle of onboarding).
+ */
+export function resetTo(screen) {
+  const index = STEPS.findIndex((s) => s.screen === screen);
+  const routes = index < 0 ? [{ name: screen }] : STEPS.slice(0, index + 1).map((s) => ({ name: s.screen }));
+  return { index: routes.length - 1, routes };
+}
+
 export function stepNumber(stepKey) {
   return STEPS.findIndex((s) => s.key === stepKey) + 1;
 }

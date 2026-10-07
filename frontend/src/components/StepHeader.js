@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ThemeToggle from './ThemeToggle';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
-import { STEPS, TOTAL_STEPS } from '../constants/content';
+import { STEPS, TOTAL_STEPS, resetTo } from '../constants/content';
 
 /**
  * Back button, segmented progress, theme toggle, and the step's heading.
@@ -16,7 +16,7 @@ export default function StepHeader({ step, eyebrow, title, subtitle, showBack = 
   const styles = useStyles(makeStyles);
   // After resuming straight onto a later step there is nothing behind it, so go to the previous step instead.
   const previous = step > 1 ? STEPS[step - 2]?.screen : null;
-  const goBack = onBack || (() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate(previous)));
+  const goBack = onBack || (() => (navigation.canGoBack() ? navigation.goBack() : navigation.reset(resetTo(previous))));
   const canGoBack = Boolean(onBack) || editing || (showBack && (navigation.canGoBack() || Boolean(previous)));
 
   return (

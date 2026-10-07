@@ -8,6 +8,7 @@ import TextField from '../components/TextField';
 import Button from '../components/Button';
 import ErrorBanner from '../components/ErrorBanner';
 import { useOnboarding } from '../context/OnboardingContext';
+import { resetTo } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
@@ -46,7 +47,7 @@ export default function AccountScreen({ navigation, route }) {
         navigation.goBack();
       } else {
         const next = await signIn({ email: email.trim(), password });
-        navigation.reset({ index: 0, routes: [{ name: next }] });
+        navigation.reset(resetTo(next));
       }
     } catch (err) {
       setError(err.status === 409 ? 'That email already has an account. Sign in instead?' : err.message);
