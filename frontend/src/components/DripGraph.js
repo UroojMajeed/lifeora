@@ -1,18 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { DRIP, MONEY_LEVELS, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
+import { Ionicons } from '@expo/vector-icons';
+import { DRIP, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius } from '../theme';
 
-const Y_AXIS = 40; // room for the $ labels
-const X_AXIS = 22; // room for the energy labels
+const Y_AXIS = 28; // the money arrow on the left
+const X_AXIS = 30; // the energy arrow along the bottom
+const GAP = 6; // between the four boxes
+const LABEL = 34; // room for each box's name and meaning, above its dots
 const SPRING = { damping: 16, stiffness: 140, mass: 0.8 };
 
-const shortName = (s) => (s.length > 14 ? `${s.slice(0, 13)}…` : s);
-const dotSize = (hours) => Math.max(16, Math.min(34, 12 + hours * 5));
+const shortName = (s) => (s.length > 12 ? `${s.slice(0, 11)}…` : s);
+const dotSize = (hours) => Math.max(14, Math.min(30, 10 + hours * 5));
 
-/** One activity on the graph. New dots fly in from the middle; changed ones glide to their new spot. */
+// The book's matrix: money up the side, energy across. Top row makes money, right column energizes.
+const BOXES = [
+  { key: 'replacement', row: 0, col: 0 },
+  { key: 'production', row: 0, col: 1 },
+  { key: 'delegation', row: 1, col: 0 },
+  { key: 'investment', row: 1, col: 1 },
+];
+
+/** One activity on the matrix. New dots fly in from the centre; changed ones glide to their new box. */
 function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
   const { colors } = useTheme();
   const size = dotSize(item.hours);
@@ -46,10 +57,7 @@ function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
           borderColor: selected ? colors.text : colors.surface,
         }}
       />
-      <Text
-        numberOfLines={1}
-        style={{ fontSize: 10, fontWeight: selected ? '800' : '600', color: colors.text, marginTop: 2, maxWidth: labelWidth }}
-      >
+      <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: selected ? '800' : '600', color: colors.text, marginTop: 1, maxWidth: labelWidth }}>
         {shortName(item.activity)}
       </Text>
     </Animated.View>
@@ -57,22 +65,32 @@ function Dot({ item, x, y, origin, color, selected, labelWidth, onPress }) {
 }
 
 /**
- * The DRIP Matrix as a graph, like in the book: money goes up ($ to $$$$$), energy goes across
- * (drains → energizes). Only rated activities (money and energy set) are plotted.
+ * The DRIP Matrix drawn like the book: four equal boxes, money rising up the side and energy
+ * growing to the right. Rated activities sit in their box as dots (higher = more $, size = hours).
  */
-export default function DripGraph({ items, selected, onSelect, height = 300 }) {
+export default function DripGraph({ items, selected, onSelect, height = 320 }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [width, setWidth] = useState(0);
 
   const plotW = Math.max(0, width - Y_AXIS);
   const plotH = height - X_AXIS;
-  const rowH = plotH / MONEY_LEVELS.length;
-  const half = plotW / 2;
-  const splitY = plotH - (MONEY_SPLIT - 1) * rowH; // between $$ and $$$
-  const rowCenter = (money) => plotH - (money - 0.5) * rowH;
+  const boxW = (plotW - GAP) / 2;
+  const boxH = (plotH - GAP) / 2;
+  const boxLeft = (col) => col * (boxW + GAP);
+  const boxTop = (row) => row * (boxH + GAP);
 
-  // Group dots that share a cell (same $ and same side) and spread them across it.
+  // Where a $ rating sits inside its box: $$$-$$$$$ share the top row, $-$$ the bottom row.
+  const yFor = (money) => {
+    const high = money >= MONEY_SPLIT;
+    const levels = high ? [5, 4, 3] : [2, 1];
+    const pos = levels.indexOf(money);
+    const top = boxTop(high ? 0 : 1) + LABEL;
+    const room = boxH - LABEL - 6;
+    return top + (pos + 0.5) * (room / levels.length);
+  };
+
+  // Spread dots that share a $ level and box across its width.
   const rated = items.filter((it) => it.energy && (it.money || it.value));
   const cells = {};
   rated.forEach((it) => {
@@ -80,58 +98,54 @@ export default function DripGraph({ items, selected, onSelect, height = 300 }) {
     (cells[key] = cells[key] || []).push(it);
   });
 
-  const QUADS = [
-    { key: 'replacement', left: 0, top: 0, h: splitY },
-    { key: 'production', left: half, top: 0, h: splitY },
-    { key: 'delegation', left: 0, top: splitY, h: plotH - splitY },
-    { key: 'investment', left: half, top: splitY, h: plotH - splitY },
-  ];
-
   return (
     <View style={{ height }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {/* $ labels */}
-      {MONEY_LEVELS.map((m) => (
-        <Text key={m} style={[styles.yLabel, { top: rowCenter(m) - 8 }, m >= MONEY_SPLIT && styles.yLabelHigh]}>
-          {dollars(m)}
-        </Text>
-      ))}
+      {/* Money axis: an arrow up the left side */}
+      <View style={[styles.yAxis, { height: plotH }]}>
+        <Ionicons name="caret-up" size={14} color={colors.muted} style={styles.yArrowHead} />
+        <View style={styles.yLine} />
+        <Text style={styles.yTop}>$$$</Text>
+        <Text style={styles.yWord}>MONEY</Text>
+        <Text style={styles.yBottom}>$</Text>
+      </View>
 
       <View style={[styles.plot, { left: Y_AXIS, width: plotW, height: plotH }]}>
-        {QUADS.map((q) => {
-          const d = DRIP[q.key];
-          const top = q.top < splitY;
+        {BOXES.map((b) => {
+          const d = DRIP[b.key];
           return (
             <View
-              key={q.key}
-              style={[styles.quad, { left: q.left, top: q.top, width: half, height: q.h, backgroundColor: colors[d.soft] }]}
+              key={b.key}
+              style={[
+                styles.box,
+                { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH, backgroundColor: colors[d.soft] },
+              ]}
             >
-              <Text style={[styles.quadName, { color: colors[d.color] }, !top && styles.quadNameBottom]}>{d.name}</Text>
+              <Text style={[styles.boxName, { color: colors[d.color] }]}>{d.name}</Text>
+              <Text style={styles.boxAxes} numberOfLines={1}>
+                {d.axes}
+              </Text>
             </View>
           );
         })}
-        {/* The two lines that make the four quadrants */}
-        <View style={[styles.vLine, { left: half - 1, height: plotH }]} />
-        <View style={[styles.hLine, { top: splitY - 1, width: plotW }]} />
 
         {width
           ? Object.values(cells).flatMap((group) =>
               group.map((it, k) => {
-                const right = it.energy === 'energizing';
-                const slot = half / (group.length + 1);
-                const x = (right ? half : 0) + slot * (k + 1);
-                const y = rowCenter(moneyOf(it));
+                const col = it.energy === 'energizing' ? 1 : 0;
+                const slot = boxW / (group.length + 1);
+                const x = boxLeft(col) + slot * (k + 1);
+                const y = yFor(moneyOf(it));
                 const value = it.money ? valueForMoney(it.money) : it.value;
-                const color = colors[DRIP[quadrantFor({ value, energy: it.energy })].color];
                 return (
                   <Dot
                     key={it.activity}
                     item={it}
                     x={x}
                     y={y}
-                    origin={{ x: half, y: splitY }}
-                    color={color}
+                    origin={{ x: plotW / 2, y: plotH / 2 }}
+                    color={colors[DRIP[quadrantFor({ value, energy: it.energy })].color]}
                     selected={selected === it.activity}
-                    labelWidth={Math.min(84, Math.max(48, slot * 1.6))}
+                    labelWidth={Math.min(80, Math.max(46, slot * 1.5))}
                     onPress={() => onSelect?.(it.activity)}
                   />
                 );
@@ -140,23 +154,49 @@ export default function DripGraph({ items, selected, onSelect, height = 300 }) {
           : null}
       </View>
 
-      <View style={[styles.xAxis, { left: Y_AXIS, width: plotW, top: plotH + 4 }]}>
-        <Text style={styles.xLabel}>← Drains me</Text>
-        <Text style={styles.xLabel}>Energizes me →</Text>
+      {/* Energy axis: an arrow along the bottom */}
+      <View style={[styles.xAxis, { left: Y_AXIS, width: plotW, top: plotH + 6 }]}>
+        <View style={styles.xLineRow}>
+          <View style={styles.xLine} />
+          <Ionicons name="caret-forward" size={14} color={colors.muted} style={styles.xArrowHead} />
+        </View>
+        <View style={styles.xLabels}>
+          <Text style={styles.xLabel}>Drains you</Text>
+          <Text style={styles.xWord}>ENERGY</Text>
+          <Text style={styles.xLabel}>Energizes you</Text>
+        </View>
       </View>
     </View>
   );
 }
 
 const makeStyles = (colors) => ({
-  plot: { position: 'absolute', top: 0, borderRadius: radius.md, overflow: 'hidden' },
-  quad: { position: 'absolute', padding: 6 },
-  quadName: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, opacity: 0.85 },
-  quadNameBottom: { position: 'absolute', bottom: 6, left: 6 },
-  vLine: { position: 'absolute', top: 0, width: 2, backgroundColor: colors.surface },
-  hLine: { position: 'absolute', left: 0, height: 2, backgroundColor: colors.surface },
-  yLabel: { position: 'absolute', left: 0, width: Y_AXIS - 6, textAlign: 'right', fontSize: 11, fontWeight: '700', color: colors.muted },
-  yLabelHigh: { color: colors.text },
-  xAxis: { position: 'absolute', flexDirection: 'row', justifyContent: 'space-between' },
-  xLabel: { fontSize: 11, fontWeight: '700', color: colors.muted },
+  plot: { position: 'absolute', top: 0 },
+  box: { position: 'absolute', borderRadius: radius.md, paddingHorizontal: 8, paddingTop: 6 },
+  boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+  boxAxes: { fontSize: 9, fontWeight: '600', color: colors.muted, marginTop: 1 },
+  yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },
+  yArrowHead: { position: 'absolute', top: -4 },
+  yLine: { position: 'absolute', top: 6, bottom: 0, width: 2, borderRadius: 1, backgroundColor: colors.border },
+  yTop: { position: 'absolute', top: 14, fontSize: 10, fontWeight: '800', color: colors.text, backgroundColor: colors.background },
+  yBottom: { position: 'absolute', bottom: 4, fontSize: 10, fontWeight: '800', color: colors.muted, backgroundColor: colors.background },
+  yWord: {
+    position: 'absolute',
+    top: '50%',
+    width: 60,
+    textAlign: 'center',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    color: colors.muted,
+    backgroundColor: colors.background,
+    transform: [{ translateY: -6 }, { rotate: '-90deg' }],
+  },
+  xAxis: { position: 'absolute' },
+  xLineRow: { flexDirection: 'row', alignItems: 'center' },
+  xLine: { flex: 1, height: 2, borderRadius: 1, backgroundColor: colors.border },
+  xArrowHead: { marginLeft: -4 },
+  xLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 },
+  xLabel: { fontSize: 10, fontWeight: '700', color: colors.muted },
+  xWord: { fontSize: 10, fontWeight: '800', letterSpacing: 1.5, color: colors.muted },
 });

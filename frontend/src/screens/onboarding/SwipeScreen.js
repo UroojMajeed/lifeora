@@ -7,8 +7,9 @@ import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import DripGraph from '../../components/DripGraph';
+import SwipeRateCard from '../../components/SwipeRateCard';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { DRIP, MONEY_LEVELS, dollars, stepNumber, summarizeSchedule, valueForMoney } from '../../constants/content';
+import { DRIP, stepNumber, summarizeSchedule, valueForMoney } from '../../constants/content';
 import { recordMove } from '../../storage/progress';
 import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
@@ -65,17 +66,10 @@ export default function SwipeScreen({ navigation, route }) {
     persist(list);
   };
 
+  const [nudge, setNudge] = useState(false);
   const pickMoney = (money) => {
-    Haptics.selectionAsync().catch(() => {});
-    const next = { ...draft, money };
-    setDraft(next);
-    if (next.energy && selected) commit(next); // changing a rated one: either tap saves
-  };
-
-  const pickEnergy = (energy) => {
-    const next = { ...draft, energy };
-    setDraft(next);
-    if (next.money) commit(next);
+    setNudge(false);
+    setDraft((d) => ({ ...d, money }));
   };
 
   // Back: reopen the activity rated just before this one.
@@ -137,79 +131,29 @@ export default function SwipeScreen({ navigation, route }) {
       />
     </View>
   ) : (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.activity}
-          </Text>
-          <Text style={styles.meta}>
-            {formatHours(item.hours)} a day{selected ? ' · changing it' : left ? ` · ${left} to rate` : ''}
-          </Text>
-        </View>
-        {selected ? (
-          <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
-            <Ionicons name="close" size={22} color={colors.muted} />
-          </Pressable>
-        ) : previous ? (
-          <Pressable onPress={() => setSelected(previous.activity)} hitSlop={10} accessibilityRole="button" style={styles.back}>
-            <Ionicons name="arrow-undo" size={14} color={colors.primaryDark} />
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-        ) : null}
-      </View>
-
-      <Text style={styles.question}>How much money does it make?</Text>
-      <View style={styles.moneyRow}>
-        {MONEY_LEVELS.map((m) => {
-          const on = draft.money === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => pickMoney(m)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              accessibilityLabel={`${m} of 5`}
-              style={({ pressed }) => [styles.money, on && styles.moneyOn, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={[styles.moneyText, on && styles.moneyTextOn]} numberOfLines={1} adjustsFontSizeToFit>
-                {dollars(m)}
-              </Text>
+    <View>
+      <SwipeRateCard
+        item={item}
+        nextItem={selected ? null : items.filter((it) => it !== item).find(needsRating)}
+        money={draft.money}
+        onMoney={pickMoney}
+        onSwipe={(energy) => commit({ ...draft, energy })}
+        onNeedMoney={() => setNudge(true)}
+        meta={selected ? 'changing it' : left ? `${left} to rate` : ''}
+        topRight={
+          selected ? (
+            <Pressable onPress={() => setSelected(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
+              <Ionicons name="close" size={22} color={colors.muted} />
             </Pressable>
-          );
-        })}
-      </View>
-      <View style={styles.scale}>
-        <Text style={styles.scaleText}>Anyone could do it</Text>
-        <Text style={styles.scaleText}>Only you, makes money</Text>
-      </View>
-
-      <Text style={styles.question}>How does it make you feel?</Text>
-      <View style={styles.energyRow}>
-        {[
-          { key: 'draining', label: 'Drains me', icon: 'battery-dead', color: colors.error, soft: colors.errorSoft },
-          { key: 'energizing', label: 'Energizes me', icon: 'flash', color: colors.success, soft: colors.successSoft },
-        ].map((e) => {
-          const on = draft.energy === e.key;
-          return (
-            <Pressable
-              key={e.key}
-              onPress={() => pickEnergy(e.key)}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              style={({ pressed }) => [
-                styles.energy,
-                { backgroundColor: e.soft, borderColor: on ? e.color : 'transparent' },
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              <Ionicons name={e.icon} size={18} color={e.color} />
-              <Text style={[styles.energyText, { color: e.color }]}>{e.label}</Text>
+          ) : previous ? (
+            <Pressable onPress={() => setSelected(previous.activity)} hitSlop={10} accessibilityRole="button" style={styles.back}>
+              <Ionicons name="arrow-undo" size={14} color={colors.primaryDark} />
+              <Text style={styles.backText}>Back</Text>
             </Pressable>
-          );
-        })}
-      </View>
-      {!draft.money && draft.energy ? <Text style={styles.nudge}>Now pick how much money it makes.</Text> : null}
+          ) : null
+        }
+      />
+      {nudge && !draft.money ? <Text style={styles.nudge}>Tap how much money it makes first.</Text> : null}
     </View>
   );
 
@@ -233,48 +177,9 @@ export default function SwipeScreen({ navigation, route }) {
 }
 
 const makeStyles = (colors) => ({
-  card: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { fontSize: 19, fontWeight: '800', color: colors.text },
-  meta: { fontSize: 13, color: colors.muted, marginTop: 2 },
+  card: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   backText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
-  question: { fontSize: 14, fontWeight: '700', color: colors.text, marginTop: spacing.md, marginBottom: spacing.sm },
-  moneyRow: { flexDirection: 'row', gap: 6 },
-  money: {
-    flex: 1,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  moneyOn: { borderColor: colors.primary, backgroundColor: colors.primary },
-  moneyText: { fontSize: 15, fontWeight: '800', color: colors.text },
-  moneyTextOn: { color: colors.onColor },
-  scale: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
-  scaleText: { fontSize: 11, color: colors.muted },
-  energyRow: { flexDirection: 'row', gap: spacing.sm },
-  energy: {
-    flex: 1,
-    height: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: radius.md,
-    borderWidth: 2,
-  },
-  energyText: { fontSize: 15, fontWeight: '800' },
   nudge: { fontSize: 13, color: colors.accentText, marginTop: spacing.sm, textAlign: 'center' },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   doneTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
