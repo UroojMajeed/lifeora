@@ -7,6 +7,7 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import ActivityRow from '../../components/ActivityRow';
 import DayComposer from '../../components/DayComposer';
+import EmptyRoutine from '../../components/EmptyRoutine';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
 import { newActivity, stepNumber } from '../../constants/content';
@@ -158,7 +159,9 @@ export default function ScheduleScreen({ navigation, route }) {
                 ? 'Handed-off tasks are gone and your new work is in. Add anything new.'
                 : editing
                 ? 'Tap an activity to change it. Changes save as you go.'
-                : 'Tap a suggestion below or type your own.'
+                : items.length
+                ? 'Tap a suggestion below or type your own.'
+                : undefined
             }
           />
 
@@ -182,12 +185,7 @@ export default function ScheduleScreen({ navigation, route }) {
               </Text>
             </>
           ) : (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="chatbubbles-outline" size={26} color={colors.primaryDark} />
-              </View>
-              <Text style={styles.emptyText}>Your routine shows up here. Add the tasks you do on a normal work day; most people add 5–8.</Text>
-            </View>
+            <EmptyRoutine role={onboarding?.role} />
           )}
 
           {newFills.length ? (
@@ -258,9 +256,6 @@ const makeStyles = (colors) => ({
   rows: { gap: spacing.sm },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
-  emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
-  emptyText: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', maxWidth: 280 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
   actionTotal: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.muted },
   actionButton: { minHeight: 44, paddingHorizontal: spacing.md },
