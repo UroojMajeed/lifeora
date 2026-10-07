@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { LayoutAnimation, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
@@ -14,6 +14,14 @@ import { recordMove } from '../../storage/progress';
 import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
+
+// One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
+const INFO = {
+  production: 'Makes money and energizes you. Your best work: do more of it.',
+  replacement: "Makes money but drains you. Train someone to replace you here.",
+  investment: 'Energizes you but pays later: learning, health, planning. Keep it.',
+  delegation: 'Drains you and pays little. Hand it off first.',
+};
 
 /**
  * Rate your day: for each activity, how much money it makes ($ to $$$$$) and whether it drains or
@@ -49,6 +57,7 @@ export default function SwipeScreen({ navigation, route }) {
   }
 
   const [saving, setSaving] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [error, setError] = useState('');
 
   const persist = (list) => {
@@ -168,7 +177,38 @@ export default function SwipeScreen({ navigation, route }) {
         step={stepNumber('swipe')}
         editing={editing}
         title={done ? 'Your DRIP Matrix' : 'Rate your routine'}
+        subtitle="Sort each task by the money it makes and how it makes you feel."
       />
+
+      {/* A short "what is this?" for the DRIP Matrix, closed by default so the screen stays calm. */}
+      <Pressable
+        onPress={() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setShowInfo((v) => !v);
+        }}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: showInfo }}
+        style={styles.infoToggle}
+      >
+        <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+        <Text style={styles.infoToggleText}>What is the DRIP Matrix?</Text>
+        <Ionicons name={showInfo ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
+      </Pressable>
+      {showInfo ? (
+        <View style={styles.info}>
+          {['production', 'replacement', 'investment', 'delegation'].map((key) => (
+            <View key={key} style={styles.infoRow}>
+              <View style={[styles.infoDot, { backgroundColor: colors[DRIP[key].color] }]} />
+              <Text style={styles.infoText}>
+                <Text style={[styles.infoName, { color: colors[DRIP[key].color] }]}>{DRIP[key].name}</Text>
+                {'  '}
+                {INFO[key]}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
       <ErrorBanner message={error} />
     </Screen>
@@ -177,6 +217,13 @@ export default function SwipeScreen({ navigation, route }) {
 
 const makeStyles = (colors) => ({
   card: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  infoToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: -spacing.sm, marginBottom: spacing.md },
+  infoToggleText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  info: { gap: spacing.sm, padding: spacing.md, marginBottom: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
+  infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
+  infoName: { fontWeight: '800' },
   progress: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
   progressText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
