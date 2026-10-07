@@ -141,7 +141,7 @@ export default function ScheduleScreen({ navigation, route }) {
   ) : null;
 
   return (
-    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+    <Screen scroll={false} avoidKeyboard contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
         <ScrollView
           ref={listRef}

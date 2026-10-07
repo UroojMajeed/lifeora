@@ -20,7 +20,7 @@ function useKeyboardOpen() {
 }
 
 /** Standard screen: scrollable content (optionally pull-to-refresh) with a pinned footer (for the CTA), hidden while typing. */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode }) {
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false }) {
   const { isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const keyboardOpen = useKeyboardOpen();
@@ -32,7 +32,12 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* iOS always lifts content above the keyboard. Android (edge-to-edge) doesn't shrink the window, so
+          screens with a bar pinned to the bottom (avoidKeyboard) are lifted there too. */}
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior={Platform.OS === 'ios' || avoidKeyboard ? 'padding' : undefined}
+      >
         <Body {...bodyProps}>{children}</Body>
         {footer && !keyboardOpen ? <View style={styles.footer}>{footer}</View> : null}
       </KeyboardAvoidingView>
