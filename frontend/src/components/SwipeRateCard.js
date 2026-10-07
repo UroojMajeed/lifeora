@@ -110,11 +110,12 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
         >
           {/* A soft tint: white into aqua (dark: surface into a deeper surface). */}
           <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-            <Animated.View style={[styles.stamp, styles.stampYes, { opacity: yes }]}>
+            {/* The stamps only show while dragging; they must never catch taps (they sit over Back). */}
+            <Animated.View pointerEvents="none" style={[styles.stamp, styles.stampYes, { opacity: yes }]}>
               <Ionicons name="flash" size={13} color={colors.success} />
               <Text style={[styles.stampText, { color: colors.success }]}>ENERGIZES</Text>
             </Animated.View>
-            <Animated.View style={[styles.stamp, styles.stampNo, { opacity: no }]}>
+            <Animated.View pointerEvents="none" style={[styles.stamp, styles.stampNo, { opacity: no }]}>
               <Ionicons name="battery-dead" size={13} color={colors.error} />
               <Text style={[styles.stampText, { color: colors.error }]}>DRAINS</Text>
             </Animated.View>
