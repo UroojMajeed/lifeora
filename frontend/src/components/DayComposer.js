@@ -10,7 +10,7 @@ const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const animate = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
 /**
- * The bottom bar of "Your day", like a chat: suggestion cards above a text box that stays at the
+ * The bottom bar of "Your routine", like a chat: suggestion cards above a text box that stays at the
  * bottom (it rides up with the keyboard). Pick or type an activity → pick its hours → it's added.
  * With `editing` set (an activity tapped in the list), the same bar renames it, changes its hours or removes it.
  */
@@ -113,7 +113,7 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
               style={styles.remove}
             >
               <Ionicons name="trash-outline" size={16} color={colors.error} />
-              <Text style={styles.removeText}>Remove from my day</Text>
+              <Text style={styles.removeText}>Remove from my routine</Text>
             </Pressable>
           ) : null}
         </View>
@@ -158,7 +158,7 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={() => (editing ? null : choose(draft))}
-          placeholder={editing ? 'Rename it (optional)' : items.length ? 'Add another activity…' : 'What do you do in a day?'}
+          placeholder={editing ? 'Rename it (optional)' : items.length ? 'Add another task…' : 'Add a task from your routine…'}
           placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           maxLength={60}
@@ -179,7 +179,7 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
           </Pressable>
         ) : null}
       </View>
-      {draft.trim() && taken(draft) ? <Text style={styles.warn}>That's already in your day.</Text> : null}
+      {draft.trim() && taken(draft) ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
     </View>
   );
 }

@@ -19,7 +19,7 @@ const TABS = [
   ['Handoffs', 'Handoffs', 'swap-horizontal'],
   ['CheckIns', 'Check-ins', 'pulse'],
   ['Home', 'Home', 'home'],
-  ['MyDay', 'My day', 'pie-chart'],
+  ['MyDay', 'Routine', 'pie-chart'],
   ['Me', 'Me', 'person'],
 ];
 

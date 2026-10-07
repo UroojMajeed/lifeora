@@ -53,7 +53,7 @@ export default function MyDayScreen({ navigation }) {
 
       {rows.length ? (
         <>
-          <Text style={[styles.section, !summary.drainingHours && styles.first]}>Your day now</Text>
+          <Text style={[styles.section, !summary.drainingHours && styles.first]}>Your routine now</Text>
           <Card style={styles.list}>
             {rows.map((a, i) => {
               const q = a.quadrant ? DRIP[a.quadrant] : null;
@@ -91,7 +91,7 @@ export default function MyDayScreen({ navigation }) {
       ) : null}
 
       <Button
-        title="Edit your day"
+        title="Edit your routine"
         variant="secondary"
         icon="create-outline"
         onPress={() => navigation.navigate('Schedule', { editing: true })}
@@ -99,7 +99,7 @@ export default function MyDayScreen({ navigation }) {
       />
       <View style={styles.hintRow}>
         <Ionicons name="information-circle-outline" size={14} color={colors.muted} />
-        <Text style={styles.hint}>Filled time is changed in Fill. It joins your day for good at the next round.</Text>
+        <Text style={styles.hint}>Filled time is changed in Fill. It joins your routine for good at the next round.</Text>
       </View>
     </Screen>
   );

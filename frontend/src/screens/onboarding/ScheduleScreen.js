@@ -116,12 +116,12 @@ export default function ScheduleScreen({ navigation, route }) {
   const ready = items.length > 0 && !over;
   const unsorted = items.filter((i) => !i.energy).length;
   const nextTitle = round
-    ? 'Next: rate your day'
+    ? 'Next: rate your routine'
     : editing
     ? unsorted
       ? `Rate ${unsorted} new`
       : 'Save'
-    : 'Next: rate your day';
+    : 'Next: rate your routine';
 
   // Shown above the suggestion cards: the day's total and the way forward.
   const action = items.length ? (
@@ -154,8 +154,8 @@ export default function ScheduleScreen({ navigation, route }) {
           <StepHeader
             step={stepNumber('schedule')}
             editing={editing}
-            eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your day' : 'Your day'}
-            title={round ? 'What fills your day now?' : 'What fills a normal day?'}
+            eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your routine' : 'Your routine'}
+            title={round ? 'What is in your routine now?' : 'What is in your routine?'}
             subtitle={
               round
                 ? 'Handed-off tasks are gone and your new work is in. Add anything new.'
@@ -194,7 +194,7 @@ export default function ScheduleScreen({ navigation, route }) {
               <View style={styles.emptyIcon}>
                 <Ionicons name="chatbubbles-outline" size={26} color={colors.primaryDark} />
               </View>
-              <Text style={styles.emptyText}>Your day shows up here. Start with the first thing you do in the morning.</Text>
+              <Text style={styles.emptyText}>Your routine shows up here. Add the tasks you do on a normal work day.</Text>
             </View>
           )}
 
@@ -217,7 +217,7 @@ export default function ScheduleScreen({ navigation, route }) {
                   <Ionicons name="chevron-forward" size={16} color={colors.muted} />
                 </Pressable>
               ))}
-              <Text style={styles.hint}>Change these in Fill. They join your day for good at the next round.</Text>
+              <Text style={styles.hint}>Change these in Fill. They join your routine for good at the next round.</Text>
             </>
           ) : null}
 

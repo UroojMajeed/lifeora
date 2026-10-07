@@ -143,8 +143,8 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
       icon: 'trophy-outline',
       title: summary?.total ? `Round ${round} complete` : 'Nothing drains you',
       body: bought
-        ? `You bought back ${formatHours(bought * WORKDAYS_PER_WEEK)} a week and gave it a new job. Your day has changed, so look at it again: new drains show up as you grow.`
-        : 'Your day changes as the business grows. Look at it again to find what drains you now.',
+        ? `You bought back ${formatHours(bought * WORKDAYS_PER_WEEK)} a week and gave it a new job. Your routine has changed, so look at it again: new drains show up as you grow.`
+        : 'Your routine changes as the business grows. Look at it again to find what drains you now.',
       minutes: 3,
       cta: `Start round ${round + 1}`,
       action: 'nextRound',
@@ -171,9 +171,9 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
     title: summary?.boughtBackHours ? 'Protect your filled hours' : 'Protect your best hours',
     body: summary?.boughtBackHours
       ? 'Every freed hour has a job. Guard that time like your most important meeting.'
-      : 'Nothing in your day drains you. Keep it that way as the business grows.',
+      : 'Nothing in your routine drains you. Keep it that way as the business grows.',
     minutes: null,
-    cta: summary?.boughtBackHours ? 'See my fills' : 'See my day',
+    cta: summary?.boughtBackHours ? 'See my fills' : 'See my routine',
     go: summary?.boughtBackHours ? ['Fill'] : ['MyDay'],
   };
 }

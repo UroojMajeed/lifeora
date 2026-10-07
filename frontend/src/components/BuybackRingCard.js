@@ -100,7 +100,7 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
   const potentialYear = draining * effectiveHourlyRate * WORKDAYS_PER_YEAR;
 
   let valueLine = 'Your numbers are loading…';
-  if (nothingDrains) valueLine = 'Nothing in your day drains you. Keep it that way.';
+  if (nothingDrains) valueLine = 'Nothing in your routine drains you. Keep it that way.';
   else if (summary && bought > 0) valueLine = `≈ ${formatMoney(valueYear, currency, { decimals: 0 })} a year of your time, back in your hands.`;
   else if (summary) valueLine = `${formatMoney(potentialYear, currency, { decimals: 0 })} a year of your time goes to work that drains you.`;
 
@@ -192,7 +192,7 @@ export default function BuybackRingCard({ summary, share, effectiveHourlyRate = 
         ) : null}
         {share && share.now !== share.start ? (
           <Text style={styles.share}>
-            {share.now}% of your day now energizes you (was {share.start}%)
+            {share.now}% of your routine now energizes you (was {share.start}%)
           </Text>
         ) : null}
         {bought > 0 ? (

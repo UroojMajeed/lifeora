@@ -71,7 +71,7 @@ export default function HandoffsScreen({ navigation }) {
         <View style={styles.empty}>
           <Ionicons name="sunny-outline" size={40} color={colors.success} />
           <Text style={styles.emptyTitle}>Nothing drains you</Text>
-          <Text style={styles.emptyBody}>Every activity in your day energizes you. Keep protecting that.</Text>
+          <Text style={styles.emptyBody}>Every task in your routine energizes you. Keep protecting that.</Text>
         </View>
       ) : null}
 

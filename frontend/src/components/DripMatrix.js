@@ -48,7 +48,7 @@ export default function DripMatrix({ summary, compact = false, animate = false }
                   { opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] },
                 ]}
                 accessible
-                accessibilityLabel={`${q.name}: ${formatHours(hours[key])}, ${pct} percent of your day`}
+                accessibilityLabel={`${q.name}: ${formatHours(hours[key])}, ${pct} percent of your routine`}
               >
                 <View style={styles.nameRow}>
                   <View style={[styles.dot, { backgroundColor: colors[q.color] }]} />
@@ -58,7 +58,7 @@ export default function DripMatrix({ summary, compact = false, animate = false }
                 <View style={styles.track}>
                   <View style={[styles.fill, { width: `${pct}%`, backgroundColor: colors[q.color] }]} />
                 </View>
-                <Text style={styles.pct}>{pct}% of your day</Text>
+                <Text style={styles.pct}>{pct}% of your routine</Text>
                 {!compact && tasks[key].length ? (
                   <Text style={styles.tasks} numberOfLines={4}>
                     {tasks[key].map((t) => t.activity).join('\n')}

@@ -127,7 +127,7 @@ export default function HomeScreen({ navigation }) {
         <Pressable
           onPress={() => navigation.navigate('MyDay')}
           accessibilityRole="button"
-          accessibilityLabel={`Your DRIP Matrix${zone ? `. You live in ${zone.name}` : ''}. Open My day`}
+          accessibilityLabel={`Your DRIP Matrix${zone ? `. You live in ${zone.name}` : ''}. Open your routine`}
           style={({ pressed }) => pressed && styles.pressed}
         >
           <Card style={styles.dripCard}>
@@ -140,7 +140,7 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.cardHead}>
                 <Text style={type.label}>Your DRIP Matrix</Text>
                 <View style={styles.link}>
-                  <Text style={styles.linkText}>My day</Text>
+                  <Text style={styles.linkText}>Routine</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.primary} />
                 </View>
               </View>

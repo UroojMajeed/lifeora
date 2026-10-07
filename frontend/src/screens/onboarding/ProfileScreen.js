@@ -55,7 +55,7 @@ export default function ProfileScreen({ navigation, route }) {
         title="What best describes you?"
         subtitle={
           editing
-            ? 'Tap one to change it. Your day stays the same.'
+            ? 'Tap one to change it. Your routine stays the same.'
             : "Tap one. We'll suggest the activities people like you usually do."
         }
       />

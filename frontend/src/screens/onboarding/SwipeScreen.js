@@ -129,7 +129,7 @@ export default function SwipeScreen({ navigation, route }) {
         </View>
       </View>
       <Button
-        title={editing ? 'Save my day' : 'Start buying back my time'}
+        title={editing ? 'Save my routine' : 'Start buying back my time'}
         icon={editing ? 'checkmark' : 'arrow-forward'}
         onPress={finish}
         loading={saving}
@@ -219,7 +219,7 @@ export default function SwipeScreen({ navigation, route }) {
         step={stepNumber('swipe')}
         editing={editing}
         eyebrow="Your DRIP Matrix"
-        title={done ? 'Here is your day' : 'Rate your day'}
+        title={done ? 'Here is your routine' : 'Rate your routine'}
         subtitle={
           done
             ? 'Each dot is an activity: higher makes more money, further right gives you more energy.'

@@ -84,7 +84,7 @@ export default function MeScreen({ navigation }) {
   const confirmStartOver = () =>
     Alert.alert(
       saved ? 'Delete your account?' : 'Delete everything and start over?',
-      `Your ${saved ? 'account, ' : ''}Buyback Rate, your day, your handoffs and your photo will be deleted for good.`,
+      `Your ${saved ? 'account, ' : ''}Buyback Rate, your routine, your handoffs and your photo will be deleted for good.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: deleteEverything },
