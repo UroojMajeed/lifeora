@@ -51,8 +51,8 @@ export const lightColors = {
 
   shadow: brand.evergreen,
 
-  // Soft background wash (top of tinted screens)
-  tintTop: '#DDF3EC',
+  // A day in one wash (tinted screens): morning yellow → clear sky → evening blue, kept pastel for text
+  dayGradient: ['#FFF3D1', '#FBF6EC', '#E4EFFA', '#CFDDF3'],
 
   // Landing page: aqua mist with a mint glow and a small apricot spark
   landing: [brand.aqua, brand.offWhite, '#DDF2EA'],
@@ -97,7 +97,8 @@ export const darkColors = {
 
   shadow: '#000000',
 
-  tintTop: '#11302D',
+  // Dark: first light → deep sky → night
+  dayGradient: ['#2B2414', '#17202B', '#0F1A2B', '#0A1220'],
   landing: ['#0A1716', '#0E2120', brand.evergreen],
   glowA: 'rgba(63,179,166,0.22)',
   glowB: 'rgba(245,185,113,0.12)',

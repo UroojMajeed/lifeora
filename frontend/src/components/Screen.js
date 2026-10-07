@@ -32,11 +32,11 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
-      {/* tinted: a soft aqua wash at the top that fades into the page. */}
+      {/* tinted: the day as a soft wash, morning at the top to evening at the bottom. */}
       {tinted ? (
         <LinearGradient
-          colors={[colors.tintTop, colors.background]}
-          locations={[0, 0.7]}
+          colors={colors.dayGradient}
+          locations={[0, 0.3, 0.65, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
