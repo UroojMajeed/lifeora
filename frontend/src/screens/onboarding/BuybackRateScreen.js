@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import MoneyInput from '../../components/MoneyInput';
@@ -13,7 +14,7 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import { calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
-import { useStyles, useTheme } from '../../theme/ThemeContext';
+import { useStyles } from '../../theme/ThemeContext';
 import { brand, radius, spacing } from '../../theme';
 
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
@@ -49,7 +50,6 @@ function useCountUp(target, duration = 600) {
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep, saveEdit } = useOnboarding();
-  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [role, setRole] = useState(onboarding?.role || null);
   // A brand-new account has the server default (USD); prefer the phone's region then.
@@ -62,7 +62,15 @@ export default function BuybackRateScreen({ navigation, route }) {
 
   const amount = Number(income) || 0;
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
-  const shownRate = useCountUp(buybackRate);
+  // Revealed when typing is done (or straight away when editing a pay you already gave).
+  const [revealed, setRevealed] = useState(editing && onboarding?.annualIncome != null);
+  const reveal = () => {
+    if (!amount || revealed) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setRevealed(true);
+  };
+  // Counts from zero on the reveal, then to each new value.
+  const shownRate = useCountUp(revealed ? buybackRate : 0);
   const ready = amount > 0 && (editing || Boolean(role));
   // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -135,12 +143,14 @@ export default function BuybackRateScreen({ navigation, route }) {
           onChangeText={(t) => setIncome(sanitizeAmount(t))}
           placeholder="120,000"
           accessibilityLabel="Yearly pay from your business"
+          onBlur={reveal}
         />
       </Animated.View>
 
-      {/* The answer: hidden until there's a number, then it fades in and counts up. */}
-      {amount ? (
-        <Animated.View entering={FadeIn.duration(350)}>
+      {/* The answer is a reveal: it appears once you finish typing (Done, a tap outside or a scroll),
+          rising in with the rate counting up from zero. After that it follows any change. */}
+      {revealed && amount ? (
+        <Animated.View entering={FadeInDown.duration(450).springify().damping(16)}>
           <HeroCard style={{ marginTop: gap }}>
             <View style={styles.heroTop}>
               <Text style={styles.heroLabel}>Your Buyback Rate</Text>
@@ -164,14 +174,7 @@ export default function BuybackRateScreen({ navigation, route }) {
             </View>
           </HeroCard>
         </Animated.View>
-      ) : (
-        <View style={[styles.placeholder, { marginTop: gap }]}>
-          <Ionicons name="sparkles-outline" size={22} color={colors.muted} />
-          <Text style={styles.placeholderText}>
-            Your Buyback Rate appears here: what you can afford to pay someone to take tasks off your plate.
-          </Text>
-        </View>
-      )}
+      ) : null}
 
       <ErrorBanner message={error} />
     </Screen>
@@ -191,15 +194,4 @@ const makeStyles = (colors) => ({
   divider: { height: 1, backgroundColor: colors.heroDivider, marginVertical: spacing.md },
   tip: { flexDirection: 'row', gap: spacing.sm },
   tipText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.heroMuted },
-  placeholder: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    padding: spacing.md + 4,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: colors.border,
-  },
-  placeholderText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.muted },
 });

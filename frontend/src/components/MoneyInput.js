@@ -11,7 +11,7 @@ import { fitFontSize } from '../utils/format';
  * Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000].
  * The list floats over the screen (a transparent modal under the field), so a tap anywhere outside closes it.
  */
-export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing, large = false, suffix }) {
+export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing, onBlur, large = false, suffix }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -96,7 +96,10 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           onSubmitEditing={onSubmitEditing}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false);
+            onBlur?.();
+          }}
           style={[styles.input, large && styles.inputLarge, large && { fontSize: largeFont }]}
           accessibilityLabel={accessibilityLabel || label}
         />
