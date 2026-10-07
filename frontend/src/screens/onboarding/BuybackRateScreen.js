@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Keyboard, Text, View, useWindowDimensions } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import MoneyInput from '../../components/MoneyInput';
@@ -17,32 +16,8 @@ import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../uti
 import { useStyles } from '../../theme/ThemeContext';
 import { brand, radius, spacing } from '../../theme';
 
-const SETTLE_MS = 220; // pause after the keyboard closes, before the rate card rises in
+const SETTLE_MS = 150; // pause after the keyboard closes, before the rate card fades in
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
-
-/** A number that counts up (or down) to its new value, so the result feels like a reveal. */
-function useCountUp(target, duration = 600) {
-  const [shown, setShown] = useState(target);
-  const from = useRef(target);
-  useEffect(() => {
-    const start = Date.now();
-    const begin = from.current;
-    let frame;
-    const tick = () => {
-      const t = Math.min(1, (Date.now() - start) / duration);
-      const eased = 1 - (1 - t) ** 3;
-      setShown(begin + (target - begin) * eased);
-      if (t < 1) frame = requestAnimationFrame(tick);
-      else from.current = target;
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      from.current = target;
-    };
-  }, [target, duration]);
-  return shown;
-}
 
 /**
  * "What's your time worth?" (onboarding step 1): who you are and what your business pays you,
@@ -66,7 +41,7 @@ export default function BuybackRateScreen({ navigation, route }) {
   // Revealed when typing is done (or straight away when editing a pay you already gave).
   const [revealed, setRevealed] = useState(editing && onboarding?.annualIncome != null);
   // Typing done: wait for the keyboard to finish closing (and the button to come back) so the card
-  // rises into a still screen instead of while everything is moving.
+  // fades into a still screen instead of while everything is moving.
   const [waiting, setWaiting] = useState(false);
   const reveal = () => {
     if (amount && !revealed) setWaiting(true);
@@ -79,7 +54,6 @@ export default function BuybackRateScreen({ navigation, route }) {
       timer = setTimeout(() => {
         setWaiting(false);
         setRevealed(true);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }, SETTLE_MS);
     };
     // If the keyboard is still up, start counting once it's gone; otherwise start now.
@@ -90,14 +64,13 @@ export default function BuybackRateScreen({ navigation, route }) {
       clearTimeout(timer);
     };
   }, [waiting]);
-  // Counts from zero on the reveal, then to each new value.
-  const shownRate = useCountUp(revealed ? buybackRate : 0);
+
   const ready = amount > 0 && (editing || Boolean(role));
   // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const columnWidth = Math.min(screenWidth - 48, MAX_COLUMN);
   const gap = screenHeight < 700 ? spacing.lg - 4 : spacing.xl - 4; // 20 on short phones, 28 otherwise
-  const rateText = formatMoney(shownRate, currency);
+  const rateText = formatMoney(buybackRate, currency);
   const bigFont = fitFontSize(`${formatMoney(buybackRate, currency)}/h`, columnWidth - 48, 48, 22);
 
   const next = async () => {
@@ -148,13 +121,13 @@ export default function BuybackRateScreen({ navigation, route }) {
       />
 
       {!editing ? (
-        <Animated.View entering={FadeInDown.duration(380)} style={{ marginTop: gap - spacing.lg }}>
+        <View style={{ marginTop: gap - spacing.lg }}>
           <Text style={styles.lead}>I am a…</Text>
           <RolePicker value={role} onChange={setRole} soft />
-        </Animated.View>
+        </View>
       ) : null}
 
-      <Animated.View entering={FadeInDown.duration(380).delay(80)} style={!editing && { marginTop: gap }}>
+      <View style={!editing && { marginTop: gap }}>
         {!editing ? <Text style={styles.lead}>My business pays me each year…</Text> : null}
         <MoneyInput
           large
@@ -166,12 +139,12 @@ export default function BuybackRateScreen({ navigation, route }) {
           accessibilityLabel="Yearly pay from your business"
           onBlur={reveal}
         />
-      </Animated.View>
+      </View>
 
       {/* The answer is a reveal: it appears once you finish typing (Done, a tap outside or a scroll),
-          rising in with the rate counting up from zero. After that it follows any change. */}
+          fading in quietly. After that it follows any change. */}
       {revealed && amount ? (
-        <Animated.View entering={FadeInDown.duration(450).springify().damping(16)}>
+        <Animated.View entering={FadeIn.duration(250)}>
           <HeroCard style={{ marginTop: gap }}>
             <View style={styles.heroTop}>
               <Text style={styles.heroLabel}>Your Buyback Rate</Text>
