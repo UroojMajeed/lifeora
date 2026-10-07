@@ -141,7 +141,7 @@ export default function BuybackRateScreen({ navigation, route }) {
               <Text style={styles.heroLabel}>Your Buyback Rate</Text>
               <View style={styles.worth}>
                 <Text style={styles.worthText} numberOfLines={1}>
-                  Your time: {formatMoney(effectiveHourlyRate, currency, { decimals: 0 })}/hr
+                  Your hour is worth {formatMoney(effectiveHourlyRate, currency, { decimals: 0 })}
                 </Text>
               </View>
             </View>
