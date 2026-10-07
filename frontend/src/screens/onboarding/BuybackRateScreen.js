@@ -130,7 +130,6 @@ export default function BuybackRateScreen({ navigation, route }) {
           placeholder="120,000"
           accessibilityLabel="Yearly pay from your business"
         />
-        <Text style={styles.hint}>Salary plus profit. A rough number is fine.</Text>
       </Animated.View>
 
       {/* The answer: hidden until there's a number, then it fades in and counts up. */}
@@ -176,7 +175,6 @@ export default function BuybackRateScreen({ navigation, route }) {
 const makeStyles = (colors) => ({
   lead: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.sm, letterSpacing: -0.2 },
   section: { marginTop: spacing.lg },
-  hint: { fontSize: 13, color: colors.muted, marginTop: spacing.sm, marginLeft: 4 },
   hero: { marginTop: spacing.lg },
   heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },

@@ -76,12 +76,7 @@ export default function RolePicker({ value, onChange, soft = false }) {
         {current ? (
           <>
             <RoleIcon role={current} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.value}>{current.label}</Text>
-              <Text style={styles.line} numberOfLines={1}>
-                {ROLE_LOOK[current.key].line}
-              </Text>
-            </View>
+            <Text style={[styles.value, { flex: 1 }]}>{current.label}</Text>
           </>
         ) : (
           <>
