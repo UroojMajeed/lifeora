@@ -13,7 +13,7 @@ export default function EmptyRoutine() {
         <Ionicons name="sunny-outline" size={28} color={colors.primaryDark} />
       </View>
       <Text style={styles.title}>Start with your morning</Text>
-      <Text style={styles.text}>Pick a suggestion below or type your own.{'\n'}Most people add 5–8 tasks.</Text>
+      <Text style={styles.text}>Pick a suggestion below or type your own.</Text>
     </View>
   );
 }
