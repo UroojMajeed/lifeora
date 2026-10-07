@@ -49,7 +49,8 @@ export default function BuybackRateScreen({ navigation, route }) {
   };
 
   return (
-    <Screen footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
+    // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
+    <Screen keyboardDismissMode="on-drag" footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
       <StepHeader
         step={stepNumber('buyback_rate')}
         editing={editing}
