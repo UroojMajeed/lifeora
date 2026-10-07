@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutAnimation, Pressable, ScrollView, Text, View } from 'react-native';
+import { Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
@@ -33,6 +33,15 @@ export default function ScheduleScreen({ navigation, route }) {
       .map(({ activity, hours, value, money, per, energy }) => ({ activity, hours, value, money: money ?? null, per: per || 'day', energy: energy ?? null }))
   );
   const [editingIndex, setEditingIndex] = useState(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const listRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -210,6 +219,9 @@ export default function ScheduleScreen({ navigation, route }) {
           <ErrorBanner message={error} />
         </ScrollView>
 
+        {/* Next sits on its own above the chat sheet (hidden while typing, so the keyboard area stays clear). */}
+        {!keyboardOpen ? action : null}
+
         {items.length < MAX_ACTIVITIES || editingIndex !== null ? (
           <DayComposer
             role={onboarding?.role}
@@ -219,11 +231,8 @@ export default function ScheduleScreen({ navigation, route }) {
             onSave={save}
             onRemove={() => remove(editingIndex)}
             onCancelEdit={() => setEditingIndex(null)}
-            action={action}
           />
-        ) : (
-          action
-        )}
+        ) : null}
       </View>
     </Screen>
   );
@@ -252,7 +261,14 @@ const makeStyles = (colors) => ({
   rows: { gap: spacing.sm + 2 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+  },
   actionTotal: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.muted },
   actionButton: { minHeight: 44, paddingHorizontal: spacing.md },
 });

@@ -15,7 +15,7 @@ const animate = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.ease
  * bottom (it rides up with the keyboard). Pick or type an activity → pick its hours → it's added.
  * With `editing` set (an activity tapped in the list), the same bar renames it, changes its hours or removes it.
  */
-export default function DayComposer({ role, items, editing, onAdd, onSave, onRemove, onCancelEdit, action }) {
+export default function DayComposer({ role, items, editing, onAdd, onSave, onRemove, onCancelEdit }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const inputRef = useRef(null);
@@ -121,7 +121,6 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
       ) : (
         // Step 1: suggestion cards (filtered by what's typed).
         <>
-          {action}
           {suggestions.length || typedIsNew ? <Text style={styles.sectionLabel}>{draft.trim() ? 'Matches' : 'Suggestions'}</Text> : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
             {typedIsNew ? (
