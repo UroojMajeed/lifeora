@@ -223,7 +223,7 @@ export function handoffIdeas(item) {
 
 // Order of onboarding steps. Keys match the backend.
 export const STEPS = [
-  { key: 'profile', screen: 'Profile' },
+  // Step 1 'About you' asks for the role and the yearly pay together (the role used to be its own step).
   { key: 'buyback_rate', screen: 'BuybackRate' },
   { key: 'schedule', screen: 'Schedule' },
   { key: 'swipe', screen: 'Swipe' },
@@ -235,7 +235,7 @@ export function screenForStep(stepKey) {
   if (stepKey === 'done') return 'Main';
   // The DRIP Matrix now builds live on the rating screen, so the old reveal step lands there too.
   if (stepKey === 'drip') return 'Swipe';
-  return STEPS.find((s) => s.key === stepKey)?.screen || 'Profile';
+  return STEPS.find((s) => s.key === stepKey)?.screen || 'BuybackRate'; // incl. the old 'profile' step
 }
 
 /**

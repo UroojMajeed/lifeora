@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import MoneyInput from '../../components/MoneyInput';
@@ -7,18 +9,22 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import { HeroCard } from '../../components/Card';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { calculateBuybackRate, stepNumber } from '../../constants/content';
+import { ROLES, calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { formatMoney, sanitizeAmount } from '../../utils/format';
-import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
-import { spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
 
+/**
+ * About you (onboarding step 1): what describes you and your yearly pay, which gives the Buyback Rate.
+ * With `editing` (from Me) it only changes the pay; the role has its own screen there.
+ */
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep, saveEdit } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
+  const [role, setRole] = useState(onboarding?.role || null);
   // A brand-new account has the server default (USD); prefer the phone's region then.
   const [currency, setCurrency] = useState(() =>
     onboarding?.annualIncome != null ? onboarding.currency || 'USD' : defaultCurrency()
@@ -29,8 +35,15 @@ export default function BuybackRateScreen({ navigation, route }) {
 
   const amount = Number(income) || 0;
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
+  const ready = amount > 0 && (editing || Boolean(role));
+
+  const pickRole = (key) => {
+    Haptics.selectionAsync().catch(() => {});
+    setRole(key);
+  };
 
   const next = async () => {
+    if (!ready) return;
     setError('');
     setLoading(true);
     try {
@@ -39,7 +52,10 @@ export default function BuybackRateScreen({ navigation, route }) {
         navigation.goBack();
         return;
       }
-      await saveStep({ annualIncome: amount, currency }, 'schedule');
+      const data = { role, annualIncome: amount, currency };
+      // A different role means different suggestions, so the routine starts fresh.
+      if (onboarding?.role && role !== onboarding.role) data.schedule = [];
+      await saveStep(data, 'schedule');
       navigation.navigate('Schedule');
     } catch (err) {
       setError(err.message);
@@ -48,16 +64,59 @@ export default function BuybackRateScreen({ navigation, route }) {
     }
   };
 
+  const buttonTitle = editing ? 'Save' : !role ? 'Pick what describes you' : amount <= 0 ? 'Add your yearly pay' : 'Continue';
+
   return (
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
-    <Screen keyboardDismissMode="on-drag" avoidKeyboard keepFooter footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
+    <Screen
+      keyboardDismissMode="on-drag"
+      avoidKeyboard
+      keepFooter
+      footer={
+        <Button
+          title={buttonTitle}
+          icon={ready ? (editing ? 'checkmark' : 'arrow-forward') : undefined}
+          onPress={next}
+          loading={loading}
+          disabled={!ready}
+        />
+      }
+    >
       <StepHeader
         step={stepNumber('buyback_rate')}
         editing={editing}
-        eyebrow="Your Buyback Rate"
-        title="What does your business pay you a year?"
-        subtitle="A rough number is fine."
+        eyebrow={editing ? 'Your Buyback Rate' : undefined}
+        title={editing ? 'What does your business pay you a year?' : 'About you'}
+        subtitle={editing ? 'A rough number is fine.' : undefined}
       />
+
+      {!editing ? (
+        <>
+          <Text style={styles.label}>What describes you?</Text>
+          <View style={styles.roles}>
+            {ROLES.map((r) => {
+              const on = role === r.key;
+              return (
+                <Pressable
+                  key={r.key}
+                  onPress={() => pickRole(r.key)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  style={({ pressed }) => [styles.role, on && styles.roleOn, pressed && { opacity: 0.8 }]}
+                >
+                  <Ionicons name={r.icon} size={18} color={on ? colors.onColor : colors.primaryDark} />
+                  <Text style={[styles.roleText, on && styles.roleTextOn]} numberOfLines={2}>
+                    {r.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.label, styles.gap]}>What does your business pay you a year?</Text>
+          <Text style={styles.help}>A rough number is fine.</Text>
+        </>
+      ) : null}
 
       <MoneyInput
         currency={currency}
@@ -66,7 +125,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         onChangeText={(t) => setIncome(sanitizeAmount(t))}
         placeholder="e.g. 120,000"
         accessibilityLabel="Yearly pay from your business"
-        onSubmitEditing={() => amount > 0 && next()}
+        onSubmitEditing={next}
       />
 
       <HeroCard style={styles.hero}>
@@ -103,6 +162,25 @@ export default function BuybackRateScreen({ navigation, route }) {
 }
 
 const makeStyles = (colors) => ({
+  label: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  gap: { marginTop: spacing.lg, marginBottom: 2 },
+  help: { fontSize: 13, color: colors.muted, marginBottom: spacing.sm },
+  roles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  role: {
+    width: '48.5%',
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  roleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  roleText: { flex: 1, fontSize: 13, lineHeight: 17, fontWeight: '700', color: colors.text },
+  roleTextOn: { color: colors.onColor },
   hero: { marginTop: spacing.lg },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   big: { color: colors.heroText, fontSize: 44, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
