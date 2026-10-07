@@ -67,8 +67,6 @@ export default function BuybackRateScreen({ navigation, route }) {
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
     <Screen
       keyboardDismissMode="on-drag"
-      avoidKeyboard
-      keepFooter
       footer={
         <Button
           title={buttonTitle}
