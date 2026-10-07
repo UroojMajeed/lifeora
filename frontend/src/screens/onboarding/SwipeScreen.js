@@ -11,6 +11,7 @@ import ErrorBanner from '../../components/ErrorBanner';
 import DripGraph from '../../components/DripGraph';
 import SwipeRateCard from '../../components/SwipeRateCard';
 import ZoneTitle from '../../components/ZoneTitle';
+import QuadrantBoard from '../../components/QuadrantBoard';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { DRIP, quadrantFor, stepNumber, summarizeSchedule, valueForMoney } from '../../constants/content';
 import { recordMove } from '../../storage/progress';
@@ -30,10 +31,10 @@ const INFO = {
 };
 
 /**
- * Rate your day: for each activity, how much money it makes ($ to $$$$$) and whether it drains or
- * energizes you. Every rating drops a dot onto the DRIP graph above, so the matrix builds in front
- * of you. Tap any dot to change it. Also used after onboarding (`editing`: rate new activities) and
- * at the start of a new round (`round`: rate the whole day again).
+ * Rate your routine: for each task, how much money it makes ($ to $$$$$) and whether it drains or
+ * energizes you. Each rating puts the task into its quadrant on the board above; after the last one
+ * the full DRIP graph is revealed. Tap any task to change it. Also used after onboarding (`editing`:
+ * rate new tasks) and at the start of a new round (`round`: rate the whole routine again).
  */
 export default function SwipeScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
@@ -144,7 +145,7 @@ export default function SwipeScreen({ navigation, route }) {
         <Ionicons name="checkmark-circle" size={26} color={colors.success} />
         <View style={{ flex: 1 }}>
           {zone ? <ZoneTitle summary={summary} style={styles.doneTitle} /> : <Text style={styles.doneTitle}>All rated</Text>}
-          <Text style={styles.doneText}>Tap any dot to change it.</Text>
+          <Text style={styles.doneText}>Tap any task to change it.</Text>
         </View>
       </View>
       {/* The first win, so the finish feels like a start: the biggest draining task to hand off. */}
@@ -236,7 +237,8 @@ export default function SwipeScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
+        {/* While rating: the four quadrants filling up with tasks (the full graph is the reveal at the end). */}
+        <QuadrantBoard items={items} latest={chip?.activity} selected={selected} onSelect={(name) => setSelected(name)} />
         <ErrorBanner message={error} />
 
         {/* The big moment, once: after the last rating the whole matrix fills in, dot by dot. */}
