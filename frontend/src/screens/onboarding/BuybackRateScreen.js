@@ -38,8 +38,9 @@ export default function BuybackRateScreen({ navigation, route }) {
 
   const amount = Number(income) || 0;
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
-  // Revealed when typing is done (or straight away when editing a pay you already gave).
-  const [revealed, setRevealed] = useState(editing && onboarding?.annualIncome != null);
+  // A pay you already gave (coming back, resuming, or editing from Me) shows its card straight away;
+  // the reveal is only for the first time you type it.
+  const [revealed, setRevealed] = useState(onboarding?.annualIncome != null);
   // Typing done: wait for the keyboard to finish closing (and the button to come back) so the card
   // fades into a still screen instead of while everything is moving.
   const [waiting, setWaiting] = useState(false);
