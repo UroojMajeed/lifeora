@@ -51,6 +51,9 @@ export const lightColors = {
 
   shadow: brand.evergreen,
 
+  // Soft background wash (top of tinted screens)
+  tintTop: '#DDF3EC',
+
   // Landing page: aqua mist with a mint glow and a small apricot spark
   landing: [brand.aqua, brand.offWhite, '#DDF2EA'],
   glowA: 'rgba(191,233,216,0.75)',
@@ -94,6 +97,7 @@ export const darkColors = {
 
   shadow: '#000000',
 
+  tintTop: '#11302D',
   landing: ['#0A1716', '#0E2120', brand.evergreen],
   glowA: 'rgba(63,179,166,0.22)',
   glowB: 'rgba(245,185,113,0.12)',

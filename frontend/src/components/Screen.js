@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
@@ -20,8 +21,8 @@ function useKeyboardOpen() {
 }
 
 /** Standard screen: scrollable content (optionally pull-to-refresh) with a pinned footer (for the CTA), hidden while typing. */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false, keepFooter = false }) {
-  const { isDark } = useTheme();
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false, keepFooter = false, tinted = false }) {
+  const { isDark, colors } = useTheme();
   const styles = useStyles(makeStyles);
   const keyboardOpen = useKeyboardOpen();
   const Body = scroll ? ScrollView : View;
@@ -31,6 +32,15 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
 
   return (
     <SafeAreaView style={styles.safe} edges={edges}>
+      {/* tinted: a soft aqua wash at the top that fades into the page. */}
+      {tinted ? (
+        <LinearGradient
+          colors={[colors.tintTop, colors.background]}
+          locations={[0, 0.7]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      ) : null}
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {/* iOS always lifts content above the keyboard. Android (edge-to-edge) doesn't shrink the window, so
           screens with a bar pinned to the bottom (avoidKeyboard) are lifted there too. */}

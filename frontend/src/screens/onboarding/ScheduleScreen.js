@@ -140,7 +140,7 @@ export default function ScheduleScreen({ navigation, route }) {
   ) : null;
 
   return (
-    <Screen scroll={false} avoidKeyboard contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+    <Screen scroll={false} avoidKeyboard tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
         {/* Like a chat: the list scrolls with the keyboard open (it fills the space above the bar). */}
         <ScrollView
