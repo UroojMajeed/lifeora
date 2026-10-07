@@ -16,7 +16,14 @@ export default function StepHeader({ step, eyebrow, title, subtitle, showBack = 
   const styles = useStyles(makeStyles);
   // After resuming straight onto a later step there is nothing behind it, so go to the previous step instead.
   const previous = step > 1 ? STEPS[step - 2]?.screen : null;
-  const goBack = onBack || (() => (navigation.canGoBack() ? navigation.goBack() : navigation.reset(resetTo(previous))));
+  const goBack =
+    onBack ||
+    (() => {
+      if (navigation.canGoBack()) navigation.goBack();
+      else if (previous) navigation.reset(resetTo(previous));
+      // Opened from the app with nothing behind it (e.g. after a reload): close back to the tabs.
+      else if (editing) navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
+    });
   const canGoBack = Boolean(onBack) || editing || (showBack && (navigation.canGoBack() || Boolean(previous)));
 
   return (
