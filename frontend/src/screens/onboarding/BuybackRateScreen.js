@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import MoneyInput from '../../components/MoneyInput';
+import RolePicker from '../../components/RolePicker';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import { HeroCard } from '../../components/Card';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { ROLES, calculateBuybackRate, stepNumber } from '../../constants/content';
+import { calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { formatMoney, sanitizeAmount } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
-import { radius, spacing } from '../../theme';
+import { spacing } from '../../theme';
 
 /**
  * About you (onboarding step 1): what describes you and your yearly pay, which gives the Buyback Rate.
@@ -37,10 +37,7 @@ export default function BuybackRateScreen({ navigation, route }) {
   const { effectiveHourlyRate, buybackRate } = calculateBuybackRate(amount);
   const ready = amount > 0 && (editing || Boolean(role));
 
-  const pickRole = (key) => {
-    Haptics.selectionAsync().catch(() => {});
-    setRole(key);
-  };
+  const pickRole = (key) => setRole(key);
 
   const next = async () => {
     if (!ready) return;
@@ -93,25 +90,7 @@ export default function BuybackRateScreen({ navigation, route }) {
       {!editing ? (
         <>
           <Text style={styles.label}>What describes you?</Text>
-          <View style={styles.roles}>
-            {ROLES.map((r) => {
-              const on = role === r.key;
-              return (
-                <Pressable
-                  key={r.key}
-                  onPress={() => pickRole(r.key)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: on }}
-                  style={({ pressed }) => [styles.role, on && styles.roleOn, pressed && { opacity: 0.8 }]}
-                >
-                  <Ionicons name={r.icon} size={18} color={on ? colors.onColor : colors.primaryDark} />
-                  <Text style={[styles.roleText, on && styles.roleTextOn]} numberOfLines={2}>
-                    {r.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <RolePicker value={role} onChange={pickRole} />
 
           <Text style={[styles.label, styles.gap]}>What does your business pay you a year?</Text>
           <Text style={styles.help}>A rough number is fine.</Text>
@@ -165,22 +144,6 @@ const makeStyles = (colors) => ({
   label: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
   gap: { marginTop: spacing.lg, marginBottom: 2 },
   help: { fontSize: 13, color: colors.muted, marginBottom: spacing.sm },
-  roles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  role: {
-    width: '48.5%',
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  roleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  roleText: { flex: 1, fontSize: 13, lineHeight: 17, fontWeight: '700', color: colors.text },
-  roleTextOn: { color: colors.onColor },
   hero: { marginTop: spacing.lg },
   heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   big: { color: colors.heroText, fontSize: 44, fontWeight: '800', letterSpacing: -1, marginTop: 4 },
