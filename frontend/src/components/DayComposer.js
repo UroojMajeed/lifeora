@@ -121,6 +121,7 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
       ) : (
         // Step 1: suggestion cards (filtered by what's typed).
         <>
+          {suggestions.length || typedIsNew ? <Text style={styles.sectionLabel}>{draft.trim() ? 'Matches' : 'Suggestions'}</Text> : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
             {typedIsNew ? (
               <Pressable onPress={() => choose(draft)} accessibilityRole="button" style={[styles.card, styles.cardNew]}>
@@ -193,6 +194,7 @@ const makeStyles = (colors, isDark) => ({
     backgroundColor: colors.surface,
     ...(isDark ? { borderTopWidth: 1, borderTopColor: colors.border } : { shadowColor: colors.shadow, shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 8 }),
   },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: spacing.lg },
   row: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   card: {
     maxWidth: 220,

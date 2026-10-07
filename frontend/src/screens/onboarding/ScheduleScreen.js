@@ -73,10 +73,6 @@ export default function ScheduleScreen({ navigation, route }) {
     const extra = fillFor(it.activity).reduce((t, f) => t + f.hours, 0);
     return extra ? { label: `+${formatHours(extra)} from Fill`, tone: 'primary' } : null;
   };
-  const dayNowHours =
-    items.filter((i) => !handedOff.has(i.activity.toLowerCase())).reduce((t, i) => t + i.hours, 0) +
-    (live ? fills.reduce((t, f) => t + f.hours, 0) : 0);
-
   const openEdit = (index) => setEditingIndex((cur) => (cur === index ? null : index));
 
   const add = (name, hours, per = 'day') => {
@@ -131,14 +127,11 @@ export default function ScheduleScreen({ navigation, route }) {
       : 'Save'
     : 'Next: rate your routine';
 
-  // Shown above the suggestion cards: the day's total and the way forward.
+  // Shown above the chat sheet: the way forward, on its own.
   const action = items.length ? (
     <View style={styles.actionRow}>
-      <Text style={[styles.actionTotal, over && styles.totalOver]} numberOfLines={1}>
-        {over ? 'More than 24 hours a day' : `${items.length} ${items.length === 1 ? 'task' : 'tasks'} · ${formatHours(live ? dayNowHours : totalHours)} a day`}
-      </Text>
       <Button
-        title={nextTitle}
+        title={over ? 'More than 24 hours a day' : nextTitle}
         icon={editing && !unsorted && !round ? 'checkmark' : 'arrow-forward'}
         onPress={next}
         loading={loading}
@@ -242,7 +235,6 @@ const makeStyles = (colors) => ({
   sectionLabel: { fontSize: 14, fontWeight: '700', color: colors.text },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.sm },
   total: { fontSize: 14, fontWeight: '700', color: colors.muted },
-  totalOver: { color: colors.error },
   fillLabel: { marginTop: spacing.lg, marginBottom: spacing.sm },
   fillRow: {
     flexDirection: 'row',
@@ -269,6 +261,5 @@ const makeStyles = (colors) => ({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
-  actionTotal: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.muted },
-  actionButton: { minHeight: 44, paddingHorizontal: spacing.md },
+  actionButton: { flex: 1 },
 });
