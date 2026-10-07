@@ -10,12 +10,14 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import { calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { formatMoney, sanitizeAmount } from '../../utils/format';
-import { useStyles } from '../../theme/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep, saveEdit } = useOnboarding();
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   // A brand-new account has the server default (USD); prefer the phone's region then.
   const [currency, setCurrency] = useState(() =>
@@ -72,9 +74,6 @@ export default function BuybackRateScreen({ navigation, route }) {
           {amount ? formatMoney(buybackRate, currency) : '—'}
           <Text style={styles.per}>/hr</Text>
         </Text>
-        <Text style={styles.rule}>
-          {amount ? 'Hand off anything that costs less than this.' : 'Type your yearly pay to see it.'}
-        </Text>
 
         {amount ? (
           <>
@@ -86,6 +85,15 @@ export default function BuybackRateScreen({ navigation, route }) {
           </>
         ) : null}
       </HeroCard>
+
+      <View style={styles.tip}>
+        <Ionicons name="bulb-outline" size={18} color={colors.accentText} />
+        <Text style={styles.tipText}>
+          {amount > 0
+            ? `If a task you don't enjoy can be done by someone else for ${formatMoney(buybackRate, currency)}/hr or less, it shouldn't be yours.`
+            : 'Enter a number to see how much you can afford to pay someone to take tasks off your plate.'}
+        </Text>
+      </View>
 
       <ErrorBanner message={error} />
     </Screen>
@@ -102,5 +110,13 @@ const makeStyles = (colors) => ({
   rowLabel: { color: colors.heroMuted, fontSize: 15 },
   rowValue: { color: colors.heroText, fontSize: 17, fontWeight: '700', flexShrink: 1 },
   bigEmpty: { color: colors.heroFaint },
-  rule: { color: colors.heroMuted, fontSize: 14, lineHeight: 20, marginTop: spacing.xs },
+  tip: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 16,
+    backgroundColor: colors.accentSoft,
+  },
+  tipText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.text },
 });
