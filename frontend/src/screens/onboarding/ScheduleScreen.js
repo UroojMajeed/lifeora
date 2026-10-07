@@ -153,15 +153,13 @@ export default function ScheduleScreen({ navigation, route }) {
             step={stepNumber('schedule')}
             editing={editing}
             eyebrow={round ? `Round ${round} · Audit` : editing ? 'Edit your routine' : 'Your routine'}
-            title={round ? 'What is in your routine now?' : 'What is in your routine?'}
+            title={round ? "What's in your routine now?" : "What's in your routine?"}
             subtitle={
               round
                 ? 'Handed-off tasks are gone and your new work is in. Add anything new.'
                 : editing
                 ? 'Tap an activity to change it. Changes save as you go.'
-                : items.length
-                ? 'Tap a suggestion below or type your own.'
-                : undefined
+                : 'The tasks you do on a normal work day.'
             }
           />
 
@@ -180,12 +178,10 @@ export default function ScheduleScreen({ navigation, route }) {
                   />
                 ))}
               </View>
-              <Text style={styles.hint}>
-                {items.length < 5 ? 'Most people add 5–8 tasks. ' : ''}Tap a task to change it.
-              </Text>
+              <Text style={styles.hint}>Tap a task to change it</Text>
             </>
           ) : (
-            <EmptyRoutine role={onboarding?.role} />
+            <EmptyRoutine />
           )}
 
           {newFills.length ? (
@@ -253,7 +249,7 @@ const makeStyles = (colors) => ({
   fillHours: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
   body: { flex: 1 },
-  rows: { gap: spacing.sm },
+  rows: { gap: spacing.sm + 2 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg },

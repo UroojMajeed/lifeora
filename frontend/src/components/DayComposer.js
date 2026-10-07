@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { HOUR_OPTIONS, hoursLabel, suggestionsFor, usualHours } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { cardShadow, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
+// The bar sits on a soft sheet at the bottom; suggestions are light chips (calm, not a wall of cards).
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const animate = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
@@ -121,17 +122,17 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
         // Step 1: suggestion cards (filtered by what's typed).
         <>
           {action}
+          {suggestions.length || typedIsNew ? <Text style={styles.sectionLabel}>{draft.trim() ? 'Matches' : 'Suggestions'}</Text> : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
             {typedIsNew ? (
               <Pressable onPress={() => choose(draft)} accessibilityRole="button" style={[styles.card, styles.cardNew]}>
-                <Ionicons name="add" size={16} color={colors.onColor} />
+                <Ionicons name="add" size={16} color={colors.primaryDark} />
                 <Text style={styles.cardNewText} numberOfLines={1}>
                   Add “{draft.trim()}”
                 </Text>
               </Pressable>
             ) : null}
             {suggestions.slice(0, 12).map((n) => {
-              const h = usualHours(n);
               return (
                 <Pressable
                   key={n}
@@ -140,10 +141,10 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
                   accessibilityLabel={`Add ${n}`}
                   style={({ pressed }) => [styles.card, pressed && { opacity: 0.7 }]}
                 >
+                  <Ionicons name="add" size={15} color={colors.primary} />
                   <Text style={styles.cardName} numberOfLines={1}>
                     {n}
                   </Text>
-                  {h ? <Text style={styles.cardHours}>~{hoursLabel(h)}</Text> : null}
                 </Pressable>
               );
             })}
@@ -186,29 +187,29 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
 
 const makeStyles = (colors, isDark) => ({
   wrap: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    gap: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm + 2,
+    gap: spacing.sm + 2,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    backgroundColor: colors.surface,
+    ...(isDark ? { borderTopWidth: 1, borderTopColor: colors.border } : { shadowColor: colors.shadow, shadowOpacity: 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 8 }),
   },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: spacing.lg },
   row: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   card: {
-    minWidth: 112,
-    maxWidth: 180,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: isDark ? colors.border : 'transparent',
-    ...cardShadow(colors, isDark),
+    maxWidth: 220,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
   },
-  cardName: { fontSize: 14, fontWeight: '700', color: colors.text },
-  cardHours: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  cardNew: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, borderColor: colors.primary },
-  cardNewText: { fontSize: 14, fontWeight: '700', color: colors.onColor, flexShrink: 1 },
+  cardName: { fontSize: 14, fontWeight: '600', color: colors.text, flexShrink: 1 },
+  cardNew: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
+  cardNewText: { fontSize: 14, fontWeight: '700', color: colors.primaryDark, flexShrink: 1 },
   panel: { gap: spacing.sm },
   panelTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
   question: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
@@ -232,11 +233,9 @@ const makeStyles = (colors, isDark) => ({
   input: {
     flex: 1,
     minHeight: 48,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.md + 2,
     borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
     fontSize: 16,
     color: colors.text,
   },
