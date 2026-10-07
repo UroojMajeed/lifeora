@@ -104,7 +104,6 @@ export default function BuybackRateScreen({ navigation, route }) {
         onChangeText={(t) => setIncome(sanitizeAmount(t))}
         placeholder="e.g. 120,000"
         accessibilityLabel="Yearly pay from your business"
-        onSubmitEditing={next}
       />
 
       <HeroCard style={styles.hero}>
