@@ -20,7 +20,7 @@ function useKeyboardOpen() {
 }
 
 /** Standard screen: scrollable content (optionally pull-to-refresh) with a pinned footer (for the CTA), hidden while typing. */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false }) {
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false, keepFooter = false }) {
   const { isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const keyboardOpen = useKeyboardOpen();
@@ -39,7 +39,8 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
         behavior={Platform.OS === 'ios' || avoidKeyboard ? 'padding' : undefined}
       >
         <Body {...bodyProps}>{children}</Body>
-        {footer && !keyboardOpen ? <View style={styles.footer}>{footer}</View> : null}
+        {/* The footer hides while typing, unless keepFooter: then it rides above the keyboard. */}
+        {footer && (!keyboardOpen || keepFooter) ? <View style={styles.footer}>{footer}</View> : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

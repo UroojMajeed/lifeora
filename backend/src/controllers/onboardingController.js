@@ -41,7 +41,8 @@ function sanitizeSchedule(schedule, errors) {
       errors.push(`schedule[${i}]: energy must be energizing, draining or null`);
     }
     // The quadrant is always derived here, never trusted from the client.
-    return { activity, hours, value, money, energy, quadrant: quadrantFor({ value, energy }) };
+    const per = item?.per === 'week' ? 'week' : 'day';
+    return { activity, hours, value, money, per, energy, quadrant: quadrantFor({ value, energy }) };
   });
 
   const total = items.reduce((sum, item) => sum + (Number.isFinite(item.hours) ? item.hours : 0), 0);

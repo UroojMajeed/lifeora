@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { HOUR_OPTIONS, hoursLabel, suggestionsFor, usualHours } from '../constants/content';
+import { HOUR_OPTIONS, WEEK_HOUR_OPTIONS, hoursLabel, perWorkday, suggestionsFor, usualHours, weeklyOf } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -20,6 +20,7 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
   const inputRef = useRef(null);
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState(null); // name waiting for its hours
+  const [per, setPer] = useState('day'); // weekly tasks: pick hours a week instead
 
   // Tapping an activity in the list loads it here.
   useEffect(() => {
@@ -27,7 +28,9 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
     if (editing) {
       setPending(editing.activity);
       setDraft(editing.activity);
+      setPer(editing.per || 'day');
     } else {
+      setPer('day');
       setPending(null);
       setDraft('');
     }
@@ -48,16 +51,18 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
     animate();
     setPending(clean);
     setDraft('');
+    setPer('day');
   };
 
-  const pickHours = (h) => {
+  const pickHours = (picked) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     animate();
+    const h = per === 'week' ? perWorkday(picked) : picked; // always saved per workday
     if (editing) {
       const name = draft.trim() && !taken(draft) ? draft.trim().slice(0, 60) : editing.activity;
-      onSave({ ...editing, activity: name, hours: h });
+      onSave({ ...editing, activity: name, hours: h, per });
     } else {
-      onAdd(pending, h);
+      onAdd(pending, h, per);
     }
     setPending(null);
     setDraft('');
@@ -71,7 +76,10 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
   };
 
   const usual = pending ? usualHours(pending) : null;
-  const current = editing?.hours;
+  // The highlighted choice: the task's current time, in the unit shown.
+  const current = editing ? (per === 'week' ? weeklyOf(editing) : editing.hours) : null;
+  const options = per === 'week' ? WEEK_HOUR_OPTIONS : HOUR_OPTIONS;
+  const optionLabel = (h) => (per === 'week' ? `${h}h` : hoursLabel(h));
 
   return (
     <View style={styles.wrap}>
@@ -80,25 +88,45 @@ export default function DayComposer({ role, items, editing, onAdd, onSave, onRem
         <View style={styles.panel}>
           <View style={styles.panelTop}>
             <Text style={styles.question} numberOfLines={2}>
-              {editing ? `Change ${editing.activity}` : `How long does ${pending} take a day?`}
+              {editing ? `Change ${editing.activity}` : `How long does ${pending} take?`}
             </Text>
             <Pressable onPress={cancel} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
               <Ionicons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
-          {usual && !editing ? <Text style={styles.hint}>The highlighted time is usual for most people.</Text> : null}
+          <View style={styles.perRow}>
+            {[
+              { key: 'day', label: 'Per day' },
+              { key: 'week', label: 'Per week' },
+            ].map((o) => (
+              <Pressable
+                key={o.key}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  animate();
+                  setPer(o.key);
+                }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: per === o.key }}
+                style={[styles.per, per === o.key && styles.perOn]}
+              >
+                <Text style={[styles.perText, per === o.key && styles.perTextOn]}>{o.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {usual && !editing && per === 'day' ? <Text style={styles.hint}>The highlighted time is usual for most people.</Text> : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
-            {HOUR_OPTIONS.map((h) => {
-              const on = h === current || (!current && h === usual);
+            {options.map((h) => {
+              const on = h === current || (!current && per === 'day' && h === usual);
               return (
                 <Pressable
                   key={h}
                   onPress={() => pickHours(h)}
                   accessibilityRole="button"
-                  accessibilityLabel={hoursLabel(h)}
+                  accessibilityLabel={`${optionLabel(h)} ${per === 'week' ? 'a week' : 'a day'}`}
                   style={({ pressed }) => [styles.hour, on && styles.hourOn, pressed && { opacity: 0.7 }]}
                 >
-                  <Text style={[styles.hourText, on && styles.hourTextOn]}>{hoursLabel(h)}</Text>
+                  <Text style={[styles.hourText, on && styles.hourTextOn]}>{optionLabel(h)}</Text>
                 </Pressable>
               );
             })}
@@ -226,6 +254,11 @@ const makeStyles = (colors, isDark) => ({
   hourOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   hourText: { fontSize: 15, fontWeight: '700', color: colors.text },
   hourTextOn: { color: colors.primaryDark },
+  perRow: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.lg },
+  per: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
+  perOn: { backgroundColor: colors.primary },
+  perText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+  perTextOn: { color: colors.onColor },
   remove: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginLeft: spacing.lg, paddingVertical: 4 },
   removeText: { fontSize: 14, fontWeight: '700', color: colors.error },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },

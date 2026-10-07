@@ -10,7 +10,7 @@ import { radius, spacing, withAlpha } from '../theme';
  * Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000].
  * The list floats over the screen (a transparent modal under the field), so a tap anywhere outside closes it.
  */
-export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel }) {
+export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -82,6 +82,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           placeholderTextColor={withAlpha(colors.muted, 0.45)}
           keyboardType="decimal-pad"
           returnKeyType="done"
+          onSubmitEditing={onSubmitEditing}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

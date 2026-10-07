@@ -50,7 +50,7 @@ export default function BuybackRateScreen({ navigation, route }) {
 
   return (
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
-    <Screen keyboardDismissMode="on-drag" footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
+    <Screen keyboardDismissMode="on-drag" avoidKeyboard keepFooter footer={<Button title={editing ? 'Save' : 'Continue'} icon={editing ? 'checkmark' : 'arrow-forward'} onPress={next} loading={loading} disabled={amount <= 0} />}>
       <StepHeader
         step={stepNumber('buyback_rate')}
         editing={editing}
@@ -66,6 +66,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         onChangeText={(t) => setIncome(sanitizeAmount(t))}
         placeholder="e.g. 120,000"
         accessibilityLabel="Yearly pay from your business"
+        onSubmitEditing={() => amount > 0 && next()}
       />
 
       <HeroCard style={styles.hero}>

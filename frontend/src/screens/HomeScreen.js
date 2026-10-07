@@ -13,6 +13,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import BuybackRingCard from '../components/BuybackRingCard';
 import LoopTracker from '../components/LoopTracker';
 import TodaysMoveCard from '../components/TodaysMoveCard';
+import ZoneTitle from '../components/ZoneTitle';
 import { Card } from '../components/Card';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -127,7 +128,7 @@ export default function HomeScreen({ navigation }) {
         <Pressable
           onPress={() => navigation.navigate('MyDay')}
           accessibilityRole="button"
-          accessibilityLabel={`Your DRIP Matrix${zone ? `. You live in ${zone.name}` : ''}. Open your routine`}
+          accessibilityLabel={`Your DRIP Matrix${zone ? `. ${drip.tied.length ? `Split between ${drip.tied.map((q) => DRIP[q].name).join(' and ')}` : `You live in ${zone.name}`}` : ''}. Open your routine`}
           style={({ pressed }) => pressed && styles.pressed}
         >
           <Card style={styles.dripCard}>
@@ -150,9 +151,7 @@ export default function HomeScreen({ navigation }) {
                     <View style={[styles.zoneDot, { backgroundColor: colors[zone.color] }]} />
                     <Text style={[styles.zonePillText, { color: colors[zone.color] }]}>{zone.axes}</Text>
                   </View>
-                  <Text style={styles.zoneTitle}>
-                    You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>
-                  </Text>
+                  <ZoneTitle summary={drip} style={styles.zoneTitle} />
                   <Text style={styles.zoneAdvice}>{zone.advice}</Text>
                 </View>
               ) : null}

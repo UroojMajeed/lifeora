@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { LayoutAnimation, Pressable, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { LayoutAnimation, Modal, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
@@ -8,12 +8,15 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import DripGraph from '../../components/DripGraph';
 import SwipeRateCard from '../../components/SwipeRateCard';
+import ZoneTitle from '../../components/ZoneTitle';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { DRIP, stepNumber, summarizeSchedule, valueForMoney } from '../../constants/content';
+import { DRIP, quadrantFor, stepNumber, summarizeSchedule, valueForMoney } from '../../constants/content';
 import { recordMove } from '../../storage/progress';
 import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
+
+const FLASH_MS = 1600; // how long the pop-up graph stays after a swipe
 
 // One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
 const INFO = {
@@ -36,11 +39,12 @@ export default function SwipeScreen({ navigation, route }) {
   const styles = useStyles(makeStyles);
 
   const [items, setItems] = useState(() =>
-    (onboarding?.schedule || []).map(({ activity, hours, value, money, energy }) => ({
+    (onboarding?.schedule || []).map(({ activity, hours, value, money, per, energy }) => ({
       activity,
       hours,
       value,
       money: money ?? null,
+      per: per || 'day',
       energy: energy ?? null,
     }))
   );
@@ -73,7 +77,17 @@ export default function SwipeScreen({ navigation, route }) {
     setItems(list);
     setSelected(null);
     persist(list);
+    const quadrant = quadrantFor({ value: valueForMoney(next.money), energy: next.energy });
+    setFlash({ activity: item.activity, quadrant, at: Date.now() });
   };
+
+  // The pop-up graph closes by itself after a moment (or on a tap).
+  const [flash, setFlash] = useState(null);
+  useEffect(() => {
+    if (!flash) return undefined;
+    const t = setTimeout(() => setFlash(null), FLASH_MS);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   const [nudge, setNudge] = useState(false);
   const pickMoney = (money) => {
@@ -120,18 +134,20 @@ export default function SwipeScreen({ navigation, route }) {
       <View style={styles.doneRow}>
         <Ionicons name="checkmark-circle" size={26} color={colors.success} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.doneTitle}>
-            {zone ? (
-              <>
-                You live in <Text style={{ color: colors[zone.color] }}>{zone.name}</Text>
-              </>
-            ) : (
-              'All rated'
-            )}
-          </Text>
+          {zone ? <ZoneTitle summary={summary} style={styles.doneTitle} /> : <Text style={styles.doneTitle}>All rated</Text>}
           <Text style={styles.doneText}>Tap any dot to change it.</Text>
         </View>
       </View>
+      {/* The first win, so the finish feels like a start: the biggest draining task to hand off. */}
+      {!editing && summary.firstHandoff ? (
+        <View style={styles.firstMove}>
+          <Ionicons name="flag" size={16} color={colors.accentText} />
+          <Text style={styles.firstMoveText}>
+            First move: hand off <Text style={styles.firstMoveName}>{summary.firstHandoff.activity}</Text>, it frees{' '}
+            {formatHours(summary.firstHandoff.hours * 5)} a week.
+          </Text>
+        </View>
+      ) : null}
       <Button
         title={editing ? 'Save my routine' : 'Start buying back my time'}
         icon={editing ? 'checkmark' : 'arrow-forward'}
@@ -211,6 +227,21 @@ export default function SwipeScreen({ navigation, route }) {
 
       <DripGraph items={items} selected={current} onSelect={(name) => setSelected(name)} />
       <ErrorBanner message={error} />
+
+      <Modal visible={Boolean(flash)} transparent animationType="fade" onRequestClose={() => setFlash(null)} statusBarTranslucent>
+        <Pressable style={styles.flashBackdrop} onPress={() => setFlash(null)} accessibilityLabel="Close">
+          {flash ? (
+            <View style={styles.flashCard}>
+              <Text style={styles.flashTitle} numberOfLines={2}>
+                {flash.activity}
+                <Text style={styles.flashArrow}>  →  </Text>
+                <Text style={{ color: colors[DRIP[flash.quadrant].color] }}>{DRIP[flash.quadrant].name}</Text>
+              </Text>
+              <DripGraph key={flash.at} items={items} selected={flash.activity} flyIn={flash.activity} height={300} />
+            </View>
+          ) : null}
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
@@ -224,6 +255,13 @@ const makeStyles = (colors) => ({
   infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
   infoName: { fontWeight: '800' },
+  flashBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.md, backgroundColor: 'rgba(2,6,23,0.55)' },
+  flashCard: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background },
+  flashTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
+  flashArrow: { color: colors.muted, fontWeight: '600' },
+  firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  firstMoveText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
+  firstMoveName: { fontWeight: '800' },
   progress: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
   progressText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },

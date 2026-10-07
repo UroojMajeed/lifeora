@@ -1,33 +1,34 @@
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { hoursLabel } from '../constants/content';
+import { hoursLabel, timeText, weeklyOf } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
 export const ACTIVITY_ROW_HEIGHT = 62;
 
-const PassThrough = ({ children }) => children;
-
 /**
  * One activity in the user's day: drag handle, name, hours (tap the row to edit), remove.
  * `badge` ({ label, tone: 'success' | 'primary' }) marks e.g. a handed-off task or extra time from Fill.
  */
-export default function ActivityRow({ item, isActive, Handle = PassThrough, onEdit, onRemove, badge, muted }) {
+export default function ActivityRow({ item, isActive, Handle, onEdit, onRemove, badge, muted }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
   return (
-    <View style={[styles.card, isActive && styles.cardActive]}>
-      <Handle>
-        <View collapsable={false} accessibilityLabel={`Drag to move ${item.activity}`} style={styles.handle}>
-          <Ionicons name="reorder-three" size={26} color={isActive ? colors.primary : colors.muted} />
-        </View>
-      </Handle>
+    <View style={[styles.card, !Handle && styles.cardNoHandle, isActive && styles.cardActive]}>
+      {/* The drag handle only shows where the list can be reordered. */}
+      {Handle ? (
+        <Handle>
+          <View collapsable={false} accessibilityLabel={`Drag to move ${item.activity}`} style={styles.handle}>
+            <Ionicons name="reorder-three" size={26} color={isActive ? colors.primary : colors.muted} />
+          </View>
+        </Handle>
+      ) : null}
 
       <Pressable
         onPress={onEdit}
         accessibilityRole="button"
-        accessibilityLabel={`${item.activity}, ${hoursLabel(item.hours)} a day. Tap to edit.`}
+        accessibilityLabel={`${item.activity}, ${timeText(item)}. Tap to edit.`}
         style={({ pressed }) => [styles.body, pressed && { opacity: 0.6 }]}
       >
         <View style={styles.titleWrap}>
@@ -50,7 +51,7 @@ export default function ActivityRow({ item, isActive, Handle = PassThrough, onEd
         </View>
         <View style={styles.hours}>
           <Ionicons name="time-outline" size={14} color={colors.primaryDark} />
-          <Text style={styles.hoursText}>{hoursLabel(item.hours)}</Text>
+          <Text style={styles.hoursText}>{item.per === 'week' ? `${weeklyOf(item)}h/wk` : hoursLabel(item.hours)}</Text>
         </View>
       </Pressable>
 
@@ -75,6 +76,7 @@ const makeStyles = (colors, isDark) => ({
     borderColor: isDark ? colors.border : 'transparent',
     ...cardShadow(colors, isDark),
   },
+  cardNoHandle: { paddingLeft: spacing.md },
   cardActive: { borderColor: colors.primary },
   handle: { width: 44, height: '100%', alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: '100%' },

@@ -23,12 +23,12 @@ const BOXES = [
 ];
 
 /** One activity on the matrix. New dots fly in from the centre; changed ones glide to their new box. */
-function Dot({ item, x, y, origin, color, selected, onPress }) {
+function Dot({ item, x, y, origin, still, color, selected, onPress }) {
   const { colors } = useTheme();
   const size = dotSize(item.hours);
-  const px = useSharedValue(origin.x);
-  const py = useSharedValue(origin.y);
-  const scale = useSharedValue(0);
+  const px = useSharedValue(still ? x : origin.x);
+  const py = useSharedValue(still ? y : origin.y);
+  const scale = useSharedValue(still ? 1 : 0);
 
   useEffect(() => {
     px.value = withSpring(x, SPRING);
@@ -78,7 +78,7 @@ function NameBubble({ name, x, y, plotW }) {
  * The DRIP Matrix drawn like the book: four equal boxes, money rising up the side and energy
  * growing to the right. Rated activities sit in their box as dots (higher = more $, size = hours).
  */
-export default function DripGraph({ items, selected, onSelect, height = 320 }) {
+export default function DripGraph({ items, selected, onSelect, flyIn, height = 320 }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [width, setWidth] = useState(0);
@@ -156,6 +156,7 @@ export default function DripGraph({ items, selected, onSelect, height = 320 }) {
                     x={x}
                     y={y}
                     origin={{ x: plotW / 2, y: plotH / 2 }}
+                    still={Boolean(flyIn) && flyIn !== it.activity}
                     color={colors[DRIP[quadrantFor({ value, energy: it.energy })].color]}
                     selected={selected === it.activity}
                     onPress={() => onSelect?.(it.activity)}

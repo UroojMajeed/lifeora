@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Dimensions, PanResponder, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { MONEY_LEVELS, dollars } from '../constants/content';
-import { formatHours } from '../utils/format';
+import { MONEY_LEVELS, dollars, timeText } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -127,7 +126,7 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
           </Text>
           <View style={styles.hours}>
             <Ionicons name="time-outline" size={13} color={colors.muted} />
-            <Text style={styles.hoursText}>{formatHours(item.hours)} a day</Text>
+            <Text style={styles.hoursText}>{timeText(item)}</Text>
           </View>
 
           <View style={styles.moneyRow}>

@@ -5,8 +5,7 @@ import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
-import ActivityRow, { ACTIVITY_ROW_HEIGHT } from '../../components/ActivityRow';
-import DraggableList from '../../components/DraggableList';
+import ActivityRow from '../../components/ActivityRow';
 import DayComposer from '../../components/DayComposer';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
@@ -30,11 +29,10 @@ export default function ScheduleScreen({ navigation, route }) {
   const [items, setItems] = useState(() =>
     (onboarding?.schedule || [])
       .filter((i) => i.hours)
-      .map(({ activity, hours, value, money, energy }) => ({ activity, hours, value, money: money ?? null, energy: energy ?? null }))
+      .map(({ activity, hours, value, money, per, energy }) => ({ activity, hours, value, money: money ?? null, per: per || 'day', energy: energy ?? null }))
   );
   const [editingIndex, setEditingIndex] = useState(null);
   const listRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -71,10 +69,10 @@ export default function ScheduleScreen({ navigation, route }) {
 
   const openEdit = (index) => setEditingIndex((cur) => (cur === index ? null : index));
 
-  const add = (name, hours) => {
+  const add = (name, hours, per = 'day') => {
     if (items.length >= MAX_ACTIVITIES) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setItems((list) => [...list, newActivity(name, hours)]);
+    setItems((list) => [...list, { ...newActivity(name, hours), per }]);
     // Like a chat: the newest one shows at the bottom of the list.
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
   };
@@ -127,7 +125,7 @@ export default function ScheduleScreen({ navigation, route }) {
   const action = items.length ? (
     <View style={styles.actionRow}>
       <Text style={[styles.actionTotal, over && styles.totalOver]} numberOfLines={1}>
-        {over ? 'More than 24 hours' : `${items.length} · ${formatHours(live ? dayNowHours : totalHours)} a day`}
+        {over ? 'More than 24 hours a day' : `${items.length} ${items.length === 1 ? 'task' : 'tasks'} · ${formatHours(live ? dayNowHours : totalHours)} a day`}
       </Text>
       <Button
         title={nextTitle}
@@ -149,7 +147,6 @@ export default function ScheduleScreen({ navigation, route }) {
           style={styles.list}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={!dragging}
         >
           <StepHeader
             step={stepNumber('schedule')}
@@ -167,34 +164,29 @@ export default function ScheduleScreen({ navigation, route }) {
 
           {items.length ? (
             <>
-              <DraggableList
-                items={items}
-                keyOf={(it) => it.activity}
-                rowHeight={ACTIVITY_ROW_HEIGHT}
-                gap={spacing.sm}
-                onReorder={setItems}
-                onDragStart={() => setDragging(true)}
-                onDragEnd={() => setDragging(false)}
-                renderItem={({ item, index, isActive, Handle }) => (
+              <View style={styles.rows}>
+                {items.map((item, index) => (
                   <ActivityRow
+                    key={item.activity}
                     item={item}
-                    isActive={isActive || editingIndex === index}
-                    Handle={Handle}
+                    isActive={editingIndex === index}
                     onEdit={() => openEdit(index)}
                     onRemove={() => remove(index)}
                     badge={badgeFor(item)}
                     muted={handedOff.has(item.activity.toLowerCase())}
                   />
-                )}
-              />
-              {items.length > 1 ? <Text style={styles.hint}>Tap one to change it · hold ≡ to reorder</Text> : null}
+                ))}
+              </View>
+              <Text style={styles.hint}>
+                {items.length < 5 ? 'Most people add 5–8 tasks. ' : ''}Tap a task to change it.
+              </Text>
             </>
           ) : (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
                 <Ionicons name="chatbubbles-outline" size={26} color={colors.primaryDark} />
               </View>
-              <Text style={styles.emptyText}>Your routine shows up here. Add the tasks you do on a normal work day.</Text>
+              <Text style={styles.emptyText}>Your routine shows up here. Add the tasks you do on a normal work day; most people add 5–8.</Text>
             </View>
           )}
 
@@ -263,6 +255,7 @@ const makeStyles = (colors) => ({
   fillHours: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
   body: { flex: 1 },
+  rows: { gap: spacing.sm },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: spacing.sm },

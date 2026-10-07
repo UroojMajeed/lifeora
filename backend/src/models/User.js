@@ -17,6 +17,8 @@ const activitySchema = new mongoose.Schema(
     value: { type: String, enum: ['high', 'low'], required: true },
     // $ to $$$$$ (1-5); sets value ($$$ and up = high). Empty for days audited before the $ rating.
     money: { type: Number, min: 1, max: 5, default: null },
+    // How the time was entered: 'day', or 'week' for weekly tasks (hours is always per workday).
+    per: { type: String, enum: ['day', 'week'], default: 'day' },
     // Empty until the user swipes the activity.
     energy: { type: String, enum: ['energizing', 'draining', null], default: null },
     quadrant: { type: String, enum: [...DRIP_QUADRANTS, null], default: null },

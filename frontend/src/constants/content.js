@@ -71,6 +71,9 @@ export function summarizeSchedule(schedule = [], buybackRate = 0) {
   });
   const totalHours = Object.values(hours).reduce((a, b) => a + b, 0);
   const dominant = totalHours ? Object.keys(hours).reduce((a, b) => (hours[b] > hours[a] ? b : a)) : null;
+  // Quadrants sharing the largest share of hours (more than one = a tie, so no single "home").
+  const top = dominant ? Object.keys(hours).filter((q) => Math.abs(hours[q] - hours[dominant]) < 0.001) : [];
+  const tied = top.length > 1 ? top : [];
   const drainingHours = hours.delegation + hours.replacement;
   // First handoff: the biggest Delegation task, else the biggest Replacement task.
   const byHours = (a, b) => b.hours - a.hours;
@@ -81,6 +84,7 @@ export function summarizeSchedule(schedule = [], buybackRate = 0) {
     tasks,
     totalHours,
     dominant,
+    tied,
     drainingHours,
     dailyBuybackCost: drainingHours * (Number(buybackRate) || 0),
     firstHandoff,
@@ -147,11 +151,20 @@ export function suggestionsFor(role) {
 
 /** A day-list entry. Typed activities default to "only you" (high); the rating card sets their $ value. */
 export function newActivity(name, hours) {
-  return { activity: name, hours, value: ACTIVITIES[name]?.value || 'high', money: null, energy: null };
+  return { activity: name, hours, value: ACTIVITIES[name]?.value || 'high', money: null, per: 'day', energy: null };
 }
 
 /** Hour choices in the picker; the activity's usual hours are highlighted. */
 export const HOUR_OPTIONS = [0.5, 1, 1.5, 2, 3, 4, 5, 6, 8];
+// Weekly tasks (e.g. bookkeeping): hours a week, saved as hours per workday (÷ 5).
+export const WEEK_HOUR_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 15, 20];
+export const WORKDAYS = 5;
+const round2 = (n) => Math.round(n * 100) / 100;
+export const perWorkday = (weeklyHours) => round2(weeklyHours / WORKDAYS);
+export const weeklyOf = (item) => round2(item.hours * WORKDAYS);
+/** A task's time the way it was entered: "1h a day" or "3h a week". */
+export const timeText = (item) =>
+  item.per === 'week' ? `${weeklyOf(item)}h a week` : `${hoursLabel(item.hours)} a day`;
 export const usualHours = (name) => ACTIVITIES[name]?.hours ?? null;
 export const hoursLabel = (h) => (h < 1 ? `${h * 60} min` : `${h} ${h === 1 ? 'hour' : 'hours'}`);
 
