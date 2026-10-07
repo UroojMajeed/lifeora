@@ -143,11 +143,12 @@ export default function ScheduleScreen({ navigation, route }) {
   return (
     <Screen scroll={false} avoidKeyboard contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
+        {/* Like a chat: the list scrolls with the keyboard open (it fills the space above the bar). */}
         <ScrollView
           ref={listRef}
+          style={styles.list}
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
           scrollEnabled={!dragging}
         >
           <StepHeader
@@ -262,6 +263,7 @@ const makeStyles = (colors) => ({
   fillHours: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
   hint: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
   body: { flex: 1 },
+  list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
