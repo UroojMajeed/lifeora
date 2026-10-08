@@ -8,7 +8,8 @@ import { radius } from '../theme';
 
 const Y_AXIS = 28; // the money arrow on the left
 const X_AXIS = 30; // the energy arrow along the bottom
-const GAP = 6; // between the four boxes
+const GAP = 0; // one box, split into four (no gaps between the quadrants)
+const LINE = 1.5; // the frame and the cross that divides it
 const LABEL = 34; // room for each box's name and meaning, above its dots
 const SPRING = { damping: 18, stiffness: 260, mass: 0.6 }; // quick, so a new dot lands within the short pop-up
 
@@ -76,7 +77,7 @@ function NameBubble({ name, x, y, plotW }) {
 
 /**
  * `stagger` (ms): dots fly in one after another in the routine's order (the end-of-rating reveal).
- * The DRIP Matrix drawn like the book: four equal boxes, money rising up the side and energy
+ * The DRIP Matrix drawn like the book: one box split into four quadrants, money rising up the side and energy
  * growing to the right. Rated activities sit in their box as dots (higher = more $, size = hours).
  */
 export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 0, height = 320 }) {
@@ -131,6 +132,11 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
               style={[
                 styles.box,
                 { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH, backgroundColor: colors[d.soft] },
+                // Only the outer corners are rounded, so the four read as one box.
+                b.row === 0 && b.col === 0 && { borderTopLeftRadius: radius.md },
+                b.row === 0 && b.col === 1 && { borderTopRightRadius: radius.md },
+                b.row === 1 && b.col === 0 && { borderBottomLeftRadius: radius.md },
+                b.row === 1 && b.col === 1 && { borderBottomRightRadius: radius.md },
               ]}
             >
               <Text style={[styles.boxName, { color: colors[d.color] }]}>{d.name}</Text>
@@ -140,6 +146,11 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
             </View>
           );
         })}
+
+        {/* The frame, and the cross that divides it into the four quadrants. */}
+        <View pointerEvents="none" style={[styles.frame, { width: plotW, height: plotH }]} />
+        <View pointerEvents="none" style={[styles.divider, { left: boxW - LINE / 2, top: 0, width: LINE, height: plotH }]} />
+        <View pointerEvents="none" style={[styles.divider, { left: 0, top: boxH - LINE / 2, width: plotW, height: LINE }]} />
 
         {width
           ? Object.values(cells).flatMap((group) =>
@@ -188,7 +199,9 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
 
 const makeStyles = (colors) => ({
   plot: { position: 'absolute', top: 0 },
-  box: { position: 'absolute', borderRadius: radius.md, paddingHorizontal: 8, paddingTop: 6 },
+  box: { position: 'absolute', paddingHorizontal: 8, paddingTop: 6 },
+  frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.border },
+  divider: { position: 'absolute', backgroundColor: colors.border },
   boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   boxAxes: { fontSize: 9, fontWeight: '600', color: colors.muted, marginTop: 1 },
   yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },

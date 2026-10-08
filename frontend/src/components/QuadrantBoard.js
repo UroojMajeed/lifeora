@@ -17,7 +17,7 @@ const Y_AXIS = 26;
 const quadrantOf = (it) => quadrantFor({ value: it.money ? valueForMoney(it.money) : it.value, energy: it.energy });
 
 /**
- * The DRIP Matrix as one box split into four sections, with the money axis up the left and the energy
+ * The DRIP Matrix as four boxes, with the money axis up the left and the energy
  * axis along the bottom (like the book's graph). Each rated task sits as a chip in its section.
  * `latest` gets an outline (the one just rated); tapping a chip re-opens it (`onSelect`).
  */
@@ -40,11 +40,11 @@ export default function QuadrantBoard({ items, latest, selected, onSelect, regis
           <Text style={[styles.yEnd, styles.yBottom]}>$</Text>
         </View>
 
-        {/* One box, divided into the four quadrants */}
-        <View style={styles.box}>
-          {LAYOUT.map((row, r) => (
-            <View key={row[0]} style={[styles.row, r === 0 && styles.rowTop]}>
-              {row.map((key, c) => {
+        {/* The four quadrants */}
+        <View style={styles.grid}>
+          {LAYOUT.map((row) => (
+            <View key={row[0]} style={styles.row}>
+              {row.map((key) => {
                 const q = DRIP[key];
                 const tasks = by[key];
                 const hours = tasks.reduce((t, it) => t + it.hours, 0);
@@ -53,7 +53,7 @@ export default function QuadrantBoard({ items, latest, selected, onSelect, regis
                     key={key}
                     ref={(node) => registerBox?.(key, node)}
                     collapsable={false}
-                    style={[styles.section, c === 0 && styles.sectionLeft, { backgroundColor: colors[q.soft] }]}
+                    style={[styles.section, { backgroundColor: colors[q.soft] }]}
                   >
                     <View style={styles.head}>
                       <Text style={[styles.name, { color: colors[q.color] }]} numberOfLines={1}>
@@ -128,12 +128,9 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.background,
     transform: [{ translateY: -6 }, { rotate: '-90deg' }],
   },
-  // A single rounded box; thin lines split it into the four quadrants.
-  box: { flex: 1, borderRadius: radius.md, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.border },
-  row: { flexDirection: 'row' },
-  rowTop: { borderBottomWidth: 1.5, borderBottomColor: colors.border },
-  section: { flex: 1, minHeight: 96, padding: spacing.sm + 2 },
-  sectionLeft: { borderRightWidth: 1.5, borderRightColor: colors.border },
+  grid: { flex: 1, gap: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm },
+  section: { flex: 1, minHeight: 96, padding: spacing.sm + 2, borderRadius: radius.md },
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 4 },
   name: { flexShrink: 1, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   hours: { fontSize: 12, fontWeight: '800' },
