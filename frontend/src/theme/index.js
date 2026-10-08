@@ -30,6 +30,9 @@ export const lightColors = {
   gold: ['#F7CB7E', '#E2A23C'], // picked $: a coin gradient
   goldInk: '#4A2E06', // $ on the gold coin
   goldLine: '#EBD3A8', // ring around an unpicked $
+  cream: ['#FFFBF3', '#FBEFD9'], // the rating card at rest: ivory into light gold
+  blushDrain: '#F6D3CE', // the card leaning left (drains)
+  blushEnergize: '#CBEFE2', // the card leaning right (energizes)
 
   // DRIP quadrants and status
   success: brand.teal, // Production
@@ -81,6 +84,9 @@ export const darkColors = {
   gold: ['#F5B971', '#D6923A'],
   goldInk: '#2A1A04',
   goldLine: 'rgba(245,185,113,0.4)',
+  cream: ['#211C14', '#2B2216'],
+  blushDrain: '#4A2522',
+  blushEnergize: '#16413A',
 
   success: '#5FD3B8',
   successSoft: 'rgba(95,211,184,0.14)',

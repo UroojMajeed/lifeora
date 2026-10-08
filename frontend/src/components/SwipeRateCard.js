@@ -96,6 +96,9 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
   const rotate = position.x.interpolate({ inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH], outputRange: ['-12deg', '0deg', '12deg'] });
   const yes = position.x.interpolate({ inputRange: [20, SWIPE_THRESHOLD], outputRange: [0, 1], extrapolate: 'clamp' });
   const no = position.x.interpolate({ inputRange: [-SWIPE_THRESHOLD, -20], outputRange: [1, 0], extrapolate: 'clamp' });
+  // The blush grows with the drag, up to a soft tint (never a full colour).
+  const blushLeft = position.x.interpolate({ inputRange: [-SWIPE_THRESHOLD, 0], outputRange: [0.85, 0], extrapolate: 'clamp' });
+  const blushRight = position.x.interpolate({ inputRange: [0, SWIPE_THRESHOLD], outputRange: [0, 0.85], extrapolate: 'clamp' });
   const nextScale = position.x.interpolate({ inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH], outputRange: [1, 0.94, 1], extrapolate: 'clamp' });
 
   return (
@@ -108,8 +111,10 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
           style={[styles.cardShell, { transform: [...position.getTranslateTransform(), { rotate }] }]}
           accessibilityHint="Pick how much money it makes, then swipe right if it energizes you or left if it drains you"
         >
-          {/* A soft tint: white into aqua (dark: surface into a deeper surface). */}
-          <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+          {/* Warm cream at rest; it blushes rose (drains) or mint (energizes) as you drag it. */}
+          <LinearGradient colors={colors.cream} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+            <Animated.View pointerEvents="none" style={[styles.blush, { backgroundColor: colors.blushDrain, opacity: blushLeft }]} />
+            <Animated.View pointerEvents="none" style={[styles.blush, { backgroundColor: colors.blushEnergize, opacity: blushRight }]} />
             {/* The stamps only show while dragging; they must never catch taps (they sit over Back). */}
             <Animated.View pointerEvents="none" style={[styles.stamp, styles.stampYes, { opacity: yes }]}>
               <Ionicons name="flash" size={13} color={colors.success} />
@@ -199,9 +204,11 @@ const makeStyles = (colors, isDark) => ({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: isDark ? colors.border : 'transparent',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.cream[0],
+    overflow: 'hidden',
   },
-  behind: { position: 'absolute', left: 10, right: 10, top: -6, bottom: 6, opacity: 0.5 },
+  behind: { position: 'absolute', left: 10, right: 10, top: -6, bottom: 6, opacity: 0.5, backgroundColor: colors.cream[1] },
+  blush: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.lg },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 26 },
   name: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 2 },
   hoursText: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 2 },
