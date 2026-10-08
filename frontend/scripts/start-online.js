@@ -7,7 +7,7 @@ const { bin, install } = require('cloudflared');
 
 const PORT = 8081;
 const API_URL = 'https://lifeora-nine.vercel.app/api';
-const ATTEMPTS = 3;
+const ATTEMPTS = 5; // Cloudflare's free tunnels are sometimes slow to answer; keep trying a while
 // The tunnel's own address, e.g. https://joy-received-contributed-bull.trycloudflare.com.
 // (Not api.trycloudflare.com, which only shows up in Cloudflare's error messages.)
 const TUNNEL_URL = /https:\/\/(?!api\.)[a-z0-9]+(?:-[a-z0-9]+)+\.trycloudflare\.com/;
@@ -51,8 +51,8 @@ async function openTunnelWithRetry() {
       return { tunnel, proxyUrl: await url };
     } catch (err) {
       if (attempt >= ATTEMPTS) throw err;
-      console.log(`Cloudflare didn't open a tunnel (${err.message}). Trying again…`);
-      await wait(3000 * attempt);
+      console.log(`Cloudflare didn't open a tunnel (attempt ${attempt} of ${ATTEMPTS}). Trying again…`);
+      await wait(4000 * attempt);
     }
   }
 }
