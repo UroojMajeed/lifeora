@@ -157,7 +157,7 @@ export default function BuybackRateScreen({ navigation, route }) {
               </Text>
             </View>
             <View style={styles.divider} />
-            {/* How it's worked out, as two rows in the same type: your hour, then ÷ 4 = your Buyback Rate. */}
+            {/* Two rows in the same type: what your hour is worth, then your Buyback Rate. */}
             <View style={styles.rateRow}>
               <Text style={styles.rateLabel} numberOfLines={2}>Your hour is worth</Text>
               <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
@@ -166,7 +166,7 @@ export default function BuybackRateScreen({ navigation, route }) {
               </Text>
             </View>
             <View style={[styles.rateRow, styles.rateMain]}>
-              <Text style={[styles.rateLabel, styles.rateLabelMain]} numberOfLines={2}>÷ 4 = Your Buyback Rate</Text>
+              <Text style={[styles.rateLabel, styles.rateLabelMain]} numberOfLines={2}>Your Buyback Rate</Text>
               <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
                 {rateText}
                 <Text style={styles.per}>/hr</Text>
