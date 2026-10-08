@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedLogo from '../components/AnimatedLogo';
-import DayBar from '../components/DayBar';
+import Roadmap from '../components/Roadmap';
 import Wordmark from '../components/Wordmark';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
@@ -93,11 +93,11 @@ export default function LandingScreen({ navigation }) {
             <Text style={styles.tagline}>Buy back your time.</Text>
           </Animated.View>
 
-          {/* The promise: the pain in one line, then the whole idea as a picture (no list to read). */}
+          {/* The promise: the pain in one line, then a road map of what the next two minutes give you. */}
           {ready ? (
             <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
               <Text style={styles.punch}>You didn't start a business to drown in busywork.</Text>
-              <DayBar />
+              <Roadmap />
             </Animated.View>
           ) : null}
         </View>
