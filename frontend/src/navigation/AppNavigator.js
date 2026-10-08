@@ -3,6 +3,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 import LandingScreen from '../screens/LandingScreen';
 import ProfileScreen from '../screens/onboarding/ProfileScreen';
+import JourneyScreen from '../screens/onboarding/JourneyScreen';
 import BuybackRateScreen from '../screens/onboarding/BuybackRateScreen';
 import ScheduleScreen from '../screens/onboarding/ScheduleScreen';
 import SwipeScreen from '../screens/onboarding/SwipeScreen';
@@ -27,6 +28,7 @@ export default function AppNavigator() {
       }}
     >
       <Stack.Screen name="Landing" component={LandingScreen} options={{ animation: 'fade' }} />
+      <Stack.Screen name="Journey" component={JourneyScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="BuybackRate" component={BuybackRateScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />

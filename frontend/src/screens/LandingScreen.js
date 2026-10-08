@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedLogo from '../components/AnimatedLogo';
-import Roadmap from '../components/Roadmap';
 import Wordmark from '../components/Wordmark';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
@@ -25,10 +24,6 @@ const PERKS = [
 export default function LandingScreen({ navigation }) {
   const { bootstrap, startAsGuest } = useOnboarding();
   const { colors, isDark } = useTheme();
-  // The road map takes the room left after the logo and the buttons (220-300 tall); if a phone is
-  // shorter still, the page scrolls rather than letting anything overlap.
-  const { height: screenHeight } = useWindowDimensions();
-  const roadHeight = Math.max(220, Math.min(300, screenHeight - 560));
   const styles = useStyles(makeStyles);
   const [ready, setReady] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -44,7 +39,8 @@ export default function LandingScreen({ navigation }) {
     setStarting(true);
     try {
       const next = await startAsGuest();
-      navigation.reset(resetTo(next));
+      if (next === 'BuybackRate') navigation.reset({ index: 0, routes: [{ name: 'Journey' }] });
+      else navigation.reset(resetTo(next));
     } catch (err) {
       setError(err.message);
       setStarting(false);
@@ -91,19 +87,13 @@ export default function LandingScreen({ navigation }) {
         <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false} bounces={false}>
           <View style={styles.center}>
             <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-              <AnimatedLogo size={96} />
+              <AnimatedLogo size={128} />
             </Animated.View>
             <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
-              <Wordmark height={44} color={colors.text} />
+              <Wordmark height={52} color={colors.text} />
               <Text style={styles.tagline}>Buy back your time.</Text>
             </Animated.View>
 
-            {/* The promise: a road map of the journey, ending with your time back. */}
-            {ready ? (
-              <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
-                <Roadmap height={roadHeight} />
-              </Animated.View>
-            ) : null}
           </View>
 
           <View style={styles.bottom}>
@@ -160,7 +150,6 @@ const makeStyles = (colors, isDark) => ({
   tagline: { fontSize: 18, fontWeight: '600', color: colors.primary, marginTop: spacing.sm },
   bottom: { minHeight: 170, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   ctas: { gap: spacing.md },
-  promise: { alignSelf: 'stretch', paddingHorizontal: spacing.lg, marginTop: spacing.md },
   perks: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.sm },
   perk: {
     flexDirection: 'row',
