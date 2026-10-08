@@ -15,7 +15,6 @@ export const DRIP = {
     name: 'Production',
     axes: 'Makes money · Energizes you',
     advice: 'Your zone of genius. Protect these hours and fill freed-up time with more of them.',
-    icon: 'rocket-outline', // faded behind the dots on the graph
     color: 'success',
     soft: 'successSoft',
   },
@@ -23,7 +22,6 @@ export const DRIP = {
     name: 'Replacement',
     axes: 'Makes money · Drains you',
     advice: "You're good at it, but it wears you down. Write the playbook and hire someone to replace you.",
-    icon: 'swap-horizontal-outline', // faded behind the dots on the graph
     color: 'warm',
     soft: 'warmSoft',
   },
@@ -31,7 +29,6 @@ export const DRIP = {
     name: 'Investment',
     axes: "Doesn't pay yet · Energizes you",
     advice: 'Learning, health and planning. It pays off later, so keep investing here.',
-    icon: 'leaf-outline', // faded behind the dots on the graph
     color: 'info',
     soft: 'infoSoft',
   },
@@ -39,7 +36,6 @@ export const DRIP = {
     name: 'Delegation',
     axes: "Doesn't pay · Drains you",
     advice: 'The cheapest hours to buy back. Hand these off first.',
-    icon: 'hand-left-outline', // faded behind the dots on the graph
     color: 'error',
     soft: 'errorSoft',
   },
