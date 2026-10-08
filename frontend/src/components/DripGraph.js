@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Line } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { DRIP, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius } from '../theme';
@@ -123,20 +124,14 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
       </View>
 
       <View style={[styles.plot, { left: Y_AXIS, width: plotW, height: plotH }]}>
+        {/* One warm cream sheet behind the whole graph (the same cream as the rating card). */}
+        <LinearGradient colors={colors.cream} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.sheet, { width: plotW, height: plotH }]} />
         {BOXES.map((b) => {
           const d = DRIP[b.key];
           return (
             <View
               key={b.key}
-              style={[
-                styles.box,
-                { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH, backgroundColor: colors.surface },
-                // Only the outer corners are rounded, so the four read as one box.
-                b.row === 0 && b.col === 0 && { borderTopLeftRadius: radius.md },
-                b.row === 0 && b.col === 1 && { borderTopRightRadius: radius.md },
-                b.row === 1 && b.col === 0 && { borderBottomLeftRadius: radius.md },
-                b.row === 1 && b.col === 1 && { borderBottomRightRadius: radius.md },
-              ]}
+              style={[styles.box, { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH }]}
             >
               <Text style={[styles.boxName, { color: colors[d.color] }]}>{d.name}</Text>
               <Text style={styles.boxAxes} numberOfLines={1}>
@@ -162,8 +157,7 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke={colors.muted}
-                strokeOpacity={0.6}
+                stroke={colors.goldLine}
                 strokeWidth={LINE + 0.5}
                 strokeDasharray="0.1 6"
                 strokeLinecap="round"
@@ -220,7 +214,9 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
 const makeStyles = (colors) => ({
   plot: { position: 'absolute', top: 0 },
   box: { position: 'absolute', paddingHorizontal: 8, paddingTop: 6 },
-  frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.border },
+  sheet: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md },
+  // The frame and the dotted dividers share one soft gold.
+  frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.goldLine },
   dividers: { position: 'absolute', left: 0, top: 0 },
   boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   boxAxes: { fontSize: 9, fontWeight: '600', color: colors.muted, marginTop: 1 },
