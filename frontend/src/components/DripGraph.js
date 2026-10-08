@@ -119,8 +119,10 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
       {/* Money axis: an arrow up the left side */}
       <View style={[styles.yAxis, { height: plotH }]}>
         <Ionicons name="caret-up" size={14} color={colors.muted} style={styles.yArrowHead} />
+        <Text style={[styles.yEnd, styles.yTop]}>$$$</Text>
         <View style={styles.yLine} />
         <Text style={styles.yWord}>MONEY</Text>
+        <Text style={[styles.yEnd, styles.yBottom]}>$</Text>
       </View>
 
       <View style={[styles.plot, { left: Y_AXIS, width: plotW, height: plotH }]}>
@@ -157,9 +159,9 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke={colors.goldLine}
-                strokeWidth={LINE + 0.5}
-                strokeDasharray="0.1 6"
+                stroke={colors.gold[1]}
+                strokeWidth={3}
+                strokeDasharray="0.1 7"
                 strokeLinecap="round"
               />
             ))}
@@ -215,14 +217,18 @@ const makeStyles = (colors) => ({
   plot: { position: 'absolute', top: 0 },
   box: { position: 'absolute', paddingHorizontal: 8, paddingTop: 6 },
   sheet: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md },
-  // The frame and the dotted dividers share one soft gold.
+  // A soft gold frame; the dotted dividers inside are the deeper gold.
   frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.goldLine },
   dividers: { position: 'absolute', left: 0, top: 0 },
   boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   boxAxes: { fontSize: 9, fontWeight: '600', color: colors.muted, marginTop: 1 },
   yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },
   yArrowHead: { position: 'absolute', top: -4 },
-  yLine: { position: 'absolute', top: 6, bottom: 0, width: 2, borderRadius: 1, backgroundColor: colors.border },
+  // The line runs between the $$$ and $ marks (never under them), so the ends stay clean.
+  yLine: { position: 'absolute', top: 26, bottom: 18, width: 2, borderRadius: 1, backgroundColor: colors.border },
+  yEnd: { position: 'absolute', fontSize: 10, fontWeight: '800', color: colors.accentText },
+  yTop: { top: 8 },
+  yBottom: { bottom: 2 },
   yWord: {
     position: 'absolute',
     top: '50%',
