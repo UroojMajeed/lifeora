@@ -20,6 +20,7 @@ import { radius, spacing } from '../../theme';
 
 const CHIP_MS = 1100; // how long the task just rated stays outlined on the board
 const REVEAL_STAGGER = 140; // ms between dots flying in on the final reveal
+const REVEAL_HOLD_MS = 2400; // after the last dot lands, how long the reveal stays before closing itself
 
 // One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
 const INFO = {
@@ -97,6 +98,13 @@ export default function SwipeScreen({ navigation, route }) {
     return () => clearTimeout(t);
   }, [chip]);
   const [reveal, setReveal] = useState(false);
+  // The reveal closes by itself: time for every dot to land, then a moment to take it in.
+  useEffect(() => {
+    if (!reveal) return undefined;
+    const t = setTimeout(() => setReveal(false), items.length * REVEAL_STAGGER + REVEAL_HOLD_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal]);
 
   const [nudge, setNudge] = useState(false);
   const pickMoney = (money) => {
@@ -241,13 +249,18 @@ export default function SwipeScreen({ navigation, route }) {
 
         {/* The big moment, once: after the last rating the whole matrix fills in, dot by dot. */}
         <Modal visible={reveal} animationType="fade" onRequestClose={() => setReveal(false)} statusBarTranslucent>
-          <View style={[styles.reveal, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
+          <Pressable
+            onPress={() => setReveal(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Your DRIP Matrix. Tap to continue."
+            style={[styles.reveal, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}
+          >
             <Text style={styles.revealEyebrow}>Your DRIP Matrix</Text>
             <ZoneTitle summary={summary} style={styles.revealTitle} />
             <Text style={styles.revealText}>Each dot is one task: higher makes more money, further right gives you energy.</Text>
             <DripGraph items={items} stagger={REVEAL_STAGGER} height={Math.min(420, screenHeight * 0.48)} />
-            <Button title="Continue" icon="arrow-forward" onPress={() => setReveal(false)} style={styles.revealButton} />
-          </View>
+            <Text style={styles.revealSkip}>Tap anywhere to continue</Text>
+          </Pressable>
         </Modal>
       </Screen>
     </View>
@@ -267,7 +280,7 @@ const makeStyles = (colors) => ({
   revealEyebrow: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
   revealTitle: { fontSize: 28, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs, letterSpacing: -0.6 },
   revealText: { fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
-  revealButton: { marginTop: spacing.xl },
+  revealSkip: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.xl },
   firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   firstMoveText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
   firstMoveName: { fontWeight: '800' },
