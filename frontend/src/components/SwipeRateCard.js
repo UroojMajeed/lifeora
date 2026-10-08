@@ -221,15 +221,16 @@ const makeStyles = (colors, isDark) => ({
     justifyContent: 'center',
     paddingHorizontal: 3,
     overflow: 'hidden',
-    backgroundColor: colors.accentSoft,
+    // Unpicked looks clearly empty (plain, grey); only the picked one turns into a gold coin.
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: colors.goldLine,
+    borderColor: colors.border,
   },
   // The picked $ looks like a gold coin.
   moneyOn: { borderColor: colors.gold[1], transform: [{ scale: 1.08 }] },
   coin: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  moneyText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
-  moneyTextOn: { color: colors.goldInk },
+  moneyText: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  moneyTextOn: { color: colors.goldInk, fontWeight: '800' },
   caption: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 6 },
   captionOn: { color: colors.accentText, fontWeight: '800' },
   stamp: {
