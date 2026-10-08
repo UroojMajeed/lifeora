@@ -1,104 +1,170 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Svg, { Defs, LinearGradient, Path, Stop as GradientStop } from 'react-native-svg';
+import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, spacing } from '../theme';
 
-// The three things onboarding gives you, in order (one per step).
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+// The journey onboarding takes you on, ending where it's all for.
 const STOPS = [
-  { icon: 'cash-outline', label: 'What your hour\nis worth' },
-  { icon: 'pie-chart-outline', label: 'What drains\nyou' },
-  { icon: 'swap-horizontal', label: 'Your first\nhandoff' },
+  { icon: 'cash', title: 'Know your worth', line: 'What your hour is really worth' },
+  { icon: 'pie-chart', title: 'See what drains you', line: 'Your work, by money and energy' },
+  { icon: 'swap-horizontal', title: 'Hand it off', line: 'Your first task to let go' },
 ];
+const DESTINATION = { title: 'Your time, back', line: 'For the work and life you love' };
 
-const ROAD_HEIGHT = 64;
-const STOP = 46; // icon circle size
-const TRAVEL_MS = 2400;
+const HEIGHT = 300;
+const NODE = 44;
+const SUN = 52;
+const DRAW_MS = 3200;
 
-// Point on a cubic Bézier curve at t (0 → 1).
-const bezier = (t, p0, c1, c2, p1) => {
-  'worklet';
+// Point on a cubic Bézier.
+const bez = (t, a, b, c, d) => {
   const u = 1 - t;
-  return u * u * u * p0 + 3 * u * u * t * c1 + 3 * u * t * t * c2 + t * t * t * p1;
+  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+};
+const segLength = (s) => {
+  let len = 0;
+  let prev = { x: s[0].x, y: s[0].y };
+  for (let i = 1; i <= 30; i += 1) {
+    const t = i / 30;
+    const p = { x: bez(t, s[0].x, s[1].x, s[2].x, s[3].x), y: bez(t, s[0].y, s[1].y, s[2].y, s[3].y) };
+    len += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+  }
+  return len;
 };
 
-/** One stop: lights up (filled) once the travelling dot reaches it. */
-function Stop({ t, at, stop, x, y }) {
+/** A stop on the road: an outlined circle that softly fills in when the road reaches it. */
+function Node({ progress, at, stop, x, y, labelSide, width }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const lit = useAnimatedStyle(() => ({ opacity: t.value >= at - 0.02 ? withTiming(1, { duration: 250 }) : 0 }));
+  const lit = useAnimatedStyle(() => ({ opacity: progress.value >= at ? withTiming(1, { duration: 400 }) : 0 }));
+  const label = labelSide === 'right' ? { left: x + NODE / 2 + 12, right: 0 } : { left: 0, width: x - NODE / 2 - 12 };
   return (
-    <View style={[styles.stop, { left: x - 55, top: y - STOP / 2 }]}>
-      <View style={styles.circle}>
-        <Ionicons name={stop.icon} size={20} color={colors.primaryDark} />
-        <Animated.View style={[styles.circleLit, lit]}>
-          <Ionicons name={stop.icon.replace('-outline', '')} size={20} color={colors.onColor} />
+    <>
+      <View style={[styles.node, { left: x - NODE / 2, top: y - NODE / 2 }]}>
+        <Ionicons name={`${stop.icon}-outline`} size={20} color={colors.primary} />
+        <Animated.View style={[styles.nodeLit, lit]}>
+          <Ionicons name={stop.icon} size={20} color={colors.onColor} />
         </Animated.View>
       </View>
-      <Text style={styles.label}>{stop.label}</Text>
-    </View>
+      <View style={[styles.labelBox, label, { top: y - 20 }]}>
+        <Text style={[styles.title, labelSide === 'left' && styles.alignRight]}>{stop.title}</Text>
+        <Text style={[styles.line, labelSide === 'left' && styles.alignRight]}>{stop.line}</Text>
+      </View>
+    </>
   );
 }
 
 /**
- * The start screen's road map: three stops on a gently curving dotted road (what your hour is
- * worth → what drains you → your first handoff). A small apricot dot travels it once and each
- * stop lights up as it arrives; with reduced motion it's shown already lit.
+ * The start screen's road map: a winding road from teal (busy) to apricot (sunrise) through three
+ * stops (know your worth, see what drains you, hand it off) to the sun: "Your time, back".
+ * The road draws itself once and each stop fills in as it's reached; the sun glows at the end.
+ * With reduced motion it's shown complete.
  */
 export default function Roadmap() {
   const styles = useStyles(makeStyles);
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
-  const t = useSharedValue(0);
+  const progress = useSharedValue(0);
 
   useEffect(() => {
     let cancelled = false;
     AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
       if (cancelled) return;
-      if (reduce) t.value = 1;
-      else t.value = withDelay(350, withTiming(1, { duration: TRAVEL_MS, easing: Easing.inOut(Easing.cubic) }));
+      if (reduce) progress.value = 1;
+      else progress.value = withDelay(300, withTiming(1, { duration: DRAW_MS, easing: Easing.inOut(Easing.quad) }));
     });
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [progress]);
 
-  // The road: left stop low, middle stop high, right stop low (two gentle curves).
-  const pad = 55;
-  const p0 = { x: pad, y: ROAD_HEIGHT - 18 };
-  const p1 = { x: width / 2, y: 18 };
-  const p2 = { x: width - pad, y: ROAD_HEIGHT - 18 };
-  const seg1 = [p0, { x: p0.x + (p1.x - p0.x) * 0.5, y: p0.y }, { x: p0.x + (p1.x - p0.x) * 0.5, y: p1.y }, p1];
-  const seg2 = [p1, { x: p1.x + (p2.x - p1.x) * 0.5, y: p1.y }, { x: p1.x + (p2.x - p1.x) * 0.5, y: p2.y }, p2];
-  const d = `M${p0.x} ${p0.y} C${seg1[1].x} ${seg1[1].y} ${seg1[2].x} ${seg1[2].y} ${p1.x} ${p1.y} C${seg2[1].x} ${seg2[1].y} ${seg2[2].x} ${seg2[2].y} ${p2.x} ${p2.y}`;
+  // The road: left, right, left, then down to the sun in the middle.
+  const geo = useMemo(() => {
+    const pts = [
+      { x: width * 0.24, y: 24 },
+      { x: width * 0.76, y: 104 },
+      { x: width * 0.24, y: 184 },
+      { x: width * 0.5, y: 262 },
+    ];
+    const segs = [];
+    for (let i = 0; i < 3; i += 1) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      segs.push([a, { x: a.x, y: a.y + 44 }, { x: b.x, y: b.y - 44 }, b]);
+    }
+    const lens = segs.map(segLength);
+    const total = lens.reduce((t, l) => t + l, 0) || 1;
+    const d = `M${pts[0].x} ${pts[0].y} ${segs.map((s) => `C${s[1].x} ${s[1].y} ${s[2].x} ${s[2].y} ${s[3].x} ${s[3].y}`).join(' ')}`;
+    const reachAt = [0, lens[0] / total, (lens[0] + lens[1]) / total, 1];
+    return { pts, d, total, reachAt };
+  }, [width]);
 
-  const dot = useAnimatedStyle(() => {
-    const first = t.value < 0.5;
-    const s = first ? seg1 : seg2;
-    const local = first ? t.value * 2 : (t.value - 0.5) * 2;
-    const x = bezier(local, s[0].x, s[1].x, s[2].x, s[3].x);
-    const y = bezier(local, s[0].y, s[1].y, s[2].y, s[3].y);
-    return { transform: [{ translateX: x - 7 }, { translateY: y - 7 }], opacity: t.value >= 0.995 ? 0 : 1 };
-  });
+  const drawn = useAnimatedProps(() => ({ strokeDashoffset: geo.total * (1 - progress.value) }));
+  const sunGlow = useAnimatedStyle(() => ({
+    opacity: progress.value >= 0.98 ? withTiming(0.28, { duration: 700 }) : 0,
+    transform: [{ scale: progress.value >= 0.98 ? withTiming(1, { duration: 900 }) : 0.6 }],
+  }));
+  const sunLit = useAnimatedStyle(() => ({ opacity: progress.value >= 0.98 ? withTiming(1, { duration: 500 }) : 0.35 }));
+  const sun = geo.pts[3];
 
   return (
     <View
       style={styles.wrap}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
-      accessibilityLabel="In a couple of minutes: what your hour is worth, what drains you, and your first task to hand off."
+      accessibilityLabel="Your journey: know your worth, see what drains you, hand it off, and get your time back for the work and life you love."
     >
       {width ? (
         <>
-          <Svg width={width} height={ROAD_HEIGHT} style={styles.road}>
-            <Path d={d} stroke={colors.border} strokeWidth={4} strokeLinecap="round" strokeDasharray="2 9" fill="none" />
+          <Svg width={width} height={HEIGHT} style={styles.svg}>
+            <Defs>
+              <LinearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+                <GradientStop offset="0" stopColor={colors.primary} />
+                <GradientStop offset="1" stopColor={brand.apricot} />
+              </LinearGradient>
+            </Defs>
+            {/* The whole road, faint, so you can see where it goes… */}
+            <Path d={geo.d} stroke={colors.border} strokeWidth={5} strokeLinecap="round" fill="none" />
+            {/* …and the part already travelled, in colour, drawing itself towards the sun. */}
+            <AnimatedPath
+              d={geo.d}
+              stroke="url(#road)"
+              strokeWidth={5}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={`${geo.total} ${geo.total}`}
+              animatedProps={drawn}
+            />
           </Svg>
-          <Animated.View style={[styles.dot, dot]} />
-          {[p0, p1, p2].map((p, i) => (
-            <Stop key={STOPS[i].label} t={t} at={i / 2} stop={STOPS[i]} x={p.x} y={p.y} />
+
+          {STOPS.map((stop, i) => (
+            <Node
+              key={stop.title}
+              progress={progress}
+              at={geo.reachAt[i]}
+              stop={stop}
+              x={geo.pts[i].x}
+              y={geo.pts[i].y}
+              labelSide={i === 1 ? 'left' : 'right'}
+              width={width}
+            />
           ))}
+
+          {/* The destination: a warm sun with a soft glow. */}
+          <Animated.View style={[styles.glow, { left: sun.x - 46, top: sun.y - 46 }, sunGlow]} />
+          <Animated.View style={[styles.sun, { left: sun.x - SUN / 2, top: sun.y - SUN / 2 }, sunLit]}>
+            <Ionicons name="sunny" size={26} color={colors.onColor} />
+          </Animated.View>
+          <View style={[styles.destination, { top: sun.y + SUN / 2 + 6 }]}>
+            <Text style={styles.destTitle}>{DESTINATION.title}</Text>
+            <Text style={styles.destLine}>{DESTINATION.line}</Text>
+          </View>
         </>
       ) : null}
     </View>
@@ -106,14 +172,13 @@ export default function Roadmap() {
 }
 
 const makeStyles = (colors) => ({
-  wrap: { alignSelf: 'stretch', height: ROAD_HEIGHT + 64, marginTop: spacing.xl },
-  road: { position: 'absolute', left: 0, top: 0 },
-  dot: { position: 'absolute', left: 0, top: 0, width: 14, height: 14, borderRadius: 7, backgroundColor: brand.apricot, zIndex: 3 },
-  stop: { position: 'absolute', width: 110, alignItems: 'center' },
-  circle: {
-    width: STOP,
-    height: STOP,
-    borderRadius: STOP / 2,
+  wrap: { alignSelf: 'stretch', height: HEIGHT + 48, marginTop: spacing.lg },
+  svg: { position: 'absolute', left: 0, top: 0 },
+  node: {
+    position: 'absolute',
+    width: NODE,
+    height: NODE,
+    borderRadius: NODE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -121,7 +186,7 @@ const makeStyles = (colors) => ({
     borderColor: colors.primary,
     overflow: 'hidden',
   },
-  circleLit: {
+  nodeLit: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -131,5 +196,21 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  label: { fontSize: 12, lineHeight: 16, fontWeight: '700', color: colors.text, textAlign: 'center', marginTop: 6 },
+  labelBox: { position: 'absolute' },
+  title: { fontSize: 15, fontWeight: '800', color: colors.text },
+  line: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 2 },
+  alignRight: { textAlign: 'right' },
+  glow: { position: 'absolute', width: 92, height: 92, borderRadius: 46, backgroundColor: brand.apricot },
+  sun: {
+    position: 'absolute',
+    width: SUN,
+    height: SUN,
+    borderRadius: SUN / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: brand.apricot,
+  },
+  destination: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  destTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  destLine: { fontSize: 13, color: colors.muted, marginTop: 2 },
 });

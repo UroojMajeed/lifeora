@@ -93,10 +93,9 @@ export default function LandingScreen({ navigation }) {
             <Text style={styles.tagline}>Buy back your time.</Text>
           </Animated.View>
 
-          {/* The promise: the pain in one line, then a road map of what the next two minutes give you. */}
+          {/* The promise: a road map of the journey, ending with your time back. */}
           {ready ? (
             <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
-              <Text style={styles.punch}>You didn't start a business to drown in busywork.</Text>
               <Roadmap />
             </Animated.View>
           ) : null}
@@ -154,8 +153,7 @@ const makeStyles = (colors, isDark) => ({
   tagline: { fontSize: 18, fontWeight: '600', color: colors.primary, marginTop: spacing.sm },
   bottom: { minHeight: 170, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   ctas: { gap: spacing.md },
-  promise: { alignSelf: 'stretch', paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  punch: { fontSize: 20, lineHeight: 27, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
+  promise: { alignSelf: 'stretch', paddingHorizontal: spacing.lg, marginTop: spacing.md },
   perks: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.sm },
   perk: {
     flexDirection: 'row',
