@@ -1,4 +1,5 @@
 import { Text, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Roadmap from '../../components/Roadmap';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
@@ -8,11 +9,11 @@ import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
 /**
- * Shown once, right after "Get started": the journey ahead as a road map (know your worth → see
- * what drains you → hand it off → your time back), so people know why the next questions matter.
+ * Shown once, right after "Get started": the journey ahead as a road map. Each step says what you
+ * share and what you get back (and how long it takes), so people know why the next questions matter.
  */
 export default function JourneyScreen({ navigation }) {
-  const { type } = useTheme();
+  const { type, colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { height: screenHeight } = useWindowDimensions();
   // The road takes the room between the heading and the button.
@@ -28,6 +29,10 @@ export default function JourneyScreen({ navigation }) {
       </View>
       <Text style={[type.label, styles.eyebrow]}>Your journey</Text>
       <Text style={type.title}>Three steps to your time back</Text>
+      <View style={styles.note}>
+        <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
+        <Text style={styles.noteText}>About 2 minutes · Private to you</Text>
+      </View>
       <Roadmap height={roadHeight} />
     </Screen>
   );
@@ -36,4 +41,6 @@ export default function JourneyScreen({ navigation }) {
 const makeStyles = (colors) => ({
   top: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, marginBottom: spacing.md },
   eyebrow: { color: colors.primary, marginBottom: spacing.sm },
+  note: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  noteText: { fontSize: 13, color: colors.muted },
 });

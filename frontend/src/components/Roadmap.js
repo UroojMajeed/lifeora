@@ -9,10 +9,11 @@ import { brand, spacing } from '../theme';
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 // The journey onboarding takes you on, ending where it's all for.
+// Each stop says what you share and what you get back (the value exchange), and how long it takes.
 const STOPS = [
-  { icon: 'cash', title: 'Know your worth', line: 'What your hour is really worth' },
-  { icon: 'pie-chart', title: 'See what drains you', line: 'Your work, by money and energy' },
-  { icon: 'swap-horizontal', title: 'Hand it off', line: 'Your first task to let go' },
+  { icon: 'cash', title: 'Know your worth', give: 'Your role and yearly pay', get: 'Your Buyback Rate', time: '30 sec' },
+  { icon: 'list', title: 'Map your routine', give: 'The tasks in a normal day', get: 'A clear view of your time', time: '1 min' },
+  { icon: 'pie-chart', title: 'See what drains you', give: 'A quick swipe per task', get: 'DRIP Matrix + first handoff', time: '1 min' },
 ];
 const DESTINATION = { title: 'Your time, back', line: 'For the work and life you love' };
 
@@ -52,9 +53,25 @@ function Node({ progress, at, stop, x, y, labelSide, width }) {
           <Ionicons name={stop.icon} size={20} color={colors.onColor} />
         </Animated.View>
       </View>
-      <View style={[styles.labelBox, label, { top: y - 20 }]}>
-        <Text style={[styles.title, labelSide === 'left' && styles.alignRight]}>{stop.title}</Text>
-        <Text style={[styles.line, labelSide === 'left' && styles.alignRight]}>{stop.line}</Text>
+      <View style={[styles.labelBox, label, { top: y - 22 }, labelSide === 'left' && styles.alignEnd]}>
+        <View style={[styles.titleRow, labelSide === 'left' && styles.rowReverse]}>
+          <Text style={styles.title} numberOfLines={1}>
+            {stop.title}
+          </Text>
+          <Text style={styles.time}>{stop.time}</Text>
+        </View>
+        <View style={[styles.exchange, labelSide === 'left' && styles.rowReverse]}>
+          <Ionicons name="arrow-up-circle-outline" size={13} color={colors.muted} />
+          <Text style={[styles.give, labelSide === 'left' && styles.alignRight]} numberOfLines={1}>
+            {stop.give}
+          </Text>
+        </View>
+        <View style={[styles.exchange, labelSide === 'left' && styles.rowReverse]}>
+          <Ionicons name="sparkles" size={12} color={colors.accentText} />
+          <Text style={[styles.get, labelSide === 'left' && styles.alignRight]} numberOfLines={1}>
+            {stop.get}
+          </Text>
+        </View>
       </View>
     </>
   );
@@ -119,7 +136,7 @@ export default function Roadmap({ height = FULL_HEIGHT }) {
       style={[styles.wrap, { height: height + 48 }]}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
-      accessibilityLabel="Your journey: know your worth, see what drains you, hand it off, and get your time back for the work and life you love."
+      accessibilityLabel="Your journey, about 2 minutes. Know your worth: share your role and yearly pay, get your Buyback Rate. Map your routine: add the tasks in a normal day, get a clear view of your time. See what drains you: a quick swipe per task, get your DRIP Matrix and your first task to hand off. Then: your time, back."
     >
       {width ? (
         <>
@@ -198,9 +215,24 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.primary,
   },
   labelBox: { position: 'absolute' },
-  title: { fontSize: 15, fontWeight: '800', color: colors.text },
-  line: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  title: { flexShrink: 1, fontSize: 15, fontWeight: '800', color: colors.text },
+  time: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: colors.primarySoft,
+  },
+  exchange: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  give: { flexShrink: 1, fontSize: 12, color: colors.muted },
+  get: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.text },
   alignRight: { textAlign: 'right' },
+  alignEnd: { alignItems: 'flex-end' },
+  rowReverse: { flexDirection: 'row-reverse' },
   glow: { position: 'absolute', width: 92, height: 92, borderRadius: 46, backgroundColor: brand.apricot },
   sun: {
     position: 'absolute',
