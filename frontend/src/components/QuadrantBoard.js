@@ -17,7 +17,7 @@ const quadrantOf = (it) => quadrantFor({ value: it.money ? valueForMoney(it.mone
  * The DRIP Matrix as four boxes that fill up while you rate: each rated task sits as a chip in its
  * quadrant. `latest` gets an outline (the one just rated); tapping a chip re-opens it (`onSelect`).
  */
-export default function QuadrantBoard({ items, latest, selected, onSelect }) {
+export default function QuadrantBoard({ items, latest, selected, onSelect, registerBox }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const rated = items.filter((it) => it.energy && (it.money || it.value));
@@ -33,7 +33,12 @@ export default function QuadrantBoard({ items, latest, selected, onSelect }) {
             const tasks = by[key];
             const hours = tasks.reduce((t, it) => t + it.hours, 0);
             return (
-              <View key={key} style={[styles.box, { backgroundColor: colors[q.soft] }]}>
+              <View
+                key={key}
+                ref={(node) => registerBox?.(key, node)}
+                collapsable={false}
+                style={[styles.box, { backgroundColor: colors[q.soft] }]}
+              >
                 <View style={styles.head}>
                   <Text style={[styles.name, { color: colors[q.color] }]} numberOfLines={1}>
                     {q.name}

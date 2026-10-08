@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { LayoutAnimation, Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { LayoutAnimation, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../../components/Screen';
@@ -19,8 +19,34 @@ import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
 const CHIP_MS = 1100; // how long the task just rated stays outlined on the board
-const REVEAL_STAGGER = 140; // ms between dots flying in on the final reveal
-const REVEAL_HOLD_MS = 2400; // after the last dot lands, how long the reveal stays before closing itself
+const REVEAL_STAGGER = 140; // ms between dots flying in when the finished graph appears
+
+/** A task's name gliding from the swipe card into its quadrant, then fading as it lands. */
+function Flyer({ label, color, from, to, onDone }) {
+  const styles = useStyles(makeStyles);
+  const t = useSharedValue(0);
+  useEffect(() => {
+    t.value = withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }, (ok) => ok && runOnJS(onDone)());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => ({
+    opacity: t.value < 0.75 ? 1 : 1 - (t.value - 0.75) * 4,
+    transform: [
+      { translateX: from.x + (to.x - from.x) * t.value },
+      { translateY: from.y + (to.y - from.y) * t.value },
+      { translateX: -60 },
+      { translateY: -14 },
+      { scale: 1 - t.value * 0.35 },
+    ],
+  }));
+  return (
+    <Animated.View pointerEvents="none" style={[styles.flyer, { borderColor: color }, style]}>
+      <Text style={styles.flyerText} numberOfLines={1}>
+        {label}
+      </Text>
+    </Animated.View>
+  );
+}
 
 // One line per quadrant for the "What is the DRIP Matrix?" note (from the book, in our words).
 const INFO = {
@@ -41,7 +67,6 @@ export default function SwipeScreen({ navigation, route }) {
   const { onboarding, saveStep, complete } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
 
   const [items, setItems] = useState(() =>
@@ -86,9 +111,27 @@ export default function SwipeScreen({ navigation, route }) {
     persist(list);
     const quadrant = quadrantFor({ value: valueForMoney(next.money), energy: next.energy });
     setChip({ activity: item.activity, quadrant, at: Date.now() });
-    // The last rating (not a later change) opens the big reveal.
-    if (!changing && !list.some(needsRating)) setTimeout(() => setReveal(true), CHIP_MS / 2);
+    // Show where it went: the name glides from the card into its box (only while the board is up).
+    const box = boxes.current[quadrant];
+    // (Not for the last one: the board becomes the graph right then, and its dots take over.)
+    if (!changing && box && cardRef.current && list.some(needsRating)) {
+      cardRef.current.measureInWindow((cx, cy, cw) =>
+        box.measureInWindow((bx, by, bw, bh) =>
+          setFlyer({
+            label: item.activity,
+            color: colors[DRIP[quadrant].color],
+            from: { x: cx + cw / 2, y: cy + 40 },
+            to: { x: bx + bw / 2, y: by + bh / 2 },
+            at: Date.now(),
+          })
+        )
+      );
+    }
   };
+
+  const boxes = useRef({});
+  const cardRef = useRef(null);
+  const [flyer, setFlyer] = useState(null);
 
   // The task just rated, outlined on the board for a moment.
   const [chip, setChip] = useState(null);
@@ -97,14 +140,6 @@ export default function SwipeScreen({ navigation, route }) {
     const t = setTimeout(() => setChip(null), CHIP_MS);
     return () => clearTimeout(t);
   }, [chip]);
-  const [reveal, setReveal] = useState(false);
-  // The reveal closes by itself: time for every dot to land, then a moment to take it in.
-  useEffect(() => {
-    if (!reveal) return undefined;
-    const t = setTimeout(() => setReveal(false), items.length * REVEAL_STAGGER + REVEAL_HOLD_MS);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reveal]);
 
   const [nudge, setNudge] = useState(false);
   const pickMoney = (money) => {
@@ -119,6 +154,8 @@ export default function SwipeScreen({ navigation, route }) {
   const left = items.filter(needsRating).length;
   const position = items.length - left + 1; // which card this is, e.g. 3 of 7
   const done = !item;
+  // Everything rated: the board becomes the full graph (and stays, even while changing a task).
+  const finished = !items.some(needsRating);
   const rated = items.filter((it) => it.energy);
   const summary = summarizeSchedule(
     rated.map((it) => ({ ...it, value: it.money ? valueForMoney(it.money) : it.value })),
@@ -206,12 +243,16 @@ export default function SwipeScreen({ navigation, route }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen footer={card}>
+      <Screen footer={<View ref={cardRef} collapsable={false}>{card}</View>}>
         <StepHeader
           step={stepNumber('swipe')}
           editing={editing}
-          title={done ? 'Your DRIP Matrix' : 'Rate your routine'}
-          subtitle="Sort each task by the money it makes and how it makes you feel."
+          title={finished ? 'Your DRIP Matrix' : 'Rate your routine'}
+          subtitle={
+            finished
+              ? 'Each dot is a task: higher makes more money, further right gives you energy.'
+              : 'Sort each task by the money it makes and how it makes you feel.'
+          }
         />
 
         {/* A short "what is this?" for the DRIP Matrix, closed by default so the screen stays calm. */}
@@ -243,26 +284,30 @@ export default function SwipeScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* While rating: the four quadrants filling up with tasks (the full graph is the reveal at the end). */}
-        <QuadrantBoard items={items} latest={chip?.activity} selected={selected} onSelect={(name) => setSelected(name)} />
+        {/* While rating: the four quadrants filling up. When done: the full graph, in the same place, for good. */}
+        {finished ? (
+          <DripGraph
+            items={items}
+            stagger={REVEAL_STAGGER}
+            selected={selected}
+            onSelect={(name) => setSelected(name)}
+            height={Math.min(360, screenHeight * 0.42)}
+          />
+        ) : (
+          <QuadrantBoard
+            items={items}
+            latest={chip?.activity}
+            selected={selected}
+            onSelect={(name) => setSelected(name)}
+            registerBox={(key, node) => {
+              boxes.current[key] = node;
+            }}
+          />
+        )}
         <ErrorBanner message={error} />
 
-        {/* The big moment, once: after the last rating the whole matrix fills in, dot by dot. */}
-        <Modal visible={reveal} animationType="fade" onRequestClose={() => setReveal(false)} statusBarTranslucent>
-          <Pressable
-            onPress={() => setReveal(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Your DRIP Matrix. Tap to continue."
-            style={[styles.reveal, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}
-          >
-            <Text style={styles.revealEyebrow}>Your DRIP Matrix</Text>
-            <ZoneTitle summary={summary} style={styles.revealTitle} />
-            <Text style={styles.revealText}>Each dot is one task: higher makes more money, further right gives you energy.</Text>
-            <DripGraph items={items} stagger={REVEAL_STAGGER} height={Math.min(420, screenHeight * 0.48)} />
-            <Text style={styles.revealSkip}>Tap anywhere to continue</Text>
-          </Pressable>
-        </Modal>
       </Screen>
+      {flyer ? <Flyer key={flyer.at} {...flyer} onDone={() => setFlyer(null)} /> : null}
     </View>
   );
 }
@@ -276,14 +321,27 @@ const makeStyles = (colors) => ({
   infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
   infoName: { fontWeight: '800' },
-  reveal: { flex: 1, paddingHorizontal: spacing.lg, justifyContent: 'center', backgroundColor: colors.background },
-  revealEyebrow: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' },
-  revealTitle: { fontSize: 28, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: spacing.xs, letterSpacing: -0.6 },
-  revealText: { fontSize: 14, lineHeight: 20, color: colors.muted, textAlign: 'center', marginTop: spacing.sm, marginBottom: spacing.lg },
-  revealSkip: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: spacing.xl },
   firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   firstMoveText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
   firstMoveName: { fontWeight: '800' },
+  flyer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 120,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    backgroundColor: colors.surface,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  flyerText: { fontSize: 12, fontWeight: '800', color: colors.text },
   progress: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt },
   progressText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
