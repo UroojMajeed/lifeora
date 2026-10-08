@@ -70,9 +70,10 @@ export default function BuybackRateScreen({ navigation, route }) {
   // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const columnWidth = Math.min(screenWidth - 48, MAX_COLUMN);
-  const gap = screenHeight < 700 ? spacing.lg - 4 : spacing.xl - 4; // 20 on short phones, 28 otherwise
+  const gap = screenHeight < 740 ? spacing.md : spacing.lg - 4; // 16 on short phones, 20 otherwise (fits without scrolling)
   const rateText = formatMoney(buybackRate, currency);
-  const bigFont = fitFontSize(`${formatMoney(buybackRate, currency)}/h`, columnWidth - 48, 48, 22);
+  // Both rates in one size that fits beside their labels.
+  const rateFont = fitFontSize(`${formatMoney(Math.max(effectiveHourlyRate, buybackRate), currency)}/h`, columnWidth - 48 - 24 - 110, 22, 13);
 
   const next = async () => {
     if (!ready) return;
@@ -96,7 +97,7 @@ export default function BuybackRateScreen({ navigation, route }) {
     }
   };
 
-  const buttonTitle = editing ? 'Save' : !role ? 'Choose what describes you' : amount <= 0 ? 'Add your yearly pay' : 'Continue';
+  const buttonTitle = editing ? 'Save' : !role ? 'Choose what describes you' : amount <= 0 ? 'Add your yearly pay' : 'Find what to hand off';
 
   return (
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
@@ -146,25 +147,29 @@ export default function BuybackRateScreen({ navigation, route }) {
           fading in quietly. After that it follows any change. */}
       {revealed && amount ? (
         <Animated.View entering={FadeIn.duration(250)}>
-          <HeroCard style={{ marginTop: gap }}>
-            <View style={styles.heroTop}>
-              <Text style={styles.heroLabel}>Your Buyback Rate</Text>
-              <View style={styles.worth}>
-                <Text style={styles.worthText} numberOfLines={1}>
-                  Your hour is worth {formatMoney(effectiveHourlyRate, currency, { decimals: 0 })}
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.big, { fontSize: bigFont }]} numberOfLines={1}>
-              {rateText}
-              <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text>
-            </Text>
-            <View style={styles.divider} />
+          <HeroCard style={[styles.hero, { marginTop: gap }]}>
+            {/* The main message first: what the rate means for you. */}
             <View style={styles.tip}>
-              <Ionicons name="bulb" size={16} color={brand.apricot} />
+              <Ionicons name="bulb" size={20} color={brand.apricot} />
               <Text style={styles.tipText}>
-                If a task you don't enjoy can be done by someone else for {formatMoney(buybackRate, currency)}/hr or less, it
-                shouldn't be yours.
+                Anything someone else can do for <Text style={styles.tipRate}>{rateText}/hr</Text> or less shouldn't be
+                yours.
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            {/* How it's worked out, as two rows in the same type: your hour, then ÷ 4 = your Buyback Rate. */}
+            <View style={styles.rateRow}>
+              <Text style={styles.rateLabel} numberOfLines={2}>Your hour is worth</Text>
+              <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
+                {formatMoney(effectiveHourlyRate, currency)}
+                <Text style={styles.per}>/hr</Text>
+              </Text>
+            </View>
+            <View style={[styles.rateRow, styles.rateMain]}>
+              <Text style={[styles.rateLabel, styles.rateLabelMain]} numberOfLines={2}>÷ 4 = Your Buyback Rate</Text>
+              <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
+                {rateText}
+                <Text style={styles.per}>/hr</Text>
               </Text>
             </View>
           </HeroCard>
@@ -180,13 +185,15 @@ const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
-  heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  worth: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.heroChip },
-  worthText: { color: colors.heroText, fontSize: 12, fontWeight: '700' },
-  big: { color: colors.heroText, fontSize: 48, fontWeight: '800', letterSpacing: -1, marginTop: spacing.xs },
-  per: { fontSize: 20, fontWeight: '600', color: colors.heroMuted },
+  hero: { padding: spacing.md + 4 },
+  tip: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start' },
+  tipText: { flex: 1, fontSize: 17, lineHeight: 24, fontWeight: '800', color: colors.heroText, letterSpacing: -0.2 },
+  tipRate: { color: brand.apricot },
   divider: { height: 1, backgroundColor: colors.heroDivider, marginVertical: spacing.md },
-  tip: { flexDirection: 'row', gap: spacing.sm },
-  tipText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.heroMuted },
+  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingHorizontal: 12, paddingVertical: 8 },
+  rateMain: { marginTop: 6, borderRadius: radius.md, backgroundColor: colors.heroChip, borderWidth: 1, borderColor: 'rgba(245,185,113,0.6)' },
+  rateLabel: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.heroMuted, letterSpacing: 0.6, textTransform: 'uppercase' },
+  rateLabelMain: { color: brand.apricot },
+  rateValue: { fontWeight: '800', color: colors.heroText, letterSpacing: -0.4 },
+  per: { fontSize: 13, fontWeight: '600', color: colors.heroMuted },
 });

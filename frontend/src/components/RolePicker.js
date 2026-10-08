@@ -136,7 +136,7 @@ const makeStyles = (colors) => ({
     backgroundColor: colors.surface,
   },
   // Soft: filled, no hard border (matches the large money field).
-  boxSoft: { minHeight: 68, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg },
+  boxSoft: { minHeight: 60, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg },
   boxOpen: { borderColor: colors.primary },
   value: { fontSize: 16, fontWeight: '800', color: colors.text },
   line: { fontSize: 12, color: colors.muted, marginTop: 1 },

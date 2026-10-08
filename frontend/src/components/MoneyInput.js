@@ -164,7 +164,7 @@ const makeStyles = (colors) => ({
   },
   boxFocused: { borderColor: colors.primary },
   // Large: a big, calm amount field (soft fill, no hard border until focused).
-  boxLarge: { minHeight: 76, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, paddingRight: spacing.md },
+  boxLarge: { minHeight: 66, borderColor: 'transparent', backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, paddingRight: spacing.md },
   currencyLarge: {
     height: 40,
     marginLeft: spacing.sm + 2,
