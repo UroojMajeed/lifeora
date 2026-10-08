@@ -12,7 +12,7 @@ const Y_AXIS = 28; // the money arrow on the left
 const X_AXIS = 30; // the energy arrow along the bottom
 const GAP = 0; // one box, split into four (no gaps between the quadrants)
 const LINE = 1.5; // the frame and the cross that divides it
-const LABEL = 46; // room for each box's name and its two-line meaning, above its dots
+const LABEL = 28; // room for each box's name, above its dots
 const SPRING = { damping: 18, stiffness: 260, mass: 0.6 }; // quick, so a new dot lands within the short pop-up
 
 const dotSize = (hours) => Math.max(14, Math.min(30, 10 + hours * 5));
@@ -135,10 +135,12 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
               key={b.key}
               style={[styles.box, { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH }]}
             >
-              <Text style={[styles.boxName, { color: colors[d.color] }]}>{d.name}</Text>
-              {/* "Makes money · Energizes you" as two short lines, so it never gets cut off. */}
-              <Text style={styles.boxAxes} numberOfLines={2}>
-                {d.axes.replace(' · ', '\n')}
+              {/* A big faded icon behind the dots says what the box means (instead of a line of text). */}
+              <View pointerEvents="none" style={styles.boxIcon}>
+                <Ionicons name={d.icon} size={Math.min(boxW, boxH) * 0.42} color={colors[d.color]} style={styles.boxIconGlyph} />
+              </View>
+              <Text style={[styles.boxName, { color: colors[d.color] }]} accessibilityHint={d.axes}>
+                {d.name}
               </Text>
             </View>
           );
@@ -222,7 +224,8 @@ const makeStyles = (colors) => ({
   frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.goldLine },
   dividers: { position: 'absolute', left: 0, top: 0 },
   boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
-  boxAxes: { fontSize: 10, lineHeight: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
+  boxIcon: { position: 'absolute', left: 0, right: 0, top: LABEL - 8, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  boxIconGlyph: { opacity: 0.13 },
   yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },
   yArrowHead: { position: 'absolute', top: -4 },
   // The line runs between the $$$ and $ marks (never under them), so the ends stay clean.
