@@ -97,7 +97,7 @@ export default function BuybackRateScreen({ navigation, route }) {
     }
   };
 
-  const buttonTitle = editing ? 'Save' : !role ? 'Choose what describes you' : amount <= 0 ? 'Add your yearly pay' : 'Find what to hand off';
+  const buttonTitle = editing ? 'Save' : !role ? 'Choose what describes you' : amount <= 0 ? 'Add your yearly pay' : 'Map your routine';
 
   return (
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
