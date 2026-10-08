@@ -12,7 +12,7 @@ const LAYOUT = [
   ['delegation', 'investment'],
 ];
 
-const Y_AXIS = 26;
+const Y_AXIS = 18;
 
 const quadrantOf = (it) => quadrantFor({ value: it.money ? valueForMoney(it.money) : it.value, energy: it.energy });
 
@@ -35,9 +35,7 @@ export default function QuadrantBoard({ items, latest, selected, onSelect, regis
         <View style={styles.yAxis}>
           <View style={styles.yLine} />
           <Ionicons name="caret-up" size={14} color={colors.muted} style={styles.yArrowHead} />
-          <Text style={[styles.yEnd, styles.yTop]}>$$$</Text>
           <Text style={styles.yWord}>MONEY</Text>
-          <Text style={[styles.yEnd, styles.yBottom]}>$</Text>
         </View>
 
         {/* The four quadrants */}
@@ -113,9 +111,6 @@ const makeStyles = (colors) => ({
   yAxis: { width: Y_AXIS, alignItems: 'center', marginRight: 6 },
   yLine: { position: 'absolute', top: 6, bottom: 0, width: 2, borderRadius: 1, backgroundColor: colors.border },
   yArrowHead: { position: 'absolute', top: -4 },
-  yEnd: { position: 'absolute', fontSize: 10, fontWeight: '800', backgroundColor: colors.background },
-  yTop: { top: 14, color: colors.text },
-  yBottom: { bottom: 4, color: colors.muted },
   yWord: {
     position: 'absolute',
     top: '50%',

@@ -158,11 +158,10 @@ export default function SwipeRateCard({ item, nextItem, money, onMoney, onSwipe,
                 );
               })}
             </View>
-            {/* The scale's two ends, under the first and last coin. */}
+            {/* End labels, like a rating scale: short words under the first and last coin. */}
             <View style={styles.scale}>
-              <Text style={styles.scaleText}>Minimum money</Text>
-              <View style={styles.scaleLine} />
-              <Text style={styles.scaleText}>Maximum money</Text>
+              <Text style={styles.scaleText}>Less money</Text>
+              <Text style={styles.scaleText}>More money</Text>
             </View>
             <Text style={[styles.caption, ready && styles.captionOn]}>
               {ready ? MONEY_CAPTION[money] : 'How much money does it make?'}
@@ -238,9 +237,8 @@ const makeStyles = (colors, isDark) => ({
   moneyText: { fontSize: 13, fontWeight: '700', color: colors.muted },
   moneyTextOn: { color: colors.goldInk, fontWeight: '800' },
   // As wide as the coin row (5 × 44 + 4 × 8), so the ends line up with $ and $$$$$.
-  scale: { width: 252, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  scaleText: { fontSize: 10, fontWeight: '700', color: colors.muted },
-  scaleLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  scale: { width: 252, alignSelf: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  scaleText: { fontSize: 12, fontWeight: '600', color: colors.muted },
   caption: { fontSize: 13, fontWeight: '600', color: colors.muted, textAlign: 'center', marginTop: 6 },
   captionOn: { color: colors.accentText, fontWeight: '800' },
   stamp: {

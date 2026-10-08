@@ -118,9 +118,7 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
       <View style={[styles.yAxis, { height: plotH }]}>
         <Ionicons name="caret-up" size={14} color={colors.muted} style={styles.yArrowHead} />
         <View style={styles.yLine} />
-        <Text style={styles.yTop}>$$$</Text>
         <Text style={styles.yWord}>MONEY</Text>
-        <Text style={styles.yBottom}>$</Text>
       </View>
 
       <View style={[styles.plot, { left: Y_AXIS, width: plotW, height: plotH }]}>
@@ -207,8 +205,6 @@ const makeStyles = (colors) => ({
   yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },
   yArrowHead: { position: 'absolute', top: -4 },
   yLine: { position: 'absolute', top: 6, bottom: 0, width: 2, borderRadius: 1, backgroundColor: colors.border },
-  yTop: { position: 'absolute', top: 14, fontSize: 10, fontWeight: '800', color: colors.text, backgroundColor: colors.background },
-  yBottom: { position: 'absolute', bottom: 4, fontSize: 10, fontWeight: '800', color: colors.muted, backgroundColor: colors.background },
   yWord: {
     position: 'absolute',
     top: '50%',
