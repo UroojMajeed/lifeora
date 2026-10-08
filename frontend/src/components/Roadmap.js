@@ -16,7 +16,7 @@ const STOPS = [
 ];
 const DESTINATION = { title: 'Your time, back', line: 'For the work and life you love' };
 
-const HEIGHT = 300;
+const FULL_HEIGHT = 300; // the road's height on a roomy screen; smaller screens pass less
 const NODE = 44;
 const SUN = 52;
 const DRAW_MS = 3200;
@@ -66,7 +66,7 @@ function Node({ progress, at, stop, x, y, labelSide, width }) {
  * The road draws itself once and each stop fills in as it's reached; the sun glows at the end.
  * With reduced motion it's shown complete.
  */
-export default function Roadmap() {
+export default function Roadmap({ height = FULL_HEIGHT }) {
   const styles = useStyles(makeStyles);
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
@@ -87,23 +87,24 @@ export default function Roadmap() {
   // The road: left, right, left, then down to the sun in the middle.
   const geo = useMemo(() => {
     const pts = [
-      { x: width * 0.24, y: 24 },
-      { x: width * 0.76, y: 104 },
-      { x: width * 0.24, y: 184 },
-      { x: width * 0.5, y: 262 },
+      { x: width * 0.24, y: height * 0.08 },
+      { x: width * 0.76, y: height * 0.347 },
+      { x: width * 0.24, y: height * 0.613 },
+      { x: width * 0.5, y: height * 0.873 },
     ];
     const segs = [];
     for (let i = 0; i < 3; i += 1) {
       const a = pts[i];
       const b = pts[i + 1];
-      segs.push([a, { x: a.x, y: a.y + 44 }, { x: b.x, y: b.y - 44 }, b]);
+      const bend = height * 0.147;
+      segs.push([a, { x: a.x, y: a.y + bend }, { x: b.x, y: b.y - bend }, b]);
     }
     const lens = segs.map(segLength);
     const total = lens.reduce((t, l) => t + l, 0) || 1;
     const d = `M${pts[0].x} ${pts[0].y} ${segs.map((s) => `C${s[1].x} ${s[1].y} ${s[2].x} ${s[2].y} ${s[3].x} ${s[3].y}`).join(' ')}`;
     const reachAt = [0, lens[0] / total, (lens[0] + lens[1]) / total, 1];
     return { pts, d, total, reachAt };
-  }, [width]);
+  }, [width, height]);
 
   const drawn = useAnimatedProps(() => ({ strokeDashoffset: geo.total * (1 - progress.value) }));
   const sunGlow = useAnimatedStyle(() => ({
@@ -115,14 +116,14 @@ export default function Roadmap() {
 
   return (
     <View
-      style={styles.wrap}
+      style={[styles.wrap, { height: height + 48 }]}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
       accessibilityLabel="Your journey: know your worth, see what drains you, hand it off, and get your time back for the work and life you love."
     >
       {width ? (
         <>
-          <Svg width={width} height={HEIGHT} style={styles.svg}>
+          <Svg width={width} height={height} style={styles.svg}>
             <Defs>
               <LinearGradient id="road" x1="0" y1="0" x2="0" y2="1">
                 <GradientStop offset="0" stopColor={colors.primary} />
@@ -172,7 +173,7 @@ export default function Roadmap() {
 }
 
 const makeStyles = (colors) => ({
-  wrap: { alignSelf: 'stretch', height: HEIGHT + 48, marginTop: spacing.lg },
+  wrap: { alignSelf: 'stretch', marginTop: spacing.lg },
   svg: { position: 'absolute', left: 0, top: 0 },
   node: {
     position: 'absolute',

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +25,10 @@ const PERKS = [
 export default function LandingScreen({ navigation }) {
   const { bootstrap, startAsGuest } = useOnboarding();
   const { colors, isDark } = useTheme();
+  // The road map takes the room left after the logo and the buttons (220-300 tall); if a phone is
+  // shorter still, the page scrolls rather than letting anything overlap.
+  const { height: screenHeight } = useWindowDimensions();
+  const roadHeight = Math.max(220, Math.min(300, screenHeight - 560));
   const styles = useStyles(makeStyles);
   const [ready, setReady] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -84,52 +88,54 @@ export default function LandingScreen({ navigation }) {
           <ThemeToggle />
         </View>
 
-        <View style={styles.center}>
-          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-            <AnimatedLogo size={96} />
-          </Animated.View>
-          <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
-            <Wordmark height={44} color={colors.text} />
-            <Text style={styles.tagline}>Buy back your time.</Text>
-          </Animated.View>
-
-          {/* The promise: a road map of the journey, ending with your time back. */}
-          {ready ? (
-            <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
-              <Roadmap />
+        <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false} bounces={false}>
+          <View style={styles.center}>
+            <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+              <AnimatedLogo size={96} />
             </Animated.View>
-          ) : null}
-        </View>
-
-        <View style={styles.bottom}>
-          {ready ? (
-            <Animated.View style={[styles.ctas, { opacity: ctaOpacity, transform: [{ translateY: ctaRise }] }]}>
-              <View style={styles.perks}>
-                {PERKS.map((p) => (
-                  <View key={p.label} style={styles.perk}>
-                    <Ionicons name={p.icon} size={14} color={colors.primaryDark} />
-                    <Text style={styles.perkText}>{p.label}</Text>
-                  </View>
-                ))}
-              </View>
-              <Button title="Get started" icon="arrow-forward" onPress={getStarted} loading={starting} />
-              {error ? <Text style={styles.error}>{error}</Text> : null}
-              <Pressable
-                onPress={() => navigation.navigate('Account', { mode: 'signin' })}
-                disabled={starting}
-                accessibilityRole="button"
-                hitSlop={8}
-                style={({ pressed }) => [styles.signIn, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.signInText}>
-                  I already have an account. <Text style={styles.signInLink}>Sign in</Text>
-                </Text>
-              </Pressable>
+            <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
+              <Wordmark height={44} color={colors.text} />
+              <Text style={styles.tagline}>Buy back your time.</Text>
             </Animated.View>
-          ) : (
-            <ActivityIndicator color={colors.primary} />
-          )}
-        </View>
+
+            {/* The promise: a road map of the journey, ending with your time back. */}
+            {ready ? (
+              <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
+                <Roadmap height={roadHeight} />
+              </Animated.View>
+            ) : null}
+          </View>
+
+          <View style={styles.bottom}>
+            {ready ? (
+              <Animated.View style={[styles.ctas, { opacity: ctaOpacity, transform: [{ translateY: ctaRise }] }]}>
+                <View style={styles.perks}>
+                  {PERKS.map((p) => (
+                    <View key={p.label} style={styles.perk}>
+                      <Ionicons name={p.icon} size={14} color={colors.primaryDark} />
+                      <Text style={styles.perkText}>{p.label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Button title="Get started" icon="arrow-forward" onPress={getStarted} loading={starting} />
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+                <Pressable
+                  onPress={() => navigation.navigate('Account', { mode: 'signin' })}
+                  disabled={starting}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  style={({ pressed }) => [styles.signIn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={styles.signInText}>
+                    I already have an account. <Text style={styles.signInLink}>Sign in</Text>
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            ) : (
+              <ActivityIndicator color={colors.primary} />
+            )}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -141,6 +147,7 @@ const makeStyles = (colors, isDark) => ({
   glowTop: { top: -90, right: -110, backgroundColor: colors.glowA },
   glowBottom: { bottom: 80, left: -150, backgroundColor: colors.glowB },
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  page: { flexGrow: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logoShadow: {
     shadowColor: brand.teal,
