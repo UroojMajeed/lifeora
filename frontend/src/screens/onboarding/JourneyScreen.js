@@ -4,7 +4,6 @@ import Roadmap from '../../components/Roadmap';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import ThemeToggle from '../../components/ThemeToggle';
-import { resetTo } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
@@ -22,7 +21,7 @@ export default function JourneyScreen({ navigation }) {
   return (
     <Screen
       tinted
-      footer={<Button title="Let's start" icon="arrow-forward" onPress={() => navigation.reset(resetTo('BuybackRate'))} />}
+      footer={<Button title="Let's start" icon="arrow-forward" onPress={() => navigation.navigate('BuybackRate')} />}
     >
       <View style={styles.top}>
         <ThemeToggle />

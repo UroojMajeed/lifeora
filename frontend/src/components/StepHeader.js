@@ -15,7 +15,8 @@ export default function StepHeader({ step, eyebrow, title, subtitle, smallSubtit
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
   // After resuming straight onto a later step there is nothing behind it, so go to the previous step instead.
-  const previous = step > 1 ? STEPS[step - 2]?.screen : null;
+  // Step 1 goes back to the journey screen (the road map shown before it).
+  const previous = step > 1 ? STEPS[step - 2]?.screen : editing ? null : 'Journey';
   const goBack =
     onBack ||
     (() => {
