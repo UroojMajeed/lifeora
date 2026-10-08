@@ -16,7 +16,7 @@ export default function JourneyScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const { height: screenHeight } = useWindowDimensions();
   // The road takes the room between the heading and the button.
-  const roadHeight = Math.max(260, Math.min(420, screenHeight - 360));
+  const roadHeight = Math.max(330, Math.min(480, screenHeight - 330));
 
   return (
     <Screen
@@ -27,10 +27,10 @@ export default function JourneyScreen({ navigation }) {
         <ThemeToggle />
       </View>
       <Text style={[type.label, styles.eyebrow]}>Your journey</Text>
-      <Text style={type.title}>Three steps to your time back</Text>
+      <Text style={type.title}>How you buy back your time</Text>
       <View style={styles.note}>
         <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
-        <Text style={styles.noteText}>About 2 minutes · Private to you</Text>
+        <Text style={styles.noteText}>Setup takes 2 minutes · Private to you</Text>
       </View>
       <Roadmap height={roadHeight} />
     </Screen>

@@ -10,12 +10,14 @@ const ROWS = [
   { icon: 'cash', give: ['Your role', 'Yearly pay'], get: 'Buyback Rate' },
   { icon: 'list', give: ['Your daily tasks'], get: 'Clear view of your time' },
   { icon: 'pie-chart', give: ['A swipe per task'], get: 'DRIP Matrix' },
+  // The point of it all: hand off what drains you, get the hours back.
+  { icon: 'hand-left', give: ['What drains you'], get: 'Hours back every week' },
 ];
 const DESTINATION = { title: 'Your time, back', line: 'For the work and life you love' };
 
 const NODE = 44;
 const GAP = 12; // between the chips and the node
-const ROW_MS = 1200; // each row's give → get, one after the other
+const ROW_MS = 1000; // each row's give → get, one after the other
 const TOTAL_MS = ROWS.length * ROW_MS + 700; // + the sun
 
 // This row's own 0 → 1 progress within the whole run.
@@ -83,7 +85,8 @@ function Row({ t, i, row, side, rowHeight }) {
 /**
  * The journey screen's road map, as an exchange: for each step, what you give (role and pay, your
  * tasks, a swipe each) flows into the step and what you get (Buyback Rate, a clear view of your
- * time, your DRIP Matrix) comes out, bold and gold. Rows play once, one after another, then the
+ * time, your DRIP Matrix, then hours back from handing off what drains you) comes out, bold and
+ * gold. Rows play once, one after another, then the
  * sun: "Your time, back". Shown complete when reduce-motion is on.
  */
 export default function Roadmap({ height = 320 }) {
@@ -122,7 +125,7 @@ export default function Roadmap({ height = 320 }) {
       style={styles.wrap}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
-      accessibilityLabel="Your journey. Share your role and yearly pay, get your Buyback Rate. Add your daily tasks, get a clear view of your time. Swipe each task, get your DRIP Matrix. Then: your time, back."
+      accessibilityLabel="Your journey. Share your role and yearly pay, get your Buyback Rate. Add your daily tasks, get a clear view of your time. Swipe each task, get your DRIP Matrix. Hand off what drains you, get hours back every week. Then: your time, back."
     >
       {width ? (
         <>
