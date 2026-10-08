@@ -33,6 +33,7 @@ export const lightColors = {
   cream: ['#FFFBF3', '#FBEFD9'], // the rating card at rest: ivory into light gold
   blushDrain: '#F6D3CE', // the card leaning left (drains)
   blushEnergize: '#CBEFE2', // the card leaning right (energizes)
+  drainBlock: '#E9A79E', // a draining task in the start screen's day bar
 
   // DRIP quadrants and status
   success: brand.teal, // Production
@@ -87,6 +88,7 @@ export const darkColors = {
   cream: ['#211C14', '#2B2216'],
   blushDrain: '#4A2522',
   blushEnergize: '#16413A',
+  drainBlock: '#C97A71',
 
   success: '#5FD3B8',
   successSoft: 'rgba(95,211,184,0.14)',

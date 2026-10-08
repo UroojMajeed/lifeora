@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AnimatedLogo from '../components/AnimatedLogo';
+import DayBar from '../components/DayBar';
 import Wordmark from '../components/Wordmark';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
@@ -85,20 +86,25 @@ export default function LandingScreen({ navigation }) {
 
         <View style={styles.center}>
           <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-            <AnimatedLogo size={128} />
+            <AnimatedLogo size={96} />
           </Animated.View>
           <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
-            <Wordmark height={52} color={colors.text} />
+            <Wordmark height={44} color={colors.text} />
             <Text style={styles.tagline}>Buy back your time.</Text>
           </Animated.View>
+
+          {/* The promise: the pain in one line, then the whole idea as a picture (no list to read). */}
+          {ready ? (
+            <Animated.View style={[styles.promise, { opacity: ctaOpacity }]}>
+              <Text style={styles.punch}>You didn't start a business to drown in busywork.</Text>
+              <DayBar />
+            </Animated.View>
+          ) : null}
         </View>
 
         <View style={styles.bottom}>
           {ready ? (
             <Animated.View style={[styles.ctas, { opacity: ctaOpacity, transform: [{ translateY: ctaRise }] }]}>
-              <Text style={styles.pitch}>
-                Find the work that drains you, hand it off, and spend your hours where they matter most.
-              </Text>
               <View style={styles.perks}>
                 {PERKS.map((p) => (
                   <View key={p.label} style={styles.perk}>
@@ -146,9 +152,10 @@ const makeStyles = (colors, isDark) => ({
   },
   brand: { alignItems: 'center', marginTop: spacing.lg },
   tagline: { fontSize: 18, fontWeight: '600', color: colors.primary, marginTop: spacing.sm },
-  bottom: { minHeight: 240, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  bottom: { minHeight: 170, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   ctas: { gap: spacing.md },
-  pitch: { color: colors.muted, fontSize: 16, lineHeight: 24, textAlign: 'center' },
+  promise: { alignSelf: 'stretch', paddingHorizontal: spacing.lg, marginTop: spacing.xl },
+  punch: { fontSize: 20, lineHeight: 27, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
   perks: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.sm },
   perk: {
     flexDirection: 'row',
