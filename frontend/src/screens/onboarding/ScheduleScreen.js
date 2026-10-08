@@ -32,7 +32,7 @@ export default function ScheduleScreen({ navigation, route }) {
       .filter((i) => i.hours)
       .map(({ activity, hours, value, money, per, energy }) => ({ activity, hours, value, money: money ?? null, per: per || 'day', energy: energy ?? null }))
   );
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [openTime, setOpenTime] = useState(null); // the task whose hour choices are open
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
@@ -57,12 +57,12 @@ export default function ScheduleScreen({ navigation, route }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saving.current = saveStep({ schedule: items }, editing ? 'done' : 'schedule').catch(() => {});
+      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, editing ? 'done' : 'schedule').catch(() => {});
     }, 600);
     return () => clearTimeout(autosave.current);
   }, [items, saveStep, editing]);
 
-  const totalHours = items.reduce((sum, i) => sum + i.hours, 0);
+  const totalHours = items.reduce((sum, i) => sum + (i.hours || 0), 0);
 
   // After onboarding, show the day as it is now: handed-off tasks marked, filled time from Fill added.
   const live = editing && !round;
@@ -74,25 +74,31 @@ export default function ScheduleScreen({ navigation, route }) {
     const extra = fillFor(it.activity).reduce((t, f) => t + f.hours, 0);
     return extra ? { label: `+${formatHours(extra)} from Fill`, tone: 'primary' } : null;
   };
-  const openEdit = (index) => setEditingIndex((cur) => (cur === index ? null : index));
+  const toggleTime = (name) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenTime((cur) => (cur === name ? null : name));
+  };
 
-  const add = (name, hours, per = 'day') => {
+  // A new task joins the list straight away (no time yet); its card asks for the time.
+  const add = (name) => {
     if (items.length >= MAX_ACTIVITIES) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setItems((list) => [...list, { ...newActivity(name, hours), per }]);
+    setItems((list) => [...list, { ...newActivity(name, null), per: 'day' }]);
+    setOpenTime(name);
     // Like a chat: the newest one shows at the bottom of the list.
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
   };
 
-  const save = (updated) => {
-    setItems((list) => list.map((it, i) => (i === editingIndex ? updated : it)));
-    setEditingIndex(null);
+  const setHours = (name, hours) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setItems((list) => list.map((it) => (it.activity === name ? { ...it, hours, per: 'day' } : it)));
+    // Next, open the first task that still has no time (if any).
+    setOpenTime(() => items.find((it) => it.activity !== name && !it.hours)?.activity ?? null);
   };
 
   const remove = (index) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((_, i) => i !== index));
-    setEditingIndex(null);
   };
 
   const next = async () => {
@@ -120,7 +126,8 @@ export default function ScheduleScreen({ navigation, route }) {
   };
 
   const over = totalHours > 24;
-  const ready = items.length > 0 && !over;
+  const untimed = items.filter((i) => !i.hours).length;
+  const ready = items.length > 0 && !over && !untimed;
   const unsorted = items.filter((i) => !i.energy).length;
   const nextTitle = round
     ? 'Next: rate your routine'
@@ -134,7 +141,7 @@ export default function ScheduleScreen({ navigation, route }) {
   const action = items.length ? (
     <View style={styles.actionRow}>
       <Button
-        title={over ? 'More than 24 hours a day' : nextTitle}
+        title={over ? 'More than 24 hours a day' : untimed ? `Set time for ${untimed} ${untimed === 1 ? 'task' : 'tasks'}` : nextTitle}
         icon={editing && !unsorted && !round ? 'checkmark' : 'arrow-forward'}
         onPress={next}
         loading={loading}
@@ -163,7 +170,7 @@ export default function ScheduleScreen({ navigation, route }) {
               round
                 ? 'Handed-off tasks are gone and your new work is in. Add anything new.'
                 : editing
-                ? 'Tap an activity to change it. Changes save as you go.'
+                ? 'Add or remove tasks, or tap one to change its time.'
                 : 'The tasks you do on a normal work day.'
             }
           />
@@ -175,15 +182,16 @@ export default function ScheduleScreen({ navigation, route }) {
                   <ActivityRow
                     key={item.activity}
                     item={item}
-                    isActive={editingIndex === index}
-                    onEdit={() => openEdit(index)}
+                    open={openTime === item.activity}
+                    onToggle={() => toggleTime(item.activity)}
+                    onPickHours={(h) => setHours(item.activity, h)}
                     onRemove={() => remove(index)}
                     badge={badgeFor(item)}
                     muted={handedOff.has(item.activity.toLowerCase())}
                   />
                 ))}
               </View>
-              <Text style={styles.hint}>Tap a task to change it</Text>
+              <Text style={styles.hint}>Tap a task to change its time</Text>
             </>
           ) : (
             <EmptyRoutine />
@@ -218,17 +226,7 @@ export default function ScheduleScreen({ navigation, route }) {
         {/* Next sits on its own above the chat sheet (hidden while typing, so the keyboard area stays clear). */}
         {!keyboardOpen ? action : null}
 
-        {items.length < MAX_ACTIVITIES || editingIndex !== null ? (
-          <DayComposer
-            role={onboarding?.role}
-            items={items}
-            editing={editingIndex !== null ? items[editingIndex] : null}
-            onAdd={add}
-            onSave={save}
-            onRemove={() => remove(editingIndex)}
-            onCancelEdit={() => setEditingIndex(null)}
-          />
-        ) : null}
+        {items.length < MAX_ACTIVITIES ? <DayComposer role={onboarding?.role} items={items} onAdd={add} /> : null}
       </View>
     </Screen>
   );
