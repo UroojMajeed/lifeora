@@ -248,6 +248,7 @@ export default function SwipeScreen({ navigation, route }) {
           step={stepNumber('swipe')}
           editing={editing}
           title={finished ? 'Your DRIP Matrix' : 'Rate your routine'}
+          smallSubtitle={finished}
           subtitle={
             finished
               ? 'Each dot is a task: higher makes more money, further right gives you energy.'

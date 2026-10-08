@@ -10,7 +10,7 @@ import { STEPS, TOTAL_STEPS, resetTo } from '../constants/content';
  * Back button, segmented progress, theme toggle, and the step's heading.
  * With `editing` (changing an answer after onboarding) there is no progress bar and back just closes.
  */
-export default function StepHeader({ step, eyebrow, title, subtitle, showBack = true, onBack, editing = false }) {
+export default function StepHeader({ step, eyebrow, title, subtitle, smallSubtitle = false, showBack = true, onBack, editing = false }) {
   const navigation = useNavigation();
   const { colors, type } = useTheme();
   const styles = useStyles(makeStyles);
@@ -63,7 +63,7 @@ export default function StepHeader({ step, eyebrow, title, subtitle, showBack = 
 
       {eyebrow ? <Text style={[type.label, styles.eyebrow]}>{eyebrow}</Text> : null}
       <Text style={type.title}>{title}</Text>
-      {subtitle ? <Text style={[type.subtitle, styles.subtitle]}>{subtitle}</Text> : null}
+      {subtitle ? <Text style={[smallSubtitle ? type.small : type.subtitle, styles.subtitle]}>{subtitle}</Text> : null}
     </View>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Line } from 'react-native-svg';
 import { DRIP, MONEY_SPLIT, dollars, moneyOf, quadrantFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius } from '../theme';
@@ -145,10 +146,31 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
           );
         })}
 
-        {/* The frame, and the cross that divides it into the four quadrants. */}
+        {/* The frame, and dotted lines from the centre that divide it into the four quadrants. */}
         <View pointerEvents="none" style={[styles.frame, { width: plotW, height: plotH }]} />
-        <View pointerEvents="none" style={[styles.divider, { left: boxW - LINE / 2, top: 0, width: LINE, height: plotH }]} />
-        <View pointerEvents="none" style={[styles.divider, { left: 0, top: boxH - LINE / 2, width: plotW, height: LINE }]} />
+        {width ? (
+          <Svg pointerEvents="none" width={plotW} height={plotH} style={styles.dividers}>
+            {[
+              [boxW, boxH, boxW, 0],
+              [boxW, boxH, boxW, plotH],
+              [boxW, boxH, 0, boxH],
+              [boxW, boxH, plotW, boxH],
+            ].map(([x1, y1, x2, y2]) => (
+              <Line
+                key={`${x2}-${y2}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={colors.muted}
+                strokeOpacity={0.6}
+                strokeWidth={LINE + 0.5}
+                strokeDasharray="0.1 6"
+                strokeLinecap="round"
+              />
+            ))}
+          </Svg>
+        ) : null}
 
         {width
           ? Object.values(cells).flatMap((group) =>
@@ -199,7 +221,7 @@ const makeStyles = (colors) => ({
   plot: { position: 'absolute', top: 0 },
   box: { position: 'absolute', paddingHorizontal: 8, paddingTop: 6 },
   frame: { position: 'absolute', left: 0, top: 0, borderRadius: radius.md, borderWidth: LINE, borderColor: colors.border },
-  divider: { position: 'absolute', backgroundColor: colors.border },
+  dividers: { position: 'absolute', left: 0, top: 0 },
   boxName: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
   boxAxes: { fontSize: 9, fontWeight: '600', color: colors.muted, marginTop: 1 },
   yAxis: { position: 'absolute', left: 0, top: 0, width: Y_AXIS - 6, alignItems: 'center' },
