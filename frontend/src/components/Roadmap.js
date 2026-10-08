@@ -208,5 +208,6 @@ const makeStyles = (colors) => ({
   glow: { position: 'absolute', width: 84, height: 84, borderRadius: 42, backgroundColor: brand.apricot },
   sun: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
   destTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  destLine: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 2 },
+  // The promise itself: warm like the sun, and big enough to read as the payoff.
+  destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center', marginTop: 4 },
 });
