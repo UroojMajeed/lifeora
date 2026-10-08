@@ -130,7 +130,7 @@ export default function DripGraph({ items, selected, onSelect, flyIn, stagger = 
               key={b.key}
               style={[
                 styles.box,
-                { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH, backgroundColor: colors[d.soft] },
+                { left: boxLeft(b.col), top: boxTop(b.row), width: boxW, height: boxH, backgroundColor: colors.surface },
                 // Only the outer corners are rounded, so the four read as one box.
                 b.row === 0 && b.col === 0 && { borderTopLeftRadius: radius.md },
                 b.row === 0 && b.col === 1 && { borderTopRightRadius: radius.md },
