@@ -185,18 +185,13 @@ export default function SwipeScreen({ navigation, route }) {
 
   const card = done ? (
     <View style={styles.card}>
-      <View style={styles.doneRow}>
-        <Ionicons name="checkmark-circle" size={26} color={colors.success} />
-        <View style={{ flex: 1 }}>
-          {zone ? <ZoneTitle summary={summary} style={styles.doneTitle} /> : <Text style={styles.doneTitle}>All rated</Text>}
-          <Text style={styles.doneText}>Tap any task to change it.</Text>
-        </View>
-      </View>
+      {/* Kept compact so the graph above fits on screen without scrolling. */}
+      {zone ? <ZoneTitle summary={summary} style={styles.doneTitle} /> : <Text style={styles.doneTitle}>All rated</Text>}
       {/* The first win, so the finish feels like a start: the biggest draining task to hand off. */}
       {!editing && summary.firstHandoff ? (
         <View style={styles.firstMove}>
-          <Ionicons name="flag" size={16} color={colors.accentText} />
-          <Text style={styles.firstMoveText}>
+          <Ionicons name="flag" size={14} color={colors.accentText} style={styles.firstMoveIcon} />
+          <Text style={styles.firstMoveText} numberOfLines={2}>
             First move: hand off <Text style={styles.firstMoveName}>{summary.firstHandoff.activity}</Text>, it frees{' '}
             {formatHours(summary.firstHandoff.hours * 5)} a week.
           </Text>
@@ -251,7 +246,7 @@ export default function SwipeScreen({ navigation, route }) {
           smallSubtitle={finished}
           subtitle={
             finished
-              ? 'Each dot is a task: higher makes more money, further right gives you energy.'
+              ? 'Each dot is a task: higher makes more money, further right gives you energy. Tap one to change it.'
               : 'Sort each task by the money it makes and how it makes you feel.'
           }
         />
@@ -314,7 +309,7 @@ export default function SwipeScreen({ navigation, route }) {
 }
 
 const makeStyles = (colors) => ({
-  card: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  card: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 4, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   infoToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: -spacing.sm, marginBottom: spacing.md },
   infoToggleText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   info: { gap: spacing.sm, padding: spacing.md, marginBottom: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
@@ -322,8 +317,9 @@ const makeStyles = (colors) => ({
   infoDot: { width: 10, height: 10, borderRadius: 5, marginTop: 5 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
   infoName: { fontWeight: '800' },
-  firstMove: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.accentSoft },
-  firstMoveText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
+  firstMove: { flexDirection: 'row', gap: 6, marginTop: spacing.sm, paddingHorizontal: spacing.sm + 2, paddingVertical: 6, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  firstMoveIcon: { marginTop: 2 },
+  firstMoveText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.text },
   firstMoveName: { fontWeight: '800' },
   flyer: {
     position: 'absolute',
@@ -348,8 +344,6 @@ const makeStyles = (colors) => ({
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   backText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
   nudge: { fontSize: 13, color: colors.accentText, marginTop: spacing.sm, textAlign: 'center' },
-  doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  doneTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  doneText: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  finish: { marginTop: spacing.md },
+  doneTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
+  finish: { marginTop: spacing.sm + 2 },
 });
