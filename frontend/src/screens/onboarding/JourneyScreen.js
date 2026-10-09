@@ -16,11 +16,11 @@ export default function JourneyScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const { height: screenHeight } = useWindowDimensions();
   // The road takes the room between the heading and the button.
-  const roadHeight = Math.max(330, Math.min(480, screenHeight - 330));
+  const roadHeight = Math.max(300, Math.min(480, screenHeight - 420));
 
   return (
     <Screen
-      tinted
+      tinted="dawn"
       footer={<Button title="Let's start" icon="arrow-forward" onPress={() => navigation.navigate('BuybackRate')} />}
     >
       <View style={styles.top}>

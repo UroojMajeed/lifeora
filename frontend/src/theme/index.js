@@ -60,6 +60,8 @@ export const lightColors = {
 
   // A day in one wash (tinted screens): morning yellow → clear sky → evening blue, kept pastel for text
   dayGradient: ['#FFF3D1', '#FBF6EC', '#E4EFFA', '#CFDDF3'],
+  // The journey: a sunrise. Calm dawn mist at the top warms into golden light where "your time back" waits.
+  dawnGradient: ['#EEF1FA', '#FBF1EA', '#FFE6C9', '#FFD7A3'],
 
   // Landing page: aqua mist with a mint glow and a small apricot spark
   landing: [brand.aqua, brand.offWhite, '#DDF2EA'],
@@ -112,6 +114,8 @@ export const darkColors = {
 
   // Dark: first light → deep sky → night
   dayGradient: ['#2B2414', '#17202B', '#0F1A2B', '#0A1220'],
+  // Dark sunrise: night sky at the top, an ember glow on the horizon at the bottom.
+  dawnGradient: ['#0B1322', '#141A2C', '#2A2128', '#4A3018'],
   landing: ['#0A1716', '#0E2120', brand.evergreen],
   glowA: 'rgba(63,179,166,0.22)',
   glowB: 'rgba(245,185,113,0.12)',

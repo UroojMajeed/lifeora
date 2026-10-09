@@ -11,9 +11,15 @@ const ROWS = [
   { icon: 'list', give: ['Your daily tasks'], get: 'Clear view of your time' },
   { icon: 'pie-chart', give: ['A swipe per task'], get: 'DRIP Matrix' },
   // The point of it all: hand off what drains you, get the hours back.
-  { icon: 'hand-left', give: ['What drains you'], get: 'Hours back every week' },
+  { icon: 'hand-left', give: ['What drains you'], get: 'Hours back' },
 ];
-const DESTINATION = { title: 'Your time, back', line: 'For the work and life you love' };
+const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
+// What the time is for: concrete pictures motivate more than the word "time".
+const FOR = [
+  { icon: 'heart', label: 'Family' },
+  { icon: 'fitness', label: 'Health' },
+  { icon: 'rocket', label: 'Growth' },
+];
 
 const NODE = 44;
 const GAP = 12; // between the chips and the node
@@ -86,8 +92,8 @@ function Row({ t, i, row, side, rowHeight }) {
  * The journey screen's road map, as an exchange: for each step, what you give (role and pay, your
  * tasks, a swipe each) flows into the step and what you get (Buyback Rate, a clear view of your
  * time, your DRIP Matrix, then hours back from handing off what drains you) comes out, bold and
- * gold. Rows play once, one after another, then the
- * sun: "Your time, back". Shown complete when reduce-motion is on.
+ * gold. Rows play once, one after another, then the sun rises with the promise: "Your time back,
+ * for the work and life you love", and what it's for. Shown complete when reduce-motion is on.
  */
 export default function Roadmap({ height = 320 }) {
   const styles = useStyles(makeStyles);
@@ -118,14 +124,19 @@ export default function Roadmap({ height = 320 }) {
     const p = between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS);
     return { opacity: 0.35 + 0.65 * p, transform: [{ scale: 0.85 + 0.15 * p }] };
   });
-  const glow = useAnimatedStyle(() => ({ opacity: 0.28 * between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS) }));
+  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS) }));
+  // The promise rises in with the sun (a gentle fade, no bounce).
+  const dest = useAnimatedStyle(() => {
+    const p = between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS);
+    return { opacity: 0.4 + 0.6 * p, transform: [{ translateY: 6 * (1 - p) }] };
+  });
 
   return (
     <View
       style={styles.wrap}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
-      accessibilityLabel="Your journey. Share your role and yearly pay, get your Buyback Rate. Add your daily tasks, get a clear view of your time. Swipe each task, get your DRIP Matrix. Hand off what drains you, get hours back every week. Then: your time, back."
+      accessibilityLabel="Your journey. Share your role and yearly pay, get your Buyback Rate. Add your daily tasks, get a clear view of your time. Swipe each task, get your DRIP Matrix. Hand off what drains you, get hours back. Then: your time back, for the work and life you love: family, health, growth."
     >
       {width ? (
         <>
@@ -142,8 +153,18 @@ export default function Roadmap({ height = 320 }) {
               <Ionicons name="sunny" size={26} color={colors.onColor} />
             </Animated.View>
           </View>
-          <Text style={styles.destTitle}>{DESTINATION.title}</Text>
-          <Text style={styles.destLine}>{DESTINATION.line}</Text>
+          <Animated.View style={dest}>
+            <Text style={styles.destTitle}>{DESTINATION.title}</Text>
+            <Text style={styles.destLine}>{DESTINATION.line}</Text>
+            <View style={styles.forRow}>
+              {FOR.map((f) => (
+                <View key={f.label} style={styles.forChip}>
+                  <Ionicons name={f.icon} size={13} color={colors.accentText} />
+                  <Text style={styles.forText}>{f.label}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
         </>
       ) : null}
     </View>
@@ -204,10 +225,23 @@ const makeStyles = (colors) => ({
     borderColor: colors.gold[1],
   },
   getText: { flexShrink: 1, fontSize: 13, lineHeight: 17, fontWeight: '800', color: colors.goldInk },
-  sunWrap: { alignItems: 'center', justifyContent: 'center', height: 84, marginTop: 4 },
-  glow: { position: 'absolute', width: 84, height: 84, borderRadius: 42, backgroundColor: brand.apricot },
-  sun: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
-  destTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  // The promise itself: warm like the sun, and big enough to read as the payoff.
-  destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center', marginTop: 4 },
+  sunWrap: { alignItems: 'center', justifyContent: 'center', height: 96, marginTop: 4 },
+  glow: { position: 'absolute', width: 96, height: 96, borderRadius: 48, backgroundColor: brand.apricot },
+  sun: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
+  // The payoff reads as one statement: a big headline, then who it's for, warm like the sun.
+  destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
+  destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center', marginTop: 2 },
+  forRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.sm + 4 },
+  forChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  forText: { fontSize: 13, fontWeight: '700', color: colors.text },
 });
