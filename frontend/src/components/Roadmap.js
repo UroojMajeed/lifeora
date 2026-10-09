@@ -20,14 +20,12 @@ const FOR = [
   { icon: 'rocket', label: 'Growth' },
 ];
 
-const NODE = 44;
-const SUN = 56;
-const STOP_H = NODE + 6 + 21; // a node, then its label under it
-const ROAD_MAX = 64; // the longest a stretch of road gets on tall screens
-const ROAD_MIN = 14;
-const DEST_H = SUN + 28 + 8 + 30 + 22 + 10 + 30; // the sun (with its glow), the promise and the chips
-// The smallest the map gets (small phones scroll rather than squash it).
-const MIN_H = STOPS.length * (STOP_H + 8 + ROAD_MIN) + DEST_H;
+const PILL = 46; // a step: one pill with its icon inside and the label beside it
+const ICON = 36;
+const SUN = 52;
+const GLOW = SUN + 24;
+const ROAD_MAX = 56; // the longest a stretch of road gets on tall screens
+const ROAD_MIN = 10;
 // One stop at a time, calm: each fades in and lights up, then the road runs on to the next.
 const STOP_MS = 1200;
 const END_MS = 1400; // the sun, then the promise
@@ -65,10 +63,11 @@ function Stop({ t, i, stop, done }) {
 
   return (
     <View style={styles.stop}>
-      <Animated.View style={[styles.stopHead, done ? null : appear]}>
-        <View style={styles.node}>
-          <Animated.View style={[styles.nodeLit, done ? null : lit]}>
-            <Ionicons name={stop.icon} size={20} color={colors.onColor} />
+      {/* The icon and its label together, in one pill. */}
+      <Animated.View style={[styles.pill, done ? null : appear]}>
+        <View style={styles.icon}>
+          <Animated.View style={[styles.iconLit, done ? null : lit]}>
+            <Ionicons name={stop.icon} size={18} color={colors.onColor} />
           </Animated.View>
         </View>
         <Text style={styles.label} numberOfLines={1}>
@@ -83,8 +82,8 @@ function Stop({ t, i, stop, done }) {
 }
 
 /**
- * The journey screen's road map, centred: four stops down the middle, each an icon with one short
- * action under it ("Know your hour's worth" → "Map your routine" → "See what drains you" → "Hand
+ * The journey screen's road map, centred: four steps down the middle, each one pill with its icon
+ * and one short action ("Know your hour's worth" → "Map your routine" → "See what drains you" → "Hand
  * it off"), joined by the road, ending at the sun and the promise: "Your time back, for the work
  * and life you love", and what it's for. The road stretches to fill the screen. Plays once, one stop
  * at a time; shown complete when reduce-motion is on, and for sure once the run is over.
@@ -160,22 +159,30 @@ export default function Roadmap() {
 }
 
 const makeStyles = (colors) => ({
-  // Fills the room between the heading and the button; the road stretches share it equally.
-  wrap: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', minHeight: MIN_H, marginTop: spacing.md },
-  // A stop grows only as far as its stretch of road can (so the road always meets the next icon).
-  stop: { flex: 1, minHeight: STOP_H + 8 + ROAD_MIN, maxHeight: STOP_H + 8 + ROAD_MAX, alignItems: 'center' },
-  stopHead: { alignItems: 'center', height: STOP_H },
-  label: { fontSize: 16, lineHeight: 21, fontWeight: '700', color: colors.text, marginTop: 6, textAlign: 'center' },
-  node: {
-    width: NODE,
-    height: NODE,
-    borderRadius: NODE / 2,
+  // Fills the room between the heading and the button (no scrolling); the road stretches share it.
+  wrap: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  // A step grows only as far as its stretch of road can (so the road always meets the next pill).
+  stop: { flex: 1, minHeight: PILL + 4 + ROAD_MIN, maxHeight: PILL + 4 + ROAD_MAX, alignItems: 'center' },
+  pill: {
+    height: PILL,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 5,
+    paddingRight: 18,
+    borderRadius: PILL / 2,
     backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  icon: {
+    width: ICON,
+    height: ICON,
+    borderRadius: ICON / 2,
+    backgroundColor: colors.primarySoft,
     overflow: 'hidden',
   },
-  nodeLit: {
+  iconLit: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -185,19 +192,20 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
+  label: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: colors.text },
   // A stretch of road: faint until it's drawn in teal from the top.
-  road: { flex: 1, minHeight: ROAD_MIN, maxHeight: ROAD_MAX, width: 4, borderRadius: 2, marginVertical: 4, backgroundColor: colors.border, overflow: 'hidden' },
+  road: { flex: 1, minHeight: ROAD_MIN, maxHeight: ROAD_MAX, width: 4, borderRadius: 2, marginVertical: 2, backgroundColor: colors.border, overflow: 'hidden' },
   roadDrawn: { width: 4, borderRadius: 2, backgroundColor: colors.primary },
   roadFull: { height: '100%' },
-  sunWrap: { alignItems: 'center', justifyContent: 'center', width: SUN + 28, height: SUN + 28 },
-  glow: { position: 'absolute', width: SUN + 28, height: SUN + 28, borderRadius: (SUN + 28) / 2, backgroundColor: brand.apricot },
+  sunWrap: { alignItems: 'center', justifyContent: 'center', width: GLOW, height: GLOW },
+  glow: { position: 'absolute', width: GLOW, height: GLOW, borderRadius: GLOW / 2, backgroundColor: brand.apricot },
   glowDone: { opacity: 0.35 },
   sun: { width: SUN, height: SUN, borderRadius: SUN / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
-  dest: { alignItems: 'center', marginTop: 8 },
+  dest: { alignItems: 'center', marginTop: 4 },
   // The payoff reads as one statement: a big headline, then who it's for, warm like the sun.
   destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
   destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center' },
-  forRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.sm + 2 },
+  forRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.sm },
   forChip: {
     flexDirection: 'row',
     alignItems: 'center',

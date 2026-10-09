@@ -16,8 +16,10 @@ export default function JourneyScreen({ navigation }) {
   const styles = useStyles(makeStyles);
 
   return (
+    // No scrolling: the road map takes exactly the room between the heading and the button.
     <Screen
       tinted="dawn"
+      scroll={false}
       footer={<Button title="Let's start" icon="arrow-forward" onPress={() => navigation.navigate('BuybackRate')} />}
     >
       <View style={styles.top}>
@@ -35,7 +37,7 @@ export default function JourneyScreen({ navigation }) {
 }
 
 const makeStyles = (colors) => ({
-  top: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, marginBottom: spacing.md },
+  top: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, marginBottom: spacing.sm },
   eyebrow: { color: colors.primary, marginBottom: spacing.sm },
   note: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   noteText: { fontSize: 13, color: colors.muted },
