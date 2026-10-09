@@ -48,7 +48,9 @@ export function withFont(style) {
   if (!('fontSize' in style) && !('fontWeight' in style)) return style;
   const { fontWeight, ...rest } = style;
   if (typeof rest.fontSize === 'number') rest.fontSize = snapFontSize(rest.fontSize);
-  return { ...rest, fontFamily: fontFamilyFor(fontWeight) };
+  // Android adds extra "font padding" that, with this font, lands above the letters, so labels sat
+  // low in buttons and pills. Without it, text centres properly (iOS ignores both settings).
+  return { includeFontPadding: false, textAlignVertical: 'center', ...rest, fontFamily: fontFamilyFor(fontWeight) };
 }
 
 /** Applies withFont() to every entry of a styles map, e.g. the result of makeStyles(). */

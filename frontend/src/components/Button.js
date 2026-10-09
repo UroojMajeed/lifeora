@@ -56,7 +56,8 @@ const styles = StyleSheet.create(withFonts({
   },
   glow: { shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  text: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+  // A fixed line height keeps the label exactly centred next to the icon.
+  text: { fontSize: 16, lineHeight: 20, fontWeight: '700', letterSpacing: 0.2 },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.4 },
 }));
