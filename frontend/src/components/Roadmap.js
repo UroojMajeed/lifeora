@@ -3,118 +3,89 @@ import { AccessibilityInfo, Text, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, radius, spacing } from '../theme';
+import { brand, spacing } from '../theme';
 
-// The journey as an exchange: what you give (quiet, left) → the step (middle) → what you get (bold, right).
-const ROWS = [
-  { icon: 'cash', give: ['Your role', 'Yearly pay'], get: 'Buyback Rate' },
-  { icon: 'list', give: ['Your daily tasks'], get: 'Clear view of your time' },
-  { icon: 'pie-chart', give: ['A swipe per task'], get: 'DRIP Matrix' },
-  // The point of it all: hand off what drains you, get the hours back.
-  { icon: 'hand-left', give: ['What drains you'], get: 'Hours back' },
+// The journey as a simple flow: one short action per stop, walking down the road to your time back.
+const STOPS = [
+  { icon: 'cash', label: "Know your hour's worth" },
+  { icon: 'list', label: 'Map your routine' },
+  { icon: 'pie-chart', label: 'See what drains you' },
+  { icon: 'hand-left', label: 'Hand it off' },
 ];
 const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
-// What the time is for: concrete pictures motivate more than the word "time".
-const FOR = [
-  { icon: 'heart', label: 'Family' },
-  { icon: 'fitness', label: 'Health' },
-  { icon: 'rocket', label: 'Growth' },
-];
 
 const NODE = 44;
-const GAP = 12; // between the chips and the node
-// One step at a time, slow enough to follow: each row plays fully before the next one appears.
-const ROW_MS = 2200; // give appears → flows in → step lights → get comes out → road to the next
-const END_MS = 1600; // the sun and the promise
-const TOTAL_MS = ROWS.length * ROW_MS + END_MS;
+const GAP = 14; // between a node and its label
+// One stop at a time, calm: each fades in and lights up, then the road runs on to the next.
+const STOP_MS = 1200;
+const END_MS = 1400; // the sun, then the promise
+const TOTAL_MS = STOPS.length * STOP_MS + END_MS;
 
-// This row's own 0 → 1 progress within the whole run.
-const local = (t, i) => {
-  'worklet';
-  return Math.min(1, Math.max(0, (t * TOTAL_MS - i * ROW_MS) / ROW_MS));
-};
 const between = (v, a, b) => {
   'worklet';
   return Math.min(1, Math.max(0, (v - a) / (b - a)));
 };
-// The ending's own 0 → 1 progress, from a to b (fractions of END_MS) after the last row.
+// This stop's own 0 → 1 progress within the whole run.
+const local = (t, i) => {
+  'worklet';
+  return between(t * TOTAL_MS, i * STOP_MS, (i + 1) * STOP_MS);
+};
+// The ending's own 0 → 1 progress, from a to b (fractions of END_MS) after the last stop.
 const ending = (t, a, b) => {
   'worklet';
-  const start = ROWS.length * ROW_MS;
+  const start = STOPS.length * STOP_MS;
   return between(t * TOTAL_MS, start + a * END_MS, start + b * END_MS);
 };
 
-function Row({ t, i, row, side, rowHeight }) {
+function Stop({ t, i, stop, side, rowHeight, done }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
+  // Labels alternate right / left of the road, so the road can run straight down the middle.
+  const onRight = i % 2 === 0;
 
-  // Nothing of this row shows until its turn. Then, one thing at a time:
-  // 1) what you give appears, with the step beside it…
-  const give = useAnimatedStyle(() => {
-    const p = between(local(t.value, i), 0, 0.18);
-    return { opacity: p, transform: [{ translateX: 10 * (1 - p) }] };
+  // The stop and its label fade in together (the label drifts out from the road)…
+  const appear = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0, 0.3) }));
+  const label = useAnimatedStyle(() => {
+    const p = between(local(t.value, i), 0.05, 0.4);
+    return { opacity: p, transform: [{ translateX: (onRight ? -8 : 8) * (1 - p) }] };
   });
-  const node = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.05, 0.2) }));
-  // 2) …a bead carries it into the step…
-  const bead = useAnimatedStyle(() => {
-    const p = between(local(t.value, i), 0.25, 0.45);
-    return { opacity: p > 0 && p < 1 ? 1 : 0, transform: [{ translateX: -GAP - 10 + p * (GAP + 10) }] };
-  });
-  // 3) …the step lights up…
-  const lit = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.42, 0.55) }));
-  // 4) …and what you get comes out and settles (the road then runs on to the next step).
-  const out = useAnimatedStyle(() => {
-    const p = between(local(t.value, i), 0.58, 0.78);
-    return { opacity: p, transform: [{ translateX: -14 * (1 - p) }] };
-  });
+  // …then it lights up.
+  const lit = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.3, 0.55) }));
+
+  const text = (
+    <Animated.View style={[styles.side, { width: side }, onRight ? styles.sideRight : styles.sideLeft, done ? null : label]}>
+      <Text style={[styles.label, { textAlign: onRight ? 'left' : 'right' }]} numberOfLines={2}>
+        {stop.label}
+      </Text>
+    </Animated.View>
+  );
 
   return (
     <View style={[styles.row, { height: rowHeight }]}>
-      <Animated.View style={[styles.side, styles.giveSide, { width: side }, give]}>
-        {row.give.map((g) => (
-          <View key={g} style={styles.giveChip}>
-            <Text style={styles.giveText} numberOfLines={1}>
-              {g}
-            </Text>
-          </View>
-        ))}
-      </Animated.View>
-
-      <Animated.View style={[styles.nodeWrap, node]}>
-        <Animated.View style={[styles.bead, bead]} />
+      {onRight ? <View style={{ width: side }} /> : text}
+      <Animated.View style={[styles.nodeWrap, done ? null : appear]}>
         <View style={styles.node}>
-          <Ionicons name={`${row.icon}-outline`} size={20} color={colors.primary} />
-          <Animated.View style={[styles.nodeLit, lit]}>
-            <Ionicons name={row.icon} size={20} color={colors.onColor} />
+          <Animated.View style={[styles.nodeLit, done ? null : lit]}>
+            <Ionicons name={stop.icon} size={20} color={colors.onColor} />
           </Animated.View>
         </View>
       </Animated.View>
-
-      <Animated.View style={[styles.side, { width: side }, out]}>
-        <View style={styles.getChip}>
-          <Ionicons name="sparkles" size={12} color={colors.goldInk} />
-          <Text style={styles.getText} numberOfLines={2}>
-            {row.get}
-          </Text>
-        </View>
-      </Animated.View>
+      {onRight ? text : <View style={{ width: side }} />}
     </View>
   );
 }
 
 /**
- * The journey screen's road map, as an exchange: for each step, what you give (role and pay, your
- * tasks, a swipe each) flows into the step and what you get (Buyback Rate, a clear view of your
- * time, your DRIP Matrix, then hours back from handing off what drains you) comes out, bold and
- * gold. Rows play once, one after another, then the sun rises with the promise: "Your time back,
- * for the work and life you love", and what it's for. Shown complete when reduce-motion is on.
+ * The journey screen's road map: four stops, one short action each ("Know your hour's worth" →
+ * "Map your routine" → "See what drains you" → "Hand it off"), down a road to the sun and the
+ * promise: "Your time back, for the work and life you love". Plays once, one stop at a time.
+ * Shown complete when reduce-motion is on, and for sure once the run is over.
  */
 export default function Roadmap({ height = 320 }) {
   const styles = useStyles(makeStyles);
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
   const t = useSharedValue(0);
-  // Once the run is over, the ending is shown for sure (not left to the animated values).
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -138,16 +109,15 @@ export default function Roadmap({ height = 320 }) {
     };
   }, [t]);
 
-  const rowHeight = Math.max(64, Math.min(100, (height - 96) / ROWS.length));
+  const rowHeight = Math.max(56, Math.min(84, (height - 120) / STOPS.length));
   const side = Math.max(0, (width - NODE - GAP * 2) / 2);
   const roadTop = rowHeight / 2;
-  const roadLength = rowHeight * ROWS.length;
+  const roadLength = rowHeight * STOPS.length; // from the first stop down to the sun
 
-  // The road runs on to the next step only once this one is done (the end of each row's turn),
-  // and the last stretch reaches the sun.
+  // The road runs on to the next stop once this one has lit up; the last stretch reaches the sun.
   const road = useAnimatedStyle(() => {
     let drawn = 0;
-    for (let i = 0; i < ROWS.length; i += 1) drawn += between(local(t.value, i), 0.82, 1);
+    for (let i = 0; i < STOPS.length; i += 1) drawn += between(local(t.value, i), 0.6, 1);
     return { height: rowHeight * drawn };
   });
   // At the end: first the sun rises, then the promise under it (gentle fades, no bounce).
@@ -166,34 +136,26 @@ export default function Roadmap({ height = 320 }) {
       style={styles.wrap}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessible
-      accessibilityLabel="Your journey. Share your role and yearly pay, get your Buyback Rate. Add your daily tasks, get a clear view of your time. Swipe each task, get your DRIP Matrix. Hand off what drains you, get hours back. Then: your time back, for the work and life you love: family, health, growth."
+      accessibilityLabel={`Your journey: ${STOPS.map((s) => s.label).join(', then ')}. Then: your time back, for the work and life you love.`}
     >
       {width ? (
         <>
           <View style={[styles.roadBase, { top: roadTop, height: roadLength, left: width / 2 - 2 }]} />
-          <Animated.View style={[styles.roadDrawn, { top: roadTop, left: width / 2 - 2 }, road]} />
+          <Animated.View style={[styles.roadDrawn, { top: roadTop, left: width / 2 - 2 }, done ? { height: roadLength } : road]} />
 
-          {ROWS.map((row, i) => (
-            <Row key={row.get} t={t} i={i} row={row} side={side} rowHeight={rowHeight} />
+          {STOPS.map((stop, i) => (
+            <Stop key={stop.label} t={t} i={i} stop={stop} side={side} rowHeight={rowHeight} done={done} />
           ))}
 
           <View style={styles.sunWrap}>
             <Animated.View style={[styles.glow, done ? styles.glowDone : glow]} />
-            <Animated.View style={[styles.sun, done ? styles.shown : sun]}>
+            <Animated.View style={[styles.sun, done ? null : sun]}>
               <Ionicons name="sunny" size={26} color={colors.onColor} />
             </Animated.View>
           </View>
-          <Animated.View style={done ? styles.shown : dest}>
+          <Animated.View style={done ? null : dest}>
             <Text style={styles.destTitle}>{DESTINATION.title}</Text>
             <Text style={styles.destLine}>{DESTINATION.line}</Text>
-            <View style={styles.forRow}>
-              {FOR.map((f) => (
-                <View key={f.label} style={styles.forChip}>
-                  <Ionicons name={f.icon} size={13} color={colors.accentText} />
-                  <Text style={styles.forText}>{f.label}</Text>
-                </View>
-              ))}
-            </View>
           </Animated.View>
         </>
       ) : null}
@@ -203,31 +165,18 @@ export default function Roadmap({ height = 320 }) {
 
 const makeStyles = (colors) => ({
   wrap: { alignSelf: 'stretch', marginTop: spacing.lg },
-  shown: { opacity: 1, transform: [] },
-  glowDone: { opacity: 0.35 },
-  roadBase: { position: 'absolute', width: 4, borderRadius: 2, backgroundColor: colors.border },
+  roadBase: { position: 'absolute', width: 4, borderRadius: 2, backgroundColor: colors.border, opacity: 0.6 },
   roadDrawn: { position: 'absolute', width: 4, borderRadius: 2, backgroundColor: colors.primary },
   row: { flexDirection: 'row', alignItems: 'center' },
   side: { justifyContent: 'center' },
-  giveSide: { alignItems: 'flex-end', gap: 4 },
-  giveChip: {
-    maxWidth: '100%',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  giveText: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  sideRight: { alignItems: 'flex-start' },
+  sideLeft: { alignItems: 'flex-end' },
+  label: { fontSize: 16, lineHeight: 21, fontWeight: '700', color: colors.text },
   nodeWrap: { width: NODE + GAP * 2, alignItems: 'center', justifyContent: 'center' },
-  bead: { position: 'absolute', left: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   node: {
     width: NODE,
     height: NODE,
     borderRadius: NODE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.primary,
@@ -243,37 +192,11 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  getChip: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    maxWidth: '100%',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-    backgroundColor: colors.gold[0],
-    borderWidth: 1,
-    borderColor: colors.gold[1],
-  },
-  getText: { flexShrink: 1, fontSize: 13, lineHeight: 17, fontWeight: '800', color: colors.goldInk },
   sunWrap: { alignItems: 'center', justifyContent: 'center', height: 96, marginTop: 4 },
   glow: { position: 'absolute', width: 96, height: 96, borderRadius: 48, backgroundColor: brand.apricot },
+  glowDone: { opacity: 0.35 },
   sun: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
   // The payoff reads as one statement: a big headline, then who it's for, warm like the sun.
   destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
   destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center', marginTop: 2 },
-  forRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.sm + 4 },
-  forChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.goldLine,
-  },
-  forText: { fontSize: 13, fontWeight: '700', color: colors.text },
 });
