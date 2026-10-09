@@ -23,8 +23,10 @@ const FOR = [
 
 const NODE = 44;
 const GAP = 12; // between the chips and the node
-const ROW_MS = 1000; // each row's give → get, one after the other
-const TOTAL_MS = ROWS.length * ROW_MS + 700; // + the sun
+// One step at a time, slow enough to follow: each row plays fully before the next one appears.
+const ROW_MS = 2200; // give appears → flows in → step lights → get comes out → road to the next
+const END_MS = 1600; // the sun and the promise
+const TOTAL_MS = ROWS.length * ROW_MS + END_MS;
 
 // This row's own 0 → 1 progress within the whole run.
 const local = (t, i) => {
@@ -40,19 +42,25 @@ function Row({ t, i, row, side, rowHeight }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
-  // 1) a bead travels from what you give into the step…
+  // Nothing of this row shows until its turn. Then, one thing at a time:
+  // 1) what you give appears, with the step beside it…
+  const give = useAnimatedStyle(() => {
+    const p = between(local(t.value, i), 0, 0.18);
+    return { opacity: p, transform: [{ translateX: 10 * (1 - p) }] };
+  });
+  const node = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.05, 0.2) }));
+  // 2) …a bead carries it into the step…
   const bead = useAnimatedStyle(() => {
-    const p = between(local(t.value, i), 0, 0.4);
+    const p = between(local(t.value, i), 0.25, 0.45);
     return { opacity: p > 0 && p < 1 ? 1 : 0, transform: [{ translateX: -GAP - 10 + p * (GAP + 10) }] };
   });
-  // 2) …the step fills in…
-  const lit = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.35, 0.55) }));
-  // 3) …and what you get slides out and settles.
+  // 3) …the step lights up…
+  const lit = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.42, 0.55) }));
+  // 4) …and what you get comes out and settles (the road then runs on to the next step).
   const out = useAnimatedStyle(() => {
-    const p = between(local(t.value, i), 0.5, 0.85);
-    return { opacity: p, transform: [{ translateX: -14 * (1 - p) }, { scale: 0.92 + 0.08 * p }] };
+    const p = between(local(t.value, i), 0.58, 0.78);
+    return { opacity: p, transform: [{ translateX: -14 * (1 - p) }] };
   });
-  const give = useAnimatedStyle(() => ({ opacity: 0.55 + 0.45 * between(local(t.value, i), 0, 0.25) }));
 
   return (
     <View style={[styles.row, { height: rowHeight }]}>
@@ -66,7 +74,7 @@ function Row({ t, i, row, side, rowHeight }) {
         ))}
       </Animated.View>
 
-      <View style={styles.nodeWrap}>
+      <Animated.View style={[styles.nodeWrap, node]}>
         <Animated.View style={[styles.bead, bead]} />
         <View style={styles.node}>
           <Ionicons name={`${row.icon}-outline`} size={20} color={colors.primary} />
@@ -74,7 +82,7 @@ function Row({ t, i, row, side, rowHeight }) {
             <Ionicons name={row.icon} size={20} color={colors.onColor} />
           </Animated.View>
         </View>
-      </View>
+      </Animated.View>
 
       <Animated.View style={[styles.side, { width: side }, out]}>
         <View style={styles.getChip}>
@@ -118,17 +126,26 @@ export default function Roadmap({ height = 320 }) {
   const roadTop = rowHeight / 2;
   const roadLength = rowHeight * ROWS.length;
 
-  // The road down the middle draws itself row by row, then reaches the sun.
-  const road = useAnimatedStyle(() => ({ height: roadLength * Math.min(1, t.value * 1.02) }));
-  const sun = useAnimatedStyle(() => {
-    const p = between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS);
-    return { opacity: 0.35 + 0.65 * p, transform: [{ scale: 0.85 + 0.15 * p }] };
+  // The road runs on to the next step only once this one is done (the end of each row's turn),
+  // and the last stretch reaches the sun.
+  const road = useAnimatedStyle(() => {
+    let drawn = 0;
+    for (let i = 0; i < ROWS.length; i += 1) drawn += between(local(t.value, i), 0.82, 1);
+    return { height: rowHeight * drawn };
   });
-  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS) }));
-  // The promise rises in with the sun (a gentle fade, no bounce).
+  // At the end: first the sun rises, then the promise under it (gentle fades, no bounce).
+  const end = (a, b) => {
+    'worklet';
+    return between(t.value * TOTAL_MS, ROWS.length * ROW_MS + a * END_MS, ROWS.length * ROW_MS + b * END_MS);
+  };
+  const sun = useAnimatedStyle(() => {
+    const p = end(0, 0.45);
+    return { opacity: p, transform: [{ scale: 0.85 + 0.15 * p }] };
+  });
+  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * end(0, 0.45) }));
   const dest = useAnimatedStyle(() => {
-    const p = between(t.value * TOTAL_MS, ROWS.length * ROW_MS, TOTAL_MS);
-    return { opacity: 0.4 + 0.6 * p, transform: [{ translateY: 6 * (1 - p) }] };
+    const p = end(0.4, 1);
+    return { opacity: p, transform: [{ translateY: 6 * (1 - p) }] };
   });
 
   return (
