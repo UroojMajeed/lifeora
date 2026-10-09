@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, radius, spacing } from '../theme';
@@ -36,6 +36,12 @@ const local = (t, i) => {
 const between = (v, a, b) => {
   'worklet';
   return Math.min(1, Math.max(0, (v - a) / (b - a)));
+};
+// The ending's own 0 → 1 progress, from a to b (fractions of END_MS) after the last row.
+const ending = (t, a, b) => {
+  'worklet';
+  const start = ROWS.length * ROW_MS;
+  return between(t * TOTAL_MS, start + a * END_MS, start + b * END_MS);
 };
 
 function Row({ t, i, row, side, rowHeight }) {
@@ -108,13 +114,24 @@ export default function Roadmap({ height = 320 }) {
   const { colors } = useTheme();
   const [width, setWidth] = useState(0);
   const t = useSharedValue(0);
+  // Once the run is over, the ending is shown for sure (not left to the animated values).
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
       if (cancelled) return;
-      if (reduce) t.value = 1;
-      else t.value = withDelay(300, withTiming(1, { duration: TOTAL_MS, easing: Easing.linear }));
+      if (reduce) {
+        t.value = 1;
+        setDone(true);
+      } else {
+        t.value = withDelay(
+          300,
+          withTiming(1, { duration: TOTAL_MS, easing: Easing.linear }, (finished) => {
+            if (finished) runOnJS(setDone)(true);
+          })
+        );
+      }
     });
     return () => {
       cancelled = true;
@@ -134,17 +151,13 @@ export default function Roadmap({ height = 320 }) {
     return { height: rowHeight * drawn };
   });
   // At the end: first the sun rises, then the promise under it (gentle fades, no bounce).
-  const end = (a, b) => {
-    'worklet';
-    return between(t.value * TOTAL_MS, ROWS.length * ROW_MS + a * END_MS, ROWS.length * ROW_MS + b * END_MS);
-  };
   const sun = useAnimatedStyle(() => {
-    const p = end(0, 0.45);
+    const p = ending(t.value, 0, 0.45);
     return { opacity: p, transform: [{ scale: 0.85 + 0.15 * p }] };
   });
-  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * end(0, 0.45) }));
+  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * ending(t.value, 0, 0.45) }));
   const dest = useAnimatedStyle(() => {
-    const p = end(0.4, 1);
+    const p = ending(t.value, 0.4, 1);
     return { opacity: p, transform: [{ translateY: 6 * (1 - p) }] };
   });
 
@@ -165,12 +178,12 @@ export default function Roadmap({ height = 320 }) {
           ))}
 
           <View style={styles.sunWrap}>
-            <Animated.View style={[styles.glow, glow]} />
-            <Animated.View style={[styles.sun, sun]}>
+            <Animated.View style={[styles.glow, done ? styles.glowDone : glow]} />
+            <Animated.View style={[styles.sun, done ? styles.shown : sun]}>
               <Ionicons name="sunny" size={26} color={colors.onColor} />
             </Animated.View>
           </View>
-          <Animated.View style={dest}>
+          <Animated.View style={done ? styles.shown : dest}>
             <Text style={styles.destTitle}>{DESTINATION.title}</Text>
             <Text style={styles.destLine}>{DESTINATION.line}</Text>
             <View style={styles.forRow}>
@@ -190,6 +203,8 @@ export default function Roadmap({ height = 320 }) {
 
 const makeStyles = (colors) => ({
   wrap: { alignSelf: 'stretch', marginTop: spacing.lg },
+  shown: { opacity: 1, transform: [] },
+  glowDone: { opacity: 0.35 },
   roadBase: { position: 'absolute', width: 4, borderRadius: 2, backgroundColor: colors.border },
   roadDrawn: { position: 'absolute', width: 4, borderRadius: 2, backgroundColor: colors.primary },
   row: { flexDirection: 'row', alignItems: 'center' },
