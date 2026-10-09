@@ -1,4 +1,4 @@
-import { Text, View, useWindowDimensions } from 'react-native';
+import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Roadmap from '../../components/Roadmap';
 import Screen from '../../components/Screen';
@@ -14,9 +14,6 @@ import { spacing } from '../../theme';
 export default function JourneyScreen({ navigation }) {
   const { type, colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const { height: screenHeight } = useWindowDimensions();
-  // The road takes the room between the heading and the button.
-  const roadHeight = Math.max(300, Math.min(480, screenHeight - 420));
 
   return (
     <Screen
@@ -32,7 +29,7 @@ export default function JourneyScreen({ navigation }) {
         <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
         <Text style={styles.noteText}>Setup takes 2 minutes · Private to you</Text>
       </View>
-      <Roadmap height={roadHeight} />
+      <Roadmap />
     </Screen>
   );
 }
