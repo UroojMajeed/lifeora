@@ -11,7 +11,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { StepDots } from './HandoffStepsRow';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
+import { handoffSteps } from '../constants/handoffSteps';
 import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, spacing } from '../theme';
@@ -67,6 +69,9 @@ function DryLeaf({ task, slot, scene, index, still, onPress }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const sway = useSharedValue(0);
+  // Started handing it off: the leaf shows how far along it is (same dots as below the tree).
+  const steps = handoffSteps(task);
+  const started = steps.some((s) => s.done);
 
   useEffect(() => {
     if (still) return;
@@ -95,6 +100,11 @@ function DryLeaf({ task, slot, scene, index, still, onPress }) {
           {task.activity}
         </Text>
         <Text style={styles.leafHours}>{formatHours(task.hours * WORKDAYS_PER_WEEK)}/wk</Text>
+        {started ? (
+          <View style={styles.leafSteps}>
+            <StepDots steps={steps} size={6} />
+          </View>
+        ) : null}
       </Pressable>
     </Animated.View>
   );
@@ -102,7 +112,8 @@ function DryLeaf({ task, slot, scene, index, still, onPress }) {
 
 /**
  * Home's tree: your time, growing on the hill. Each task that drains you is a dry leaf around it
- * (the biggest five, labelled; the rest lie on the ground). Tap a leaf to hand that task off. As you
+ * (the biggest five, labelled; the rest lie on the ground; one you've started shows its step dots).
+ * Tap a leaf to hand that task off. As you
  * buy time back (`progress`, 0–1) the tree grows and turns from dry olive to lush green; when the
  * freed time gets a new job (`bloom`, 0–1, from Fill) it blossoms. A small sun keeps the journey's light.
  */
@@ -205,4 +216,5 @@ const makeStyles = (colors, isDark) => ({
   leafPress: { alignItems: 'center' },
   leafName: { fontSize: 12, fontWeight: '800', color: colors.leafInk, marginTop: 2, maxWidth: 100, textAlign: 'center' },
   leafHours: { fontSize: 10, fontWeight: '700', color: colors.leafInk, opacity: 0.75 },
+  leafSteps: { marginTop: 3 },
 });
