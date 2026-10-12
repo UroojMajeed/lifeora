@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
-import Sky from '../components/Sky';
+import TimeTree from '../components/TimeTree';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
@@ -18,10 +18,10 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
 /**
- * Home as a sky, no cards: your time is the sun, and each task that drains you is a cloud in front
- * of it. Tap a cloud to hand it off; every handoff clears a cloud and lifts the sun. Under the sky,
- * one sentence and one button: the next simple step. It picks up where the journey ended, on the
- * same sunrise: "Your time back, for the work and life you love".
+ * Home as a tree, no cards: your time is a tree on the hill, and each task that drains you is a dry
+ * leaf around it. Tap a leaf to hand it off; every handoff makes the tree grow greener, and filling
+ * the freed time makes it blossom. Under it, one sentence and one button: the next simple step. It
+ * picks up where the journey ended, on the same sunrise: "Your time back, for the work and life you love".
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
@@ -49,13 +49,15 @@ export default function HomeScreen({ navigation }) {
     });
   }, [isFocused, boughtBack]);
 
-  // The clouds: every draining task not handed off yet.
-  const clouds = handoffs.filter((h) => h.status !== 'done');
-  const cloudWeek = clouds.reduce((t, h) => t + h.hours, 0) * WORKDAYS_PER_WEEK;
+  // The dry leaves: every draining task not handed off yet.
+  const leaves = handoffs.filter((h) => h.status !== 'done');
+  const drainWeek = leaves.reduce((t, h) => t + h.hours, 0) * WORKDAYS_PER_WEEK;
   const draining = summary?.drainingHours || 0;
   const bought = Math.min(summary?.boughtBackHours || 0, draining);
   const progress = summary ? (draining ? bought / draining : 1) : 0;
   const backWeek = bought * WORKDAYS_PER_WEEK;
+  // Blossoms: how much of the freed time has a new job (Fill).
+  const bloom = bought ? Math.min(1, (summary?.filledHours || 0) / bought) : 0;
 
   const move = summary ? todaysMove({ schedule, handoffs, summary }) : null;
 
@@ -85,20 +87,20 @@ export default function HomeScreen({ navigation }) {
   const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : '';
 
   // One sentence for the sky.
-  const n = clouds.length;
+  const n = leaves.length;
   const headline = !summary
     ? ' '
     : n
-    ? `${n} ${n === 1 ? 'cloud hides' : 'clouds hide'} ${formatHours(cloudWeek)} of your week`
+    ? `${n} ${n === 1 ? 'task drains' : 'tasks drain'} ${formatHours(drainWeek)} of your week`
     : draining
-    ? `Clear sky. ${formatHours(backWeek)} a week is yours again`
-    : 'Clear sky. Your time is yours';
+    ? `Your tree is thriving. ${formatHours(backWeek)} a week is yours again`
+    : 'Your tree is thriving. Your time is yours';
   const subline = !summary
     ? ' '
     : backWeek
     ? `${formatHours(backWeek)} a week back so far, for the work and life you love`
     : n
-    ? 'Tap a cloud to hand it off and let your sun rise'
+    ? 'Tap a dry leaf to hand it off and help your tree grow'
     : 'For the work and life you love';
 
   return (
@@ -111,13 +113,25 @@ export default function HomeScreen({ navigation }) {
         <ThemeToggle />
       </View>
 
-      {/* Your time as the sun; what drains you as clouds in front of it. */}
-      <Sky tasks={clouds} progress={progress} onCloud={(activity) => navigation.navigate('HandoffDetail', { activity })} />
+      {/* Your time as a tree; what drains you as dry leaves around it. */}
+      <TimeTree
+        tasks={leaves}
+        progress={progress}
+        bloom={bloom}
+        onLeaf={(activity) => navigation.navigate('HandoffDetail', { activity })}
+      />
 
       {/* One sentence and one button: the next simple step. */}
       <Animated.View entering={FadeIn.duration(300)} style={styles.bottom}>
         <Text style={styles.headline}>{headline}</Text>
         <Text style={styles.subline}>{subline}</Text>
+        {/* More drains than labelled leaves: the rest are fallen leaves; this opens the full list. */}
+        {n > 5 ? (
+          <Pressable onPress={() => navigation.navigate('Handoffs')} hitSlop={8} style={styles.save} accessibilityRole="button">
+            <Text style={styles.saveText}>See all {n}</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </Pressable>
+        ) : null}
         {move ? (
           <>
             <Text style={styles.next} numberOfLines={2}>
