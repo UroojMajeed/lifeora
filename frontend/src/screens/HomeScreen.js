@@ -1,62 +1,47 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import { Alert, Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
-import Logo from '../components/Logo';
+import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
-import GainCard from '../components/GainCard';
-import TodaysMoveCard from '../components/TodaysMoveCard';
-import LoopPills from '../components/LoopPills';
-import DrainList from '../components/DrainList';
-import DripRow from '../components/DripRow';
+import Sky from '../components/Sky';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
-import { loadStreak, noticeBoughtBack } from '../storage/progress';
-import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
-import { WORKDAYS_PER_WEEK, greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
-import { dayNow, scheduleNow } from '../constants/fill';
-import { formatHours, formatMoney } from '../utils/format';
+import { noticeBoughtBack } from '../storage/progress';
+import { WORKDAYS_PER_WEEK, greeting, todaysMove } from '../constants/home';
+import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { spacing } from '../theme';
 
 /**
- * Home, built around one goal: buying back the hours that drain you. It continues the journey from
- * onboarding: first drain → gain (what the draining hours cost, what buying them back gets you), then the one thing to do next, the Buyback Loop as
- * the same pills, the tasks still draining you (one tap each), and the DRIP Matrix folded into a row.
+ * Home as a sky, no cards: your time is the sun, and each task that drains you is a cloud in front
+ * of it. Tap a cloud to hand it off; every handoff clears a cloud and lifts the sun. Under the sky,
+ * one sentence and one button: the next simple step. It picks up where the journey ended, on the
+ * same sunrise: "Your time back, for the work and life you love".
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs, summary, refresh: refreshHandoffs } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
-  const [streak, setStreak] = useState(null);
   const [startingRound, setStartingRound] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   const schedule = onboarding?.schedule || [];
-  const currency = onboarding?.currency || 'USD';
-  // The routine as it is now: handed-off tasks out, filled time in.
-  const now = scheduleNow(dayNow(schedule, handoffs, fills));
-  const drip = summarizeSchedule(now, onboarding?.buybackRate);
-  const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
     useCallback(() => {
       refreshHandoffs();
-      loadStreak().then(setStreak);
     }, [refreshHandoffs])
   );
 
   // More hours bought back since Home last showed them: a small success buzz (only while on screen).
-  const boughtBack = handoffSummary?.boughtBackHours;
+  const boughtBack = summary?.boughtBackHours;
   useEffect(() => {
     if (!isFocused || boughtBack === undefined) return;
     noticeBoughtBack(boughtBack).then((up) => {
@@ -64,17 +49,15 @@ export default function HomeScreen({ navigation }) {
     });
   }, [isFocused, boughtBack]);
 
-  const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
-  // The handoff the next move is about (if any): its hours and what to pay for it.
-  const moveTask = move?.go?.[0] === 'HandoffDetail' ? handoffs.find((h) => h.activity === move.go[1]?.activity) : null;
-  let moveNote = null;
-  if (moveTask) {
-    const week = formatHours(moveTask.hours * WORKDAYS_PER_WEEK);
-    moveNote =
-      moveTask.method === 'drop'
-        ? `Frees ${week} a week · costs nothing`
-        : `Frees ${week} a week · pay up to ${formatMoney(onboarding?.buybackRate || 0, currency)}/hr`;
-  }
+  // The clouds: every draining task not handed off yet.
+  const clouds = handoffs.filter((h) => h.status !== 'done');
+  const cloudWeek = clouds.reduce((t, h) => t + h.hours, 0) * WORKDAYS_PER_WEEK;
+  const draining = summary?.drainingHours || 0;
+  const bought = Math.min(summary?.boughtBackHours || 0, draining);
+  const progress = summary ? (draining ? bought / draining : 1) : 0;
+  const backWeek = bought * WORKDAYS_PER_WEEK;
+
+  const move = summary ? todaysMove({ schedule, handoffs, summary }) : null;
 
   // Round complete: close it, then re-audit the routine (edit it, then rate everything again).
   const doMove = async () => {
@@ -97,151 +80,72 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const loop = loopStatus({ schedule, summary: handoffSummary });
   // Once there's real progress to lose, invite guests to save it (never before: no sign-up wall).
-  const askToSave = user?.isGuest && (handoffSummary?.done || 0) > 0;
+  const askToSave = user?.isGuest && (summary?.done || 0) > 0;
   const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : '';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([refreshHandoffs(), loadStreak().then(setStreak)]);
-    setRefreshing(false);
-  };
+  // One sentence for the sky.
+  const n = clouds.length;
+  const headline = !summary
+    ? ' '
+    : n
+    ? `${n} ${n === 1 ? 'cloud hides' : 'clouds hide'} ${formatHours(cloudWeek)} of your week`
+    : draining
+    ? `Clear sky. ${formatHours(backWeek)} a week is yours again`
+    : 'Clear sky. Your time is yours';
+  const subline = !summary
+    ? ' '
+    : backWeek
+    ? `${formatHours(backWeek)} a week back so far, for the work and life you love`
+    : n
+    ? 'Tap a cloud to hand it off and let your sun rise'
+    : 'For the work and life you love';
 
   return (
-    <Screen
-      edges={[]}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-          progressViewOffset={insets.top}
-        />
-      }
-    >
-      <Appear index={0} style={[styles.header, { marginTop: insets.top + spacing.md }]}>
-        <Logo size={40} />
-        <View style={styles.headerText}>
-          <Text style={styles.date}>{today}</Text>
-          <Text style={styles.hello} numberOfLines={1} adjustsFontSizeToFit>
-            {greeting()}
-            {firstName ? `, ${firstName}` : ''}
-          </Text>
-        </View>
+    <Screen tinted="dawn" scroll={false} edges={['top']} contentStyle={styles.page}>
+      <View style={styles.header}>
+        <Text style={styles.hello} numberOfLines={1}>
+          {greeting()}
+          {firstName ? `, ${firstName}` : ''}
+        </Text>
         <ThemeToggle />
-      </Appear>
+      </View>
 
-      {/* 1) Drain → gain: what the draining hours cost you, and what buying them back gets you. */}
-      <Appear index={1}>
-        {handoffSummary ? (
-          <GainCard
-            summary={handoffSummary}
-            effectiveHourlyRate={effectiveHourlyRate}
-            currency={currency}
-            streak={streak}
-            onPress={() => navigation.navigate('Handoffs')}
-          />
-        ) : (
-          <Placeholder height={300} />
-        )}
-      </Appear>
+      {/* Your time as the sun; what drains you as clouds in front of it. */}
+      <Sky tasks={clouds} progress={progress} onCloud={(activity) => navigation.navigate('HandoffDetail', { activity })} />
 
-      {/* 2) The one thing to do next. */}
-      <Appear index={2}>
-        <Text style={styles.section}>Your next move</Text>
-        {move ? <TodaysMoveCard move={move} note={moveNote} onPress={doMove} loading={startingRound} /> : <Placeholder height={200} />}
-
+      {/* One sentence and one button: the next simple step. */}
+      <Animated.View entering={FadeIn.duration(300)} style={styles.bottom}>
+        <Text style={styles.headline}>{headline}</Text>
+        <Text style={styles.subline}>{subline}</Text>
+        {move ? (
+          <>
+            <Text style={styles.next} numberOfLines={2}>
+              Next: {move.title}
+            </Text>
+            <Button title={move.cta} icon="arrow-forward" onPress={doMove} loading={startingRound} />
+          </>
+        ) : null}
         {askToSave ? (
-          <Pressable
-            onPress={() => navigation.navigate('Account', { mode: 'save' })}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.save, pressed && styles.pressed]}
-          >
-            <View style={styles.saveIcon}>
-              <Ionicons name="cloud-upload-outline" size={20} color={colors.primaryDark} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.saveTitle}>Save your progress</Text>
-              <Text style={styles.saveText}>Keep your handoffs safe if you change phones. Takes 10 seconds.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          <Pressable onPress={() => navigation.navigate('Account', { mode: 'save' })} hitSlop={8} style={styles.save} accessibilityRole="button">
+            <Ionicons name="cloud-upload-outline" size={14} color={colors.primary} />
+            <Text style={styles.saveText}>Save your progress</Text>
           </Pressable>
         ) : null}
-      </Appear>
-
-      {/* 3) Where you are in the Loop, and what still drains you. */}
-      <Appear index={3}>
-        <LoopPills status={loop} round={handoffSummary?.round || 1} style={styles.block} />
-        <DrainList
-          handoffs={handoffs}
-          skip={moveTask?.activity}
-          effectiveHourlyRate={effectiveHourlyRate}
-          currency={currency}
-          onOpen={(activity) => navigation.navigate('HandoffDetail', { activity })}
-          onSeeAll={() => navigation.navigate('Handoffs')}
-          style={styles.block}
-        />
-      </Appear>
-
-      {/* 4) The matrix (folded) and a small idea for the day. */}
-      <Appear index={4}>
-        <DripRow items={now} summary={drip} style={styles.block} />
-        <View style={styles.idea}>
-          <Ionicons name="bulb" size={16} color={colors.accent} style={styles.ideaIcon} />
-          <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
-        </View>
-      </Appear>
+      </Animated.View>
     </Screen>
   );
 }
 
-/** Sections fade in one after another when Home first opens (one quiet fade, no movement). */
-function Appear({ index, style, children }) {
-  return (
-    <Animated.View entering={FadeIn.duration(300).delay(index * 60)} style={style}>
-      {children}
-    </Animated.View>
-  );
-}
-
-/** A soft pulsing block while numbers load, so the layout doesn't jump. */
-function Placeholder({ height }) {
-  const { colors } = useTheme();
-  const pulse = useSharedValue(0.5);
-  useEffect(() => {
-    pulse.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
-  }, [pulse]);
-  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
-  return <Animated.View style={[{ height, borderRadius: radius.lg, backgroundColor: colors.surfaceAlt }, style]} />;
-}
-
 const makeStyles = (colors) => ({
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  headerText: { flex: 1 },
-  date: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1 },
-  hello: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginTop: 2 },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
-  section: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm },
-  block: { marginTop: spacing.lg },
-  save: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-  },
-  saveIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
-  saveTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
-  saveText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
-  // The idea of the day: small and quiet, at the very end.
-  idea: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.xs },
-  ideaIcon: { marginTop: 2 },
-  ideaText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600', color: colors.muted },
+  page: { paddingBottom: 0 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.sm },
+  hello: { flex: 1, fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  // The ground under the sky: the hill's colour runs on to the bottom, so the next step stands on it.
+  bottom: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.md, backgroundColor: colors.hill },
+  headline: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
+  subline: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.accentText, textAlign: 'center', marginTop: 4 },
+  next: { fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center', marginTop: spacing.md, marginBottom: spacing.sm },
+  save: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: spacing.sm },
+  saveText: { fontSize: 13, fontWeight: '700', color: colors.primary },
 });

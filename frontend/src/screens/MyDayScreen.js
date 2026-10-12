@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Card, HeroCard } from '../components/Card';
+import DripRow from '../components/DripRow';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { DRIP, summarizeSchedule } from '../constants/content';
@@ -83,6 +84,8 @@ export default function MyDayScreen({ navigation }) {
               );
             })}
           </Card>
+          {/* The DRIP Matrix of the routine as it is now, folded into a row (tap to open the graph). */}
+          <DripRow items={scheduleNow(day)} summary={summary} style={styles.gap} />
         </>
       ) : null}
 
