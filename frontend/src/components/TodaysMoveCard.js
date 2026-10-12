@@ -10,7 +10,7 @@ import { radius, spacing } from '../theme';
  * One small, specific next step (from todaysMove()), with a single button to do it.
  * The main action on Home, so it carries the apricot spark (a shape, never text).
  */
-export default function TodaysMoveCard({ move, onPress, loading, style }) {
+export default function TodaysMoveCard({ move, note, onPress, loading, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   if (!move) return null;
@@ -41,6 +41,13 @@ export default function TodaysMoveCard({ move, onPress, loading, style }) {
           <Text style={styles.text}>{move.body}</Text>
         </View>
       </View>
+      {/* What it's worth: the hours it frees and what to pay for it (the Buyback Rate). */}
+      {note ? (
+        <View style={styles.note}>
+          <Ionicons name="cash-outline" size={15} color={colors.accentText} />
+          <Text style={styles.noteText}>{note}</Text>
+        </View>
+      ) : null}
       <Button title={move.cta} icon="arrow-forward" onPress={onPress} loading={loading} style={styles.button} />
     </Card>
   );
@@ -81,7 +88,18 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.accentSoft,
   },
-  title: { fontSize: 19, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  title: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   text: { fontSize: 14, lineHeight: 21, color: colors.muted, marginTop: 4 },
+  note: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    backgroundColor: colors.accentSoft,
+  },
+  noteText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.accentText },
   button: { marginTop: spacing.md + 4 },
 });

@@ -1,50 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, RefreshControl, Text, View } from 'react-native';
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import Logo from '../components/Logo';
-import DripMatrix from '../components/DripMatrix';
 import ThemeToggle from '../components/ThemeToggle';
-import BuybackRingCard from '../components/BuybackRingCard';
-import LoopTracker from '../components/LoopTracker';
+import TimeBackCard from '../components/TimeBackCard';
 import TodaysMoveCard from '../components/TodaysMoveCard';
-import ZoneTitle from '../components/ZoneTitle';
-import { Card } from '../components/Card';
+import LoopPills from '../components/LoopPills';
+import DrainList from '../components/DrainList';
+import DripRow from '../components/DripRow';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
-import { DRIP, calculateBuybackRate, summarizeSchedule } from '../constants/content';
-import { greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
-import { dayNow, energyShare, scheduleNow } from '../constants/fill';
+import { summarizeSchedule } from '../constants/content';
+import { WORKDAYS_PER_WEEK, greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
+import { dayNow, scheduleNow } from '../constants/fill';
+import { formatHours, formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-// Home tab, built around one goal: buying back the hours that drain you.
-// A personal greeting, your DRIP Matrix, then progress (ring + Buyback Loop), your next move and a daily idea.
+/**
+ * Home, built around one goal: buying back the hours that drain you. It continues the journey from
+ * onboarding: first the one number (time back), then the one thing to do next, the Buyback Loop as
+ * the same pills, the tasks still draining you (one tap each), and the DRIP Matrix folded into a row.
+ */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, fills, summary: handoffSummary, refresh: refreshHandoffs } = useHandoffs();
-  const { colors, type } = useTheme();
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const [streak, setStreak] = useState(null);
-  const [celebrate, setCelebrate] = useState(0);
   const [startingRound, setStartingRound] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const schedule = onboarding?.schedule || [];
   const currency = onboarding?.currency || 'USD';
-  // The matrix shows the day as it is now: handed-off tasks out, filled time in.
-  const drip = summarizeSchedule(scheduleNow(dayNow(schedule, handoffs, fills)), onboarding?.buybackRate);
-  const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
-  const zone = drip.dominant ? DRIP[drip.dominant] : null; // where most of your day goes
+  // The routine as it is now: handed-off tasks out, filled time in.
+  const now = scheduleNow(dayNow(schedule, handoffs, fills));
+  const drip = summarizeSchedule(now, onboarding?.buybackRate);
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
@@ -54,20 +54,28 @@ export default function HomeScreen({ navigation }) {
     }, [refreshHandoffs])
   );
 
-  // More hours bought back since Home last showed them: celebrate (only while Home is on screen).
+  // More hours bought back since Home last showed them: a small success buzz (only while on screen).
   const boughtBack = handoffSummary?.boughtBackHours;
   useEffect(() => {
     if (!isFocused || boughtBack === undefined) return;
     noticeBoughtBack(boughtBack).then((up) => {
-      if (!up) return;
-      setCelebrate((n) => n + 1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      if (up) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     });
   }, [isFocused, boughtBack]);
 
   const move = handoffSummary ? todaysMove({ schedule, handoffs, summary: handoffSummary }) : null;
+  // The handoff the next move is about (if any): its hours and what to pay for it.
+  const moveTask = move?.go?.[0] === 'HandoffDetail' ? handoffs.find((h) => h.activity === move.go[1]?.activity) : null;
+  let moveNote = null;
+  if (moveTask) {
+    const week = formatHours(moveTask.hours * WORKDAYS_PER_WEEK);
+    moveNote =
+      moveTask.method === 'drop'
+        ? `Frees ${week} a week · costs nothing`
+        : `Frees ${week} a week · pay up to ${formatMoney(onboarding?.buybackRate || 0, currency)}/hr`;
+  }
 
-  // Round complete: close it, then re-audit the day (edit it, then rate everything again).
+  // Round complete: close it, then re-audit the routine (edit it, then rate everything again).
   const doMove = async () => {
     if (!move) return;
     if (move.action !== 'nextRound') {
@@ -87,6 +95,7 @@ export default function HomeScreen({ navigation }) {
       setStartingRound(false);
     }
   };
+
   const loop = loopStatus({ schedule, summary: handoffSummary });
   // Once there's real progress to lose, invite guests to save it (never before: no sign-up wall).
   const askToSave = user?.isGuest && (handoffSummary?.done || 0) > 0;
@@ -124,65 +133,19 @@ export default function HomeScreen({ navigation }) {
         <ThemeToggle />
       </Appear>
 
+      {/* 1) The one number: time back. */}
       <Appear index={1}>
-        <Pressable
-          onPress={() => navigation.navigate('MyDay')}
-          accessibilityRole="button"
-          accessibilityLabel={`Your DRIP Matrix${zone ? `. ${drip.tied.length ? `Split between ${drip.tied.map((q) => DRIP[q].name).join(' and ')}` : `You live in ${zone.name}`}` : ''}. Open your routine`}
-          style={({ pressed }) => pressed && styles.pressed}
-        >
-          <Card style={styles.dripCard}>
-            {/* Your zone's pastel at the top, fading to the card so the four squares stay easy to tell apart. */}
-            <LinearGradient
-              colors={[zone ? colors[zone.soft] : colors.surfaceAlt, colors.surface]}
-              locations={[0, 0.55]}
-              style={styles.dripTint}
-            >
-              <View style={styles.cardHead}>
-                <Text style={type.label}>Your DRIP Matrix</Text>
-                <View style={styles.link}>
-                  <Text style={styles.linkText}>Routine</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                </View>
-              </View>
-              {zone ? (
-                <View style={styles.zone}>
-                  <View style={[styles.zonePill, { backgroundColor: colors.surface }]}>
-                    <View style={[styles.zoneDot, { backgroundColor: colors[zone.color] }]} />
-                    <Text style={[styles.zonePillText, { color: colors[zone.color] }]}>{zone.axes}</Text>
-                  </View>
-                  <ZoneTitle summary={drip} style={styles.zoneTitle} />
-                  <Text style={styles.zoneAdvice}>{zone.advice}</Text>
-                </View>
-              ) : null}
-              <DripMatrix summary={drip} compact />
-            </LinearGradient>
-          </Card>
-        </Pressable>
-      </Appear>
-
-      <Appear index={2}>
-        <Text style={styles.section}>Your progress</Text>
         {handoffSummary ? (
-          <BuybackRingCard
-            summary={handoffSummary}
-            share={energyShare(schedule, handoffSummary)}
-            effectiveHourlyRate={effectiveHourlyRate}
-            buybackRate={onboarding?.buybackRate}
-            currency={currency}
-            streak={streak}
-            celebrate={celebrate}
-            onPress={() => navigation.navigate('Handoffs')}
-          />
+          <TimeBackCard summary={handoffSummary} streak={streak} onPress={() => navigation.navigate('Handoffs')} />
         ) : (
-          <Placeholder height={380} />
+          <Placeholder height={150} />
         )}
-        <LoopTracker status={loop} round={handoffSummary?.round} style={styles.gap} />
       </Appear>
 
-      <Appear index={3}>
+      {/* 2) The one thing to do next. */}
+      <Appear index={2}>
         <Text style={styles.section}>Your next move</Text>
-        {move ? <TodaysMoveCard move={move} onPress={doMove} loading={startingRound} /> : <Placeholder height={190} />}
+        {move ? <TodaysMoveCard move={move} note={moveNote} onPress={doMove} loading={startingRound} /> : <Placeholder height={200} />}
 
         {askToSave ? (
           <Pressable
@@ -202,25 +165,34 @@ export default function HomeScreen({ navigation }) {
         ) : null}
       </Appear>
 
+      {/* 3) Where you are in the Loop, and what still drains you. */}
+      <Appear index={3}>
+        <LoopPills status={loop} round={handoffSummary?.round || 1} style={styles.block} />
+        <DrainList
+          handoffs={handoffs}
+          skip={moveTask?.activity}
+          onOpen={(activity) => navigation.navigate('HandoffDetail', { activity })}
+          onSeeAll={() => navigation.navigate('Handoffs')}
+          style={styles.block}
+        />
+      </Appear>
+
+      {/* 4) The matrix (folded) and a small idea for the day. */}
       <Appear index={4}>
+        <DripRow items={now} summary={drip} style={styles.block} />
         <View style={styles.idea}>
-          <View style={styles.ideaIcon}>
-            <Ionicons name="bulb" size={18} color={colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.ideaLabel}>Buyback idea of the day</Text>
-            <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
-          </View>
+          <Ionicons name="bulb" size={16} color={colors.accent} style={styles.ideaIcon} />
+          <Text style={styles.ideaText}>{ideaOfTheDay()}</Text>
         </View>
       </Appear>
     </Screen>
   );
 }
 
-/** Sections fade up one after another when Home first opens. */
+/** Sections fade in one after another when Home first opens (one quiet fade, no movement). */
 function Appear({ index, style, children }) {
   return (
-    <Animated.View entering={FadeInDown.duration(420).delay(index * 70)} style={style}>
+    <Animated.View entering={FadeIn.duration(300).delay(index * 60)} style={style}>
       {children}
     </Animated.View>
   );
@@ -243,28 +215,8 @@ const makeStyles = (colors) => ({
   date: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1 },
   hello: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.5, marginTop: 2 },
   pressed: { opacity: 0.92, transform: [{ scale: 0.99 }] },
-  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
-  dripCard: { padding: 0 },
-  dripTint: { borderRadius: radius.lg, padding: spacing.md + 4 },
-  zone: { marginBottom: spacing.md },
-  zonePill: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginBottom: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  zoneDot: { width: 8, height: 8, borderRadius: 4 },
-  zonePillText: { fontSize: 12, fontWeight: '700' },
-  zoneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
-  zoneAdvice: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
-  section: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginTop: spacing.xl, marginBottom: spacing.md },
-  gap: { marginTop: spacing.md },
+  section: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm },
+  block: { marginTop: spacing.lg },
   save: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -279,15 +231,8 @@ const makeStyles = (colors) => ({
   saveIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   saveTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
   saveText: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
-  idea: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xl,
-    padding: spacing.md + 4,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surfaceAlt,
-  },
-  ideaIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accentSoft },
-  ideaLabel: { fontSize: 12, fontWeight: '700', color: colors.primaryDark, textTransform: 'uppercase', letterSpacing: 1 },
-  ideaText: { fontSize: 16, lineHeight: 24, fontWeight: '600', color: colors.text, marginTop: 6 },
+  // The idea of the day: small and quiet, at the very end.
+  idea: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, paddingHorizontal: spacing.xs },
+  ideaIcon: { marginTop: 2 },
+  ideaText: { flex: 1, fontSize: 13, lineHeight: 19, fontWeight: '600', color: colors.muted },
 });
