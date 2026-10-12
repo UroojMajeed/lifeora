@@ -1,8 +1,8 @@
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
-import { WORKDAYS_PER_WEEK } from '../constants/home';
-import { formatHours } from '../utils/format';
+import { WORKDAYS_PER_WEEK, WORKDAYS_PER_YEAR } from '../constants/home';
+import { formatHours, formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
@@ -10,9 +10,9 @@ const SHOW = 3;
 
 /**
  * "Still draining you": the biggest draining tasks not handed off yet, each one tap from its handoff.
- * `skip` leaves out the task already shown as the next move. Nothing left: renders nothing.
+ * Each shows what it costs a year at your hourly worth. `skip` leaves out the task already shown as the next move. Nothing left: renders nothing.
  */
-export default function DrainList({ handoffs = [], skip, onOpen, onSeeAll, style }) {
+export default function DrainList({ handoffs = [], skip, effectiveHourlyRate = 0, currency, onOpen, onSeeAll, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const open = handoffs
@@ -46,7 +46,17 @@ export default function DrainList({ handoffs = [], skip, onOpen, onSeeAll, style
                 <Text style={styles.name} numberOfLines={1}>
                   {h.activity}
                 </Text>
-                <Text style={styles.hours}>{formatHours(h.hours * WORKDAYS_PER_WEEK)} a week</Text>
+                <Text style={styles.hours}>
+                  {formatHours(h.hours * WORKDAYS_PER_WEEK)} a week
+                  {effectiveHourlyRate ? (
+                    <>
+                      {' · '}
+                      <Text style={styles.cost}>
+                        {formatMoney(h.hours * WORKDAYS_PER_YEAR * effectiveHourlyRate, currency, { decimals: 0 })} a year
+                      </Text>
+                    </>
+                  ) : null}
+                </Text>
               </View>
               <View style={[styles.action, started && styles.actionStarted]}>
                 <Text style={[styles.actionText, started && styles.actionTextStarted]}>{started ? 'Continue' : 'Hand off'}</Text>
@@ -71,6 +81,7 @@ const makeStyles = (colors) => ({
   text: { flex: 1 },
   name: { fontSize: 15, fontWeight: '700', color: colors.text },
   hours: { fontSize: 13, color: colors.muted, marginTop: 1 },
+  cost: { fontWeight: '700', color: colors.error },
   action: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primary },
   actionStarted: { backgroundColor: colors.primarySoft },
   actionText: { fontSize: 13, fontWeight: '700', color: colors.onColor },

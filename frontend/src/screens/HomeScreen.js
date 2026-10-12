@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import Logo from '../components/Logo';
 import ThemeToggle from '../components/ThemeToggle';
-import TimeBackCard from '../components/TimeBackCard';
+import GainCard from '../components/GainCard';
 import TodaysMoveCard from '../components/TodaysMoveCard';
 import LoopPills from '../components/LoopPills';
 import DrainList from '../components/DrainList';
@@ -17,7 +17,7 @@ import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { loadStreak, noticeBoughtBack } from '../storage/progress';
-import { summarizeSchedule } from '../constants/content';
+import { calculateBuybackRate, summarizeSchedule } from '../constants/content';
 import { WORKDAYS_PER_WEEK, greeting, ideaOfTheDay, loopStatus, todaysMove } from '../constants/home';
 import { dayNow, scheduleNow } from '../constants/fill';
 import { formatHours, formatMoney } from '../utils/format';
@@ -26,7 +26,7 @@ import { radius, spacing } from '../theme';
 
 /**
  * Home, built around one goal: buying back the hours that drain you. It continues the journey from
- * onboarding: first the one number (time back), then the one thing to do next, the Buyback Loop as
+ * onboarding: first drain → gain (what the draining hours cost, what buying them back gets you), then the one thing to do next, the Buyback Loop as
  * the same pills, the tasks still draining you (one tap each), and the DRIP Matrix folded into a row.
  */
 export default function HomeScreen({ navigation }) {
@@ -45,6 +45,7 @@ export default function HomeScreen({ navigation }) {
   // The routine as it is now: handed-off tasks out, filled time in.
   const now = scheduleNow(dayNow(schedule, handoffs, fills));
   const drip = summarizeSchedule(now, onboarding?.buybackRate);
+  const { effectiveHourlyRate } = calculateBuybackRate(onboarding?.annualIncome || 0);
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
@@ -133,12 +134,18 @@ export default function HomeScreen({ navigation }) {
         <ThemeToggle />
       </Appear>
 
-      {/* 1) The one number: time back. */}
+      {/* 1) Drain → gain: what the draining hours cost you, and what buying them back gets you. */}
       <Appear index={1}>
         {handoffSummary ? (
-          <TimeBackCard summary={handoffSummary} streak={streak} onPress={() => navigation.navigate('Handoffs')} />
+          <GainCard
+            summary={handoffSummary}
+            effectiveHourlyRate={effectiveHourlyRate}
+            currency={currency}
+            streak={streak}
+            onPress={() => navigation.navigate('Handoffs')}
+          />
         ) : (
-          <Placeholder height={150} />
+          <Placeholder height={300} />
         )}
       </Appear>
 
@@ -171,6 +178,8 @@ export default function HomeScreen({ navigation }) {
         <DrainList
           handoffs={handoffs}
           skip={moveTask?.activity}
+          effectiveHourlyRate={effectiveHourlyRate}
+          currency={currency}
           onOpen={(activity) => navigation.navigate('HandoffDetail', { activity })}
           onSeeAll={() => navigation.navigate('Handoffs')}
           style={styles.block}
