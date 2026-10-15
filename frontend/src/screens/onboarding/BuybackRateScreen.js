@@ -41,9 +41,8 @@ export default function BuybackRateScreen({ navigation, route }) {
   const ready = amount > 0;
 
   // Big rates (e.g. PKR 1,250,000) shrink to fit the card instead of running off the screen.
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth } = useWindowDimensions();
   const columnWidth = Math.min(screenWidth - 48, MAX_COLUMN);
-  const gap = screenHeight < 740 ? spacing.md : spacing.lg - 4; // 16 on short phones, 20 otherwise
   const money = (n) => (amount ? formatMoney(n, currency) : '–');
   const rateText = money(buybackRate);
   const bigFont = fitFontSize(`${rateText}/h`, columnWidth - 48, 48, 22);
@@ -94,54 +93,57 @@ export default function BuybackRateScreen({ navigation, route }) {
         subtitle={editing ? 'A rough number is fine.' : null}
       />
 
-      {/* One card: the pay goes in at the top, the Buyback Rate comes out at the bottom. */}
-      <View style={[styles.card, cardShadow(colors, isDark), { marginTop: gap - spacing.lg }]}>
-        {/* In: your yearly pay (light half), in a soft filled field so it reads as "type here". */}
-        <View style={styles.cardTop}>
-          {!editing ? (
-            <View style={styles.leadRow}>
-              <Text style={styles.lead}>Your yearly pay</Text>
-              <View style={styles.private}>
-                <Ionicons name="lock-closed" size={12} color={colors.muted} />
-                <Text style={styles.privateText}>Private to you</Text>
+      {/* The card and the tip together, centred in the room between the heading and the button. */}
+      <View style={styles.middle}>
+        {/* One card: the pay goes in at the top, the Buyback Rate comes out at the bottom. */}
+        <View style={[styles.card, cardShadow(colors, isDark)]}>
+          {/* In: your yearly pay (light half), in a soft filled field so it reads as "type here". */}
+          <View style={styles.cardTop}>
+            {!editing ? (
+              <View style={styles.leadRow}>
+                <Text style={styles.lead}>Your yearly pay</Text>
+                <View style={styles.private}>
+                  <Ionicons name="lock-closed" size={12} color={colors.muted} />
+                  <Text style={styles.privateText}>Private to you</Text>
+                </View>
               </View>
+            ) : null}
+            <MoneyInput
+              large
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              value={groupDigits(income)}
+              onChangeText={(t) => setIncome(sanitizeAmount(t))}
+              placeholder="120,000"
+              accessibilityLabel="Your yearly pay"
+            />
+          </View>
+
+          {/* Out: your Buyback Rate (filled dark half), following what you type ("–" until there's a number). */}
+          <LinearGradient colors={[colors.heroFrom, colors.heroTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBottom}>
+            <Text style={styles.title}>Your Buyback Rate</Text>
+            <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
+              {rateText}
+              {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
+            </Text>
+            <View style={styles.worthChip}>
+              <Ionicons name="time" size={14} color={brand.apricot} />
+              <Text style={styles.worthText}>
+                Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
+              </Text>
             </View>
-          ) : null}
-          <MoneyInput
-            large
-            currency={currency}
-            onCurrencyChange={setCurrency}
-            value={groupDigits(income)}
-            onChangeText={(t) => setIncome(sanitizeAmount(t))}
-            placeholder="120,000"
-            accessibilityLabel="Your yearly pay"
-          />
+            <Text style={styles.basis}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+          </LinearGradient>
         </View>
 
-        {/* Out: your Buyback Rate (filled dark half), following what you type ("–" until there's a number). */}
-        <LinearGradient colors={[colors.heroFrom, colors.heroTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBottom}>
-          <Text style={styles.title}>Your Buyback Rate</Text>
-          <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
-            {rateText}
-            {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
+        {/* What it means for you: a plain line under the card, not another box. */}
+        <View style={styles.tip}>
+          <Ionicons name="bulb" size={20} color={colors.accentText} style={styles.tipIcon} />
+          <Text style={styles.tipText}>
+            Anything someone else can do for{' '}
+            <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
           </Text>
-          <View style={styles.worthChip}>
-            <Ionicons name="time" size={14} color={brand.apricot} />
-            <Text style={styles.worthText}>
-              Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
-            </Text>
-          </View>
-          <Text style={styles.basis}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
-        </LinearGradient>
-      </View>
-
-      {/* What it means for you: a plain line under the card, not another box. */}
-      <View style={styles.tip}>
-        <Ionicons name="bulb" size={18} color={colors.accentText} style={styles.tipIcon} />
-        <Text style={styles.tipText}>
-          Anything someone else can do for{' '}
-          <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
-        </Text>
+        </View>
       </View>
 
       <ErrorBanner message={error} />
@@ -152,6 +154,8 @@ export default function BuybackRateScreen({ navigation, route }) {
 const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
+  // Centred between the heading and the button (lifted a little: the optical centre looks balanced).
+  middle: { flex: 1, justifyContent: 'center', paddingBottom: spacing.lg },
   // The converter card: a light top (in) and a filled dark bottom (out), one rounded shape.
   card: { borderRadius: radius.lg, backgroundColor: colors.surface, overflow: 'hidden' },
   cardTop: { paddingTop: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.md + 2 },
@@ -180,7 +184,7 @@ const makeStyles = (colors) => ({
   basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', marginTop: spacing.sm + 2 },
   // The tip: a plain line with a bulb, the rate in warm amber.
   tip: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.xs },
-  tipIcon: { marginTop: 2 },
-  tipText: { flex: 1, color: colors.text, fontSize: 15, lineHeight: 22, fontWeight: '600' },
+  tipIcon: { marginTop: 3 },
+  tipText: { flex: 1, color: colors.text, fontSize: 17, lineHeight: 25, fontWeight: '700' },
   tipRate: { color: colors.accentText, fontWeight: '800' },
 });
