@@ -114,22 +114,25 @@ export function DelegationCard({ handoffs = [], reminders = {}, onDelegated, onR
                 ))}
               </View>
             ) : (
-              <Pressable
-                onPress={() => {
-                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                  setPicking(true);
-                }}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.later, pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons name="alarm-outline" size={16} color={colors.text} />
-                <Text style={styles.laterText}>Remind me later</Text>
-              </Pressable>
+              <View style={styles.links}>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setPicking(true);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  style={styles.textLink}
+                >
+                  <Ionicons name="alarm-outline" size={15} color={colors.primary} />
+                  <Text style={styles.planText}>Remind me later</Text>
+                </Pressable>
+                <Text style={styles.dot}>·</Text>
+                <Pressable onPress={() => onPlan(focus.activity)} hitSlop={8} accessibilityRole="button" style={styles.textLink}>
+                  <Text style={styles.planText}>Plan the handoff</Text>
+                </Pressable>
+              </View>
             )}
-            <Pressable onPress={() => onPlan(focus.activity)} hitSlop={6} accessibilityRole="button" style={styles.plan}>
-              <Text style={styles.planText}>Need help? Plan the handoff</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.primary} />
-            </Pressable>
           </LinearGradient>
         ) : (
           <Card style={styles.card}>
@@ -200,14 +203,17 @@ export function DelegationCard({ handoffs = [], reminders = {}, onDelegated, onR
 }
 
 /**
- * Journey step 4 on Home: every task you've delegated lands here with the hours it freed (Undo if
- * it was a slip), then one button to reinvest that time (Fill) and what's reinvested so far. Before
- * the first "Yes" there's nothing to reinvest yet, so it says so, quietly.
+ * Journey step 4 on Home, kept compact: how much time your delegated tasks freed and how much still
+ * waits for a new job, one button to reinvest it (Fill), and the delegated tasks (with Undo) behind a
+ * tap. The button is the screen's main one only when nothing is left to delegate. Before the first
+ * delegated task there's nothing to reinvest yet, so it says so, quietly.
  */
 export function ReinvestCard({ handoffs = [], summary, fills = [], onUndo, onFill, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
+  const [showDelegated, setShowDelegated] = useState(false);
   const delegated = handoffs.filter((h) => h.status === 'done');
+  const stillToDelegate = handoffs.some((h) => h.status !== 'done');
   const bought = summary?.boughtBackHours || 0;
   const free = Math.max(0, Math.round((bought - (summary?.filledHours || 0)) * 100) / 100);
 
@@ -216,42 +222,68 @@ export function ReinvestCard({ handoffs = [], summary, fills = [], onUndo, onFil
     content = (
       <View style={styles.noteRow}>
         <Ionicons name="sunny-outline" size={18} color={colors.muted} />
-        <Text style={styles.note}>Say yes to a delegated task and its hours land here, ready for a new job.</Text>
+        <Text style={styles.note}>Delegate a task and its hours land here, ready for a new job.</Text>
       </View>
     );
   } else {
     content = (
       <>
-        {delegated.map((h, i) => (
-          <View key={h.activity} style={[styles.freed, i > 0 && styles.line]}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-            <Text style={styles.freedName} numberOfLines={1}>
-              {h.activity}
-            </Text>
-            <Text style={styles.freedHours}>{week(h.hours)} freed</Text>
-            <Pressable
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                onUndo(h.activity);
-              }}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={`Undo: ${h.activity} isn't delegated`}
-            >
-              <Text style={styles.undo}>Undo</Text>
-            </Pressable>
-          </View>
-        ))}
-        <Button
-          title={free >= 0.25 ? 'Reinvest your time' : 'See your reinvested time'}
-          icon="sunny"
-          variant={free >= 0.25 ? 'primary' : 'secondary'}
-          onPress={onFill}
-          style={styles.fillButton}
-        />
+        <View style={styles.summaryRow}>
+          <Ionicons name={free >= 0.25 ? 'sunny' : 'flower'} size={20} color={colors.accentText} />
+          <Text style={styles.summaryText}>
+            <Text style={styles.summaryStrong}>{week(bought)} a week freed</Text>
+            {free >= 0.25 ? ` · ${week(free)} waiting for a job` : ' · every hour has a new job'}
+          </Text>
+        </View>
+        {/* All clear: everything delegated and every freed hour has a job. */}
+        {!stillToDelegate && free < 0.25 ? <Text style={styles.allClear}>All clear. Start round 2 when your routine changes.</Text> : null}
+        <View style={styles.reinvestRow}>
+          <Button
+            title={free >= 0.25 ? 'Reinvest your time' : 'Your reinvested time'}
+            icon="sunny"
+            variant={!stillToDelegate && free >= 0.25 ? 'primary' : 'secondary'}
+            onPress={onFill}
+            style={styles.reinvestButton}
+          />
+          <Pressable
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setShowDelegated((v) => !v);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showDelegated }}
+            style={styles.textLink}
+          >
+            <Text style={styles.planText}>{delegated.length} delegated</Text>
+            <Ionicons name={showDelegated ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
+          </Pressable>
+        </View>
+        {showDelegated
+          ? delegated.map((h) => (
+              <View key={h.activity} style={[styles.freed, styles.line]}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={styles.freedName} numberOfLines={1}>
+                  {h.activity}
+                </Text>
+                <Text style={styles.freedHours}>{week(h.hours)}</Text>
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    onUndo(h.activity);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Undo: ${h.activity} isn't delegated`}
+                >
+                  <Text style={styles.undo}>Undo</Text>
+                </Pressable>
+              </View>
+            ))
+          : null}
         {fills.length ? (
           <Text style={styles.filled} numberOfLines={2}>
-            Reinvested: {fills.map((f) => `${f.activity} ${formatHours(f.hours)}`).join(' · ')}
+            Reinvested in: {fills.map((f) => `${f.activity} ${formatHours(f.hours)}`).join(' · ')}
           </Text>
         ) : null}
       </>
@@ -282,13 +314,13 @@ const makeStyles = (colors) => ({
   focusLine: { fontSize: 15, lineHeight: 22, color: colors.text, marginTop: 4 },
   focusHours: { fontWeight: '800', color: colors.accentText },
   focusButton: { marginTop: spacing.md },
-  later: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 46, marginTop: spacing.sm, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
-  laterText: { fontSize: 15, fontWeight: '700', color: colors.text },
   times: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   time: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },
   timeText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
-  plan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: spacing.sm + 2 },
-  planText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  links: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md },
+  textLink: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
+  dot: { fontSize: 14, color: colors.muted },
+  planText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   // Reminders set, and the other tasks.
   laterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
   laterRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
@@ -308,6 +340,11 @@ const makeStyles = (colors) => ({
   freedName: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
   freedHours: { fontSize: 13, fontWeight: '700', color: colors.success },
   undo: { fontSize: 13, fontWeight: '700', color: colors.muted, textDecorationLine: 'underline' },
-  fillButton: { marginTop: spacing.sm + 2, marginBottom: spacing.xs },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.sm },
+  summaryText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.muted },
+  summaryStrong: { fontSize: 15, fontWeight: '800', color: colors.text },
+  allClear: { fontSize: 14, fontWeight: '600', color: colors.success, marginTop: spacing.sm },
+  reinvestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md, marginBottom: spacing.xs },
+  reinvestButton: { flex: 1, minHeight: 48 },
   filled: { fontSize: 13, color: colors.muted, marginTop: spacing.sm, marginBottom: spacing.xs },
 });

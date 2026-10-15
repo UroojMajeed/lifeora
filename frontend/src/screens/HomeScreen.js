@@ -145,7 +145,7 @@ const makeStyles = (colors) => ({
   firstTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   firstBody: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
   firstButton: { marginTop: spacing.md },
-  block: { marginTop: spacing.lg },
+  block: { marginTop: spacing.xl },
   save: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: spacing.lg },
   saveText: { fontSize: 13, fontWeight: '700', color: colors.primary },
 });
