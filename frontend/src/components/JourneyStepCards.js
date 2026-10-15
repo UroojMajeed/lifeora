@@ -9,7 +9,7 @@ import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-const SHOW = 4; // draining tasks shown on Home; the rest are one tap away
+const SHOW = 1; // one task at a time on Home; the rest open in the card with "Show all"
 const week = (hoursADay) => formatHours(hoursADay * WORKDAYS_PER_WEEK);
 
 /** The journey's numbered circle and the step's name on the left, a short status on the right. */
@@ -27,14 +27,16 @@ function StepHead({ step, name, status }) {
 }
 
 /**
- * Journey step 3 on Home, as one simple question per draining task: "Have you delegated it?"
+ * Journey step 3 on Home, one task at a time (the biggest drain first; "Show all" opens the rest in
+ * the card), each with one simple question: "Have you delegated it?"
  * Yes marks it handed off (its hours move to Reinvest); No keeps it here, with a way into the
  * handoff steps for help. `onDelegated(activity, yes)` saves the answer.
  */
-export function DelegationCard({ handoffs = [], onDelegated, onPlan, onSeeAll, style }) {
+export function DelegationCard({ handoffs = [], onDelegated, onPlan, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [saidNo, setSaidNo] = useState(() => new Set());
+  const [all, setAll] = useState(false); // the full list, opened from the card
   const open = handoffs.filter((h) => h.status !== 'done').sort((a, b) => b.hours - a.hours);
 
   const answer = (activity, yes) => {
@@ -55,7 +57,7 @@ export function DelegationCard({ handoffs = [], onDelegated, onPlan, onSeeAll, s
       </View>
     );
   } else {
-    content = open.slice(0, SHOW).map((h, i) => (
+    content = open.slice(0, all ? open.length : SHOW).map((h, i) => (
       <View key={h.activity} style={[styles.task, i > 0 && styles.line]}>
         <Text style={styles.name} numberOfLines={1}>
           {h.activity} <Text style={styles.hours}>· {week(h.hours)} a week</Text>
@@ -98,9 +100,18 @@ export function DelegationCard({ handoffs = [], onDelegated, onPlan, onSeeAll, s
       <Card style={styles.card}>
         {content}
         {open.length > SHOW ? (
-          <Pressable onPress={onSeeAll} hitSlop={8} accessibilityRole="button" style={styles.link}>
-            <Text style={styles.linkText}>See all {open.length}</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          <Pressable
+            onPress={() => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setAll((v) => !v);
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: all }}
+            style={styles.link}
+          >
+            <Text style={styles.linkText}>{all ? 'Show less' : `Show all ${open.length} tasks`}</Text>
+            <Ionicons name={all ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
           </Pressable>
         ) : null}
       </Card>

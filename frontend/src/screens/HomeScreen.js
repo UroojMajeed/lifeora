@@ -111,7 +111,6 @@ export default function HomeScreen({ navigation }) {
           handoffs={handoffs}
           onDelegated={(activity) => setDelegated(activity, true)}
           onPlan={openHandoff}
-          onSeeAll={() => navigation.navigate('Handoffs')}
           style={styles.block}
         />
         <ReinvestCard
