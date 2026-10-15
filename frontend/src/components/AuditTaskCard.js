@@ -2,7 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { HOUR_OPTIONS, MONEY_LEVELS, dollars, usualHours } from '../constants/content';
+import { DRIP, HOUR_OPTIONS, MONEY_LEVELS, dollars, quadrantFor, usualHours, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -18,9 +18,10 @@ const short = (h) => (h < 1 ? `${h * 60}m` : `${h}h`);
 export const isAudited = (it) => Boolean(it.hours && it.money && it.energy);
 
 /**
- * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy). A set
- * button shows its value; pressing one opens its choices under the buttons (`field` is the one open).
- * Picking calls `onChange(patch)`.
+ * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy), each in
+ * its own colour (teal, gold, green) even before it's set. A set button shows its value; pressing one
+ * opens its choices under the buttons (`field` is the one open). Once all three are set, the card
+ * takes its DRIP quadrant's colour, with the quadrant's name. Picking calls `onChange(patch)`.
  */
 export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
   const { colors } = useTheme();
@@ -28,6 +29,14 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
   const usual = usualHours(item.activity);
   const energy = ENERGY.find((e) => e.key === item.energy);
   const done = isAudited(item);
+  // Finished: the card wears its quadrant's colour.
+  const q = done ? DRIP[quadrantFor({ value: valueForMoney(item.money), energy: item.energy })] : null;
+  // Each button's own colour: [line, soft fill, text].
+  const tone = {
+    hours: [colors.primary, colors.primarySoft, colors.primaryDark],
+    money: [colors.gold[1], colors.accentSoft, colors.accentText],
+    energy: energy ? [colors[energy.tone], colors[`${energy.tone}Soft`], colors[energy.tone]] : [colors.success, colors.successSoft, colors.success],
+  };
 
   const pick = (patch) => {
     Haptics.selectionAsync().catch(() => {});
@@ -48,12 +57,12 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
   ];
 
   return (
-    <View style={[styles.card, field && styles.cardOpen]}>
+    <View style={[styles.card, q && { backgroundColor: colors[q.soft], borderColor: colors[q.color] }, field && !q && styles.cardOpen]}>
       <View style={styles.top}>
         <Text style={styles.name} numberOfLines={1}>
           {item.activity}
         </Text>
-        {done ? <Ionicons name="checkmark-circle" size={18} color={colors.success} /> : null}
+        {q ? <Text style={[styles.quadrant, { color: colors[q.color] }]}>{q.name}</Text> : null}
         <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
@@ -62,7 +71,7 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
       <View style={styles.buttons}>
         {buttons.map((b) => {
           const open = field === b.key;
-          const tint = b.tone ? colors[b.tone] : b.key === 'money' && b.set ? colors.accentText : colors.primaryDark;
+          const [line, soft, ink] = tone[b.key];
           return (
             <Pressable
               key={b.key}
@@ -72,14 +81,13 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
               accessibilityLabel={`${b.key === 'hours' ? 'Time' : b.key === 'money' ? 'Money' : 'Energy'}: ${b.set ? b.text : 'not set'}`}
               style={({ pressed }) => [
                 styles.button,
-                b.set && styles.buttonSet,
-                b.set && b.tone && { backgroundColor: colors[`${b.tone}Soft`] },
-                open && styles.buttonOpen,
+                { borderColor: line, backgroundColor: b.set ? soft : colors.surface },
+                open && { backgroundColor: line },
                 pressed && { opacity: 0.75 },
               ]}
             >
-              <Ionicons name={b.icon} size={15} color={b.set ? tint : colors.muted} />
-              <Text style={[styles.buttonText, b.set && { color: tint }]} numberOfLines={1}>
+              <Ionicons name={b.icon} size={15} color={open ? colors.onColor : ink} />
+              <Text style={[styles.buttonText, { color: open ? colors.onColor : ink }, b.set && styles.buttonTextSet]} numberOfLines={1}>
                 {b.text}
               </Text>
             </Pressable>
@@ -180,12 +188,10 @@ const makeStyles = (colors, isDark) => ({
     gap: 5,
     borderRadius: radius.pill,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
   },
-  buttonSet: { borderStyle: 'solid', borderColor: 'transparent', backgroundColor: colors.surfaceAlt },
-  buttonOpen: { borderStyle: 'solid', borderColor: colors.primary },
-  buttonText: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  buttonText: { fontSize: 13, fontWeight: '700' },
+  buttonTextSet: { fontWeight: '800' },
+  quadrant: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   // The open button's choices.
   choices: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm + 2 },
   pill: {

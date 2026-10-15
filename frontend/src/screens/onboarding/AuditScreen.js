@@ -5,7 +5,6 @@ import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
-import LiveMatrix from '../../components/LiveMatrix';
 import DayComposer from '../../components/DayComposer';
 import EmptyRoutine from '../../components/EmptyRoutine';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -18,8 +17,7 @@ const MAX_ACTIVITIES = 30;
 /**
  * Journey step 2, "Time and energy audit", all in one place: add tasks like a chat (type one or tap a
  * suggestion); each task's card has three buttons, Time, Money and Energy, that open their choices.
- * Above the tasks, the DRIP Matrix builds live: a dot drops into its quadrant as each task is
- * finished. Continue leads to the full DRIP Matrix.
+ * A finished card takes its DRIP quadrant's colour. Continue leads to the full DRIP Matrix.
  */
 export default function AuditScreen({ navigation }) {
   const { onboarding, saveStep } = useOnboarding();
@@ -133,8 +131,6 @@ export default function AuditScreen({ navigation }) {
           />
           {items.length ? (
             <>
-              {/* The DRIP Matrix, building live: each finished task drops in as a dot. */}
-              <LiveMatrix items={items} style={styles.matrix} />
               {/* Every task stays in its place; each card has its Time, Money and Energy buttons. */}
               <View style={styles.rows}>
                 {items.map((item) => (
@@ -179,7 +175,6 @@ const makeStyles = () => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
-  matrix: { marginBottom: spacing.md },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
