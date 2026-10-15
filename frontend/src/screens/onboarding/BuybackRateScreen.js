@@ -11,20 +11,22 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import { WORK_HOURS_PER_YEAR, calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
-import { useStyles } from '../../theme/ThemeContext';
-import { brand, spacing } from '../../theme';
+import { useStyles, useTheme } from '../../theme/ThemeContext';
+import { brand, radius, spacing } from '../../theme';
 
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
- * "What's your time worth?" (onboarding step 1): one answer, what your business pays you a year. Under
- * it, what the rate means (one line), then the card, one centred stack: "Buyback Rate", the rate big
- * (a blank until you type), then your hour's worth and the 2,000 work hours in small text. With `editing` (from Me)
- * it saves the new pay.
+ * Journey step 1, "Know your worth": one answer (what your business pays you a year), then the
+ * answer card: your Buyback Rate big in the middle, your hour's worth in an apricot chip, and the
+ * 2,000 work hours it comes from on a strip along the card's foot. Above it, what the rate means,
+ * in its own soft card. Everything follows what you type. With `editing` (from Me) it saves the
+ * new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
   const { onboarding, saveStep, saveEdit } = useOnboarding();
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   // A brand-new account has the server default (USD); prefer the phone's region then.
   const [currency, setCurrency] = useState(() =>
@@ -44,7 +46,6 @@ export default function BuybackRateScreen({ navigation, route }) {
   const gap = screenHeight < 740 ? spacing.md : spacing.lg - 4; // 16 on short phones, 20 otherwise
   const money = (n) => (amount ? formatMoney(n, currency) : '–');
   const rateText = money(buybackRate);
-  // The big Buyback Rate fills the card's width at most; the two small numbers share it in halves.
   const bigFont = fitFontSize(`${rateText}/h`, columnWidth - 48, 48, 22);
 
   const next = async () => {
@@ -84,13 +85,16 @@ export default function BuybackRateScreen({ navigation, route }) {
         />
       }
     >
+      {/* The journey's own words: this is step 1 of 4, "Know your worth". */}
       <StepHeader
         step={stepNumber('buyback_rate')}
         editing={editing}
-        title={editing ? 'Your yearly pay' : "What's your time worth?"}
-        subtitle={editing ? 'A rough number is fine.' : 'One number and we work it out.'}
+        eyebrow={editing ? null : 'Step 1 of 4'}
+        title={editing ? 'Your yearly pay' : 'Know your worth'}
+        subtitle={editing ? 'A rough number is fine.' : 'One number, and we work out what your time is worth.'}
       />
 
+      {/* 1) The question */}
       <View style={{ marginTop: gap - spacing.lg }}>
         {!editing ? <Text style={styles.lead}>My business pays me each year…</Text> : null}
         <MoneyInput
@@ -104,30 +108,41 @@ export default function BuybackRateScreen({ navigation, route }) {
         />
       </View>
 
-      {/* What the rate means, said first, above the card. */}
+      {/* 2) What it means, in its own soft card, before the numbers. */}
       <View style={[styles.tip, { marginTop: gap }]}>
-        <Ionicons name="bulb" size={18} color={brand.apricot} />
+        <View style={styles.tipIcon}>
+          <Ionicons name="bulb" size={18} color={colors.accentText} />
+        </View>
         <Text style={styles.tipText}>
           Anything someone else can do for{' '}
           <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
         </Text>
       </View>
 
-      {/* The answer, always here and following what you type ("–" until there's a number):
-          the Buyback Rate big in the middle, how it's worked out small underneath. */}
-      {/* One simple stack in the middle: the name, the number (a blank until you type), then where it
-          comes from in small text. */}
+      {/* 3) The answer: always here, following what you type ("–" until there's a number). */}
       <HeroCard style={[styles.hero, { marginTop: spacing.md }]}>
-        <Text style={styles.title}>Buyback Rate</Text>
-        <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
-          {rateText}
-          {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
-        </Text>
-        <Text style={styles.worth}>
-          Your hour is worth{' '}
-          <Text style={styles.worthValue}>{amount ? `${formatMoney(effectiveHourlyRate, currency)}/hr` : '–'}</Text>
-        </Text>
-        <Text style={styles.hours}>{WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+        <View style={styles.heroBody}>
+          <Text style={styles.title}>Buyback Rate</Text>
+          <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
+            {rateText}
+            {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
+          </Text>
+          {/* Your hour's worth, highlighted in an apricot chip. */}
+          <View style={styles.worthChip}>
+            <Ionicons name="time" size={14} color={brand.apricot} />
+            <Text style={styles.worthText}>
+              Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
+            </Text>
+          </View>
+        </View>
+        {/* How it's worked out, on a strip along the card's foot. */}
+        <View style={styles.basis}>
+          <Ionicons name="calculator-outline" size={14} color={colors.heroMuted} />
+          <Text style={styles.basisText}>
+            {amount ? `${formatMoney(amount, currency, { decimals: 0 })} ÷ ` : ''}
+            {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year
+          </Text>
+        </View>
       </HeroCard>
 
       <ErrorBanner message={error} />
@@ -139,15 +154,50 @@ const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
-  hero: { paddingVertical: spacing.lg, paddingHorizontal: spacing.md + 4 },
-  tip: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  tipText: { flex: 1, fontSize: 16, lineHeight: 23, fontWeight: '700', color: colors.text },
-  tipRate: { color: colors.accentText, fontWeight: '800' },
-  title: { color: colors.heroText, fontSize: 24, fontWeight: '800', letterSpacing: -0.3, textAlign: 'center' },
-  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.sm },
+  // The answer card: the body, then a strip along its foot (so the card carries no outer padding).
+  hero: { padding: 0, overflow: 'hidden' },
+  heroBody: { alignItems: 'center', paddingTop: spacing.lg, paddingBottom: spacing.md + 4, paddingHorizontal: spacing.md + 4 },
+  title: { color: colors.heroText, fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
+  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: 2 },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
-  // Under the rate, readable at a glance: your hour's worth in white, the hours a step quieter.
-  worth: { color: colors.heroText, fontSize: 16, lineHeight: 22, fontWeight: '600', textAlign: 'center' },
-  worthValue: { fontWeight: '800' },
-  hours: { color: colors.heroMuted, fontSize: 14, lineHeight: 20, fontWeight: '600', textAlign: 'center', marginTop: 2 },
+  worthChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm + 2,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(245,185,113,0.55)',
+    backgroundColor: 'rgba(245,185,113,0.16)',
+  },
+  worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
+  worthValue: { color: brand.apricot, fontWeight: '800' },
+  basis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.heroChip,
+    borderTopWidth: 1,
+    borderTopColor: colors.heroDivider,
+  },
+  basisText: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
+  // The tip: a soft, warm card of its own.
+  tip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 4,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    backgroundColor: colors.accentSoft,
+  },
+  tipIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  tipText: { flex: 1, fontSize: 15, lineHeight: 22, fontWeight: '600', color: colors.text },
+  tipRate: { color: colors.accentText, fontWeight: '800' },
 });
