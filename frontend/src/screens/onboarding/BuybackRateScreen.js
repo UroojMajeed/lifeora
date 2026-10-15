@@ -17,11 +17,10 @@ import { brand, cardShadow, radius, spacing } from '../../theme';
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
- * Journey step 1, "Know your worth", as one converter card (like a money converter): your yearly pay
- * goes in at the top (light half), your Buyback Rate comes out at the bottom (filled dark half), big,
- * with your hour's worth in an apricot chip and the 2,000 work hours it's based on. Under the card,
- * in a warm highlighted box, what it means for you. Everything follows what you type. With `editing` (from
- * Me) it saves the new pay.
+ * Journey step 1, "Know your worth": your yearly pay (private to you), then your Buyback Rate in a
+ * filled card, big, with your hour's worth in an apricot chip and the 2,000 work hours it's based
+ * on, then what it means for you in a warm highlighted box. All three are centred together, and
+ * follow what you type. With `editing` (from Me) it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
@@ -95,31 +94,29 @@ export default function BuybackRateScreen({ navigation, route }) {
 
       {/* The card and the tip together, centred in the room between the heading and the button. */}
       <View style={styles.middle}>
-        {/* One card: the pay goes in at the top, the Buyback Rate comes out at the bottom. */}
-        <View style={[styles.card, cardShadow(colors, isDark)]}>
-          {/* In: your yearly pay (light half), in a soft filled field so it reads as "type here". */}
-          <View style={styles.cardTop}>
-            {!editing ? (
-              <View style={styles.leadRow}>
-                <Text style={styles.lead}>Your yearly pay</Text>
-                <View style={styles.private}>
-                  <Ionicons name="lock-closed" size={12} color={colors.muted} />
-                  <Text style={styles.privateText}>Private to you</Text>
-                </View>
-              </View>
-            ) : null}
-            <MoneyInput
-              large
-              currency={currency}
-              onCurrencyChange={setCurrency}
-              value={groupDigits(income)}
-              onChangeText={(t) => setIncome(sanitizeAmount(t))}
-              placeholder="120,000"
-              accessibilityLabel="Your yearly pay"
-            />
+        {/* The question: your yearly pay, on the page itself. */}
+        {!editing ? (
+          <View style={styles.leadRow}>
+            <Text style={styles.lead}>Your yearly pay</Text>
+            <View style={styles.private}>
+              <Ionicons name="lock-closed" size={12} color={colors.muted} />
+              <Text style={styles.privateText}>Private to you</Text>
+            </View>
           </View>
+        ) : null}
+        <MoneyInput
+          large
+          currency={currency}
+          onCurrencyChange={setCurrency}
+          value={groupDigits(income)}
+          onChangeText={(t) => setIncome(sanitizeAmount(t))}
+          placeholder="120,000"
+          accessibilityLabel="Your yearly pay"
+        />
 
-          {/* Out: your Buyback Rate (filled dark half), following what you type ("–" until there's a number). */}
+        {/* The answer: your Buyback Rate, a filled card. */}
+        <View style={[styles.card, cardShadow(colors, isDark)]}>
+          {/* Following what you type ("–" until there's a number). */}
           <LinearGradient colors={[colors.heroFrom, colors.heroTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBottom}>
             <Text style={styles.title}>Your Buyback Rate</Text>
             <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
@@ -158,14 +155,13 @@ const makeStyles = (colors) => ({
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   // Centred between the heading and the button (lifted a little: the optical centre looks balanced).
   middle: { flex: 1, justifyContent: 'center', paddingBottom: spacing.lg },
-  // The converter card: a light top (in) and a filled dark bottom (out), one rounded shape.
-  card: { borderRadius: radius.lg, backgroundColor: colors.surface, overflow: 'hidden' },
-  cardTop: { paddingTop: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.md + 2 },
+  // The rate card: filled dark, rounded.
+  card: { marginTop: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
   cardBottom: { alignItems: 'center', paddingTop: spacing.lg, paddingBottom: spacing.lg - 2, paddingHorizontal: spacing.md + 4 },
-  leadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
-  lead: { fontSize: 15, fontWeight: '800', color: colors.text },
+  leadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm + 2 },
+  lead: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   private: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  privateText: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  privateText: { fontSize: 13, fontWeight: '600', color: colors.muted },
   title: { color: colors.heroText, fontSize: 20, lineHeight: 26, fontWeight: '800', letterSpacing: -0.2 },
   big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: 2 },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
