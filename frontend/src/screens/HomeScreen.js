@@ -19,14 +19,15 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 /**
- * Home, where the journey continues after onboarding: the hours you've bought back first, then the
- * journey's last two steps as cards: Step 3 · Delegation (your handoffs, where each one is) and Step 4
- * · Reinvest (the freed time waiting for a new job). When something else comes first (new tasks to
+ * Home, where the journey continues after onboarding, on the journey's sunrise: your progress first
+ * (hours back; delegated and reinvested), then the last two steps as cards: Step 3 · Delegation, one
+ * question per draining task ("Have you delegated it?"), and Step 4 · Reinvest, where every yes lands
+ * with the hours it freed, ready for a new job. When something else comes first (new tasks to
  * rate, or a finished round), it shows on top with one button.
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, summary, refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs, fills, summary, refresh: refreshHandoffs, update } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
@@ -78,9 +79,12 @@ export default function HomeScreen({ navigation }) {
   const askToSave = user?.isGuest && (summary?.done || 0) > 0;
   const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : '';
   const openHandoff = (activity) => navigation.navigate('HandoffDetail', { activity });
+  // "Have you delegated it?" Yes: handed off, its hours move to Reinvest. Undo puts it back.
+  const setDelegated = (activity, yes) =>
+    update(activity, { status: yes ? 'done' : 'mine' }).catch((err) => Alert.alert("Couldn't save that", err.message));
 
   return (
-    <Screen edges={['top']}>
+    <Screen edges={['top']} tinted="dawn">
       <View style={styles.header}>
         <Text style={styles.hello} numberOfLines={1}>
           {greeting()}
@@ -103,8 +107,21 @@ export default function HomeScreen({ navigation }) {
         <HoursBackCard summary={summary} onPress={() => navigation.navigate('Handoffs')} />
 
         {/* The journey's last two steps. */}
-        <DelegationCard handoffs={handoffs} onOpen={openHandoff} onSeeAll={() => navigation.navigate('Handoffs')} style={styles.block} />
-        <ReinvestCard summary={summary} fills={fills} onFill={() => navigation.navigate('Fill')} style={styles.block} />
+        <DelegationCard
+          handoffs={handoffs}
+          onDelegated={(activity) => setDelegated(activity, true)}
+          onPlan={openHandoff}
+          onSeeAll={() => navigation.navigate('Handoffs')}
+          style={styles.block}
+        />
+        <ReinvestCard
+          handoffs={handoffs}
+          summary={summary}
+          fills={fills}
+          onUndo={(activity) => setDelegated(activity, false)}
+          onFill={() => navigation.navigate('Fill')}
+          style={styles.block}
+        />
 
         {askToSave ? (
           <Pressable onPress={() => navigation.navigate('Account', { mode: 'save' })} hitSlop={8} style={styles.save} accessibilityRole="button">

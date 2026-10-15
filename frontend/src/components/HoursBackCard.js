@@ -7,44 +7,55 @@ import { formatHours } from '../utils/format';
 import { useStyles } from '../theme/ThemeContext';
 import { brand, spacing } from '../theme';
 
+const week = (hoursADay) => formatHours(hoursADay * WORKDAYS_PER_WEEK);
+
+/** One labelled progress bar that fills once, quietly. */
+function Bar({ label, share, value, color }) {
+  const styles = useStyles(makeStyles);
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withTiming(share, { duration: 900, easing: Easing.out(Easing.cubic) });
+  }, [share, p]);
+  const fill = useAnimatedStyle(() => ({ width: `${p.value * 100}%` }));
+  return (
+    <View style={styles.bar}>
+      <View style={styles.barHead}>
+        <Text style={styles.barLabel}>{label}</Text>
+        <Text style={styles.barValue}>{value}</Text>
+      </View>
+      <View style={styles.track}>
+        <Animated.View style={[styles.fill, { backgroundColor: color }, fill]} />
+      </View>
+    </View>
+  );
+}
+
 /**
- * Home's headline: the hours you've bought back a week, with a bar against every hour that drains
- * you, and the journey's promise under it. Tapping opens your handoffs.
+ * Home's progress, the journey's last two steps at a glance: the hours bought back a week (big),
+ * then two bars: how much of what drains you is delegated, and how much of that freed time is
+ * reinvested. The promise under it. Tapping opens your handoffs.
  */
 export default function HoursBackCard({ summary, onPress }) {
   const styles = useStyles(makeStyles);
-  const bar = useSharedValue(0);
-
   const draining = summary?.drainingHours || 0;
   const bought = Math.min(summary?.boughtBackHours || 0, draining);
-  const nothingDrains = Boolean(summary) && !summary.total;
-  const share = draining ? bought / draining : nothingDrains ? 1 : 0;
-
-  // One quiet fill (no count-up, no bounce).
-  useEffect(() => {
-    bar.value = withTiming(share, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [share, bar]);
-  const fill = useAnimatedStyle(() => ({ width: `${bar.value * 100}%` }));
+  const filled = Math.min(summary?.filledHours || 0, bought);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Hours back: ${formatHours(bought * WORKDAYS_PER_WEEK)} a week of ${formatHours(draining * WORKDAYS_PER_WEEK)} that drain you. Open your handoffs.`}
+      accessibilityLabel={`Hours back: ${week(bought)} a week. Delegated ${week(bought)} of ${week(draining)}; reinvested ${week(filled)} of ${week(bought)}. Open your handoffs.`}
       style={({ pressed }) => pressed && { opacity: 0.95 }}
     >
       <HeroCard style={styles.card}>
         <Text style={styles.label}>Hours back</Text>
         <Text style={styles.big}>
-          {summary ? formatHours(bought * WORKDAYS_PER_WEEK) : '–'}
+          {summary ? week(bought) : '–'}
           <Text style={styles.per}> a week</Text>
         </Text>
-        <View style={styles.track}>
-          <Animated.View style={[styles.fill, fill]} />
-        </View>
-        <Text style={styles.sub}>
-          {nothingDrains ? 'Nothing in your routine drains you' : `of ${formatHours(draining * WORKDAYS_PER_WEEK)} a week that drain you`}
-        </Text>
+        <Bar label="Delegated" share={draining ? bought / draining : 0} value={`${week(bought)} of ${week(draining)}`} color={brand.apricot} />
+        <Bar label="Reinvested" share={bought ? filled / bought : 0} value={`${week(filled)} of ${week(bought)}`} color={brand.mint} />
         <Text style={styles.promise}>for the work and life you love</Text>
       </HeroCard>
     </Pressable>
@@ -56,8 +67,11 @@ const makeStyles = (colors) => ({
   label: { color: colors.heroMuted, fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
   big: { color: colors.heroText, fontSize: 36, lineHeight: 44, fontWeight: '800', letterSpacing: -1, marginTop: 2 },
   per: { fontSize: 18, fontWeight: '700', color: colors.heroMuted, letterSpacing: 0 },
-  track: { height: 10, borderRadius: 5, marginTop: spacing.sm + 2, backgroundColor: colors.heroChip, overflow: 'hidden' },
-  fill: { height: 10, borderRadius: 5, backgroundColor: brand.apricot },
-  sub: { color: colors.heroMuted, fontSize: 13, fontWeight: '600', marginTop: spacing.sm },
-  promise: { color: brand.apricot, fontSize: 14, fontWeight: '800', marginTop: 4 },
+  bar: { marginTop: spacing.sm + 2 },
+  barHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  barLabel: { color: colors.heroText, fontSize: 13, fontWeight: '700' },
+  barValue: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.heroChip, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 4 },
+  promise: { color: brand.apricot, fontSize: 14, fontWeight: '800', marginTop: spacing.md },
 });
