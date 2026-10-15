@@ -123,8 +123,11 @@ export default function BuybackRateScreen({ navigation, route }) {
           {rateText}
           {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
         </Text>
-        <Text style={styles.small}>Your hour is worth {amount ? `${formatMoney(effectiveHourlyRate, currency)}/hr` : '–'}</Text>
-        <Text style={styles.small}>{WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+        <Text style={styles.worth}>
+          Your hour is worth{' '}
+          <Text style={styles.worthValue}>{amount ? `${formatMoney(effectiveHourlyRate, currency)}/hr` : '–'}</Text>
+        </Text>
+        <Text style={styles.hours}>{WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
       </HeroCard>
 
       <ErrorBanner message={error} />
@@ -143,5 +146,8 @@ const makeStyles = (colors) => ({
   title: { color: colors.heroText, fontSize: 24, fontWeight: '800', letterSpacing: -0.3, textAlign: 'center' },
   big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.sm },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
-  small: { color: colors.heroMuted, fontSize: 13, lineHeight: 19, fontWeight: '600', textAlign: 'center' },
+  // Under the rate, readable at a glance: your hour's worth in white, the hours a step quieter.
+  worth: { color: colors.heroText, fontSize: 16, lineHeight: 22, fontWeight: '600', textAlign: 'center' },
+  worthValue: { fontWeight: '800' },
+  hours: { color: colors.heroMuted, fontSize: 14, lineHeight: 20, fontWeight: '600', textAlign: 'center', marginTop: 2 },
 });
