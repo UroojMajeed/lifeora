@@ -6,7 +6,6 @@ import StepHeader from '../../components/StepHeader';
 import MoneyInput from '../../components/MoneyInput';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
-import { HeroCard } from '../../components/Card';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { WORK_HOURS_PER_YEAR, calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
@@ -118,7 +117,7 @@ export default function BuybackRateScreen({ navigation, route }) {
       {/* 2) The answer, one card: the rate, your hour's worth and what it's based on. Always here at
           full strength, following what you type ("–" until there's a number). */}
       <View style={{ marginTop: gap }}>
-        <HeroCard style={styles.hero}>
+        <View style={styles.hero}>
           <View style={styles.heroBody}>
             <Text style={styles.title}>Your Buyback Rate</Text>
             <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
@@ -127,7 +126,7 @@ export default function BuybackRateScreen({ navigation, route }) {
             </Text>
             {/* Your hour's worth, highlighted in an apricot chip. */}
             <View style={styles.worthChip}>
-              <Ionicons name="time" size={14} color={brand.apricot} />
+              <Ionicons name="time" size={14} color={colors.accentText} />
               <Text style={styles.worthText}>
                 Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
               </Text>
@@ -135,10 +134,10 @@ export default function BuybackRateScreen({ navigation, route }) {
           </View>
           {/* The work year it's based on, stuck to the bottom of the card. */}
           <View style={styles.basis}>
-            <Ionicons name="calendar-outline" size={14} color={colors.heroMuted} />
+            <Ionicons name="calendar-outline" size={14} color={colors.muted} />
             <Text style={styles.basisText}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
           </View>
-        </HeroCard>
+        </View>
       </View>
 
       {/* 3) What it means for you, last and on its own: a warm, highlighted box. */}
@@ -164,13 +163,13 @@ const makeStyles = (colors) => ({
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   private: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   privateText: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  // The answer card, one centred column.
-  // No outer padding: the body, then the hours strip running edge to edge along the bottom.
-  hero: { padding: 0, overflow: 'hidden' },
+  // The answer card: outlined in teal (the tip below is outlined in apricot), light inside. No inner
+  // padding on the card itself: the body, then the hours strip running edge to edge along the bottom.
+  hero: { borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface, overflow: 'hidden' },
   heroBody: { alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.md + 4 },
-  title: { color: colors.heroText, fontSize: 24, lineHeight: 30, fontWeight: '800', letterSpacing: -0.3 },
-  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: spacing.xs },
-  per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
+  title: { color: colors.text, fontSize: 24, lineHeight: 30, fontWeight: '800', letterSpacing: -0.3 },
+  big: { color: colors.accentText, fontWeight: '800', letterSpacing: -1, marginTop: spacing.xs },
+  per: { fontWeight: '600', color: colors.muted, letterSpacing: 0 },
   worthChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,11 +179,11 @@ const makeStyles = (colors) => ({
     paddingVertical: 7,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(245,185,113,0.55)',
-    backgroundColor: 'rgba(245,185,113,0.16)',
+    borderColor: brand.apricot,
+    backgroundColor: colors.accentSoft,
   },
-  worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
-  worthValue: { color: brand.apricot, fontWeight: '800' },
+  worthText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  worthValue: { color: colors.accentText, fontWeight: '800' },
   basis: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -192,11 +191,11 @@ const makeStyles = (colors) => ({
     gap: 6,
     paddingVertical: 11,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.heroChip,
+    backgroundColor: colors.primarySoft,
     borderTopWidth: 1,
-    borderTopColor: colors.heroDivider,
+    borderTopColor: colors.border,
   },
-  basisText: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
+  basisText: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   // The tip: warm and filled, with a solid apricot icon, so it reads as the takeaway.
   tip: {
     flexDirection: 'row',
