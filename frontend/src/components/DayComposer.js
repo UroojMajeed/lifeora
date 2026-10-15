@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { suggestionsFor } from '../constants/content';
@@ -7,24 +7,30 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
-const CHIP_ROW = 44; // the suggestions row's height (chips, or a hint in their place)
 
 /**
  * Adding tasks to "Your routine", like a chat: type a task (or tap a suggestion) and it drops straight
  * into the list; the text box stays ready for the next one. Time is set on each task's card, not here.
- * The suggestions float above the white chat bar, so the two never look alike.
+ * The suggestions float above the white chat bar, so the two never look alike. While the keyboard is
+ * open they're hidden (you're typing your own), so nothing moves as you type.
  */
 export default function DayComposer({ role, items, onAdd }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const inputRef = useRef(null);
   const [draft, setDraft] = useState('');
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTyping(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTyping(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   const taken = (n) => items.some((i) => sameName(i.activity, n));
-  const query = draft.trim().toLowerCase();
-  const suggestions = suggestionsFor(role)
-    .filter((n) => !taken(n))
-    .filter((n) => !query || n.toLowerCase().includes(query));
+  const suggestions = suggestionsFor(role).filter((n) => !taken(n));
   const canSend = Boolean(draft.trim()) && !taken(draft);
   const duplicate = Boolean(draft.trim()) && taken(draft);
 
@@ -38,35 +44,26 @@ export default function DayComposer({ role, items, onAdd }) {
 
   return (
     <View>
-      {/* Suggestions: outlined chips on the page itself, above the chat bar. While you type, this area
-          keeps its height (matches, or a short hint in the same spot), so nothing above it jumps. */}
-      {suggestions.length || query ? (
+      {/* Suggestions: outlined chips on the page itself, above the chat bar (hidden while typing). */}
+      {suggestions.length && !typing ? (
         <>
-          <Text style={styles.label}>{query ? 'Matches' : 'Suggestions'}</Text>
-          {duplicate || !suggestions.length ? (
-            <View style={styles.hintRow}>
-              <Text style={[styles.hint, duplicate && styles.warn]} numberOfLines={1}>
-                {duplicate ? "That's already in your routine." : `No match. Tap ↑ to add “${draft.trim()}”.`}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
-              {suggestions.slice(0, 12).map((n) => (
-                <Pressable
-                  key={n}
-                  onPress={() => add(n)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Add ${n}`}
-                  style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
-                >
-                  <Ionicons name="add" size={15} color={colors.primary} />
-                  <Text style={styles.chipText} numberOfLines={1}>
-                    {n}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+          <Text style={styles.label}>Suggestions</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
+            {suggestions.slice(0, 12).map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => add(n)}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${n}`}
+                style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="add" size={15} color={colors.primary} />
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {n}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </>
       ) : null}
 
@@ -84,8 +81,8 @@ export default function DayComposer({ role, items, onAdd }) {
             maxLength={60}
             returnKeyType="send"
             blurOnSubmit={false}
-            style={styles.input}
-            accessibilityLabel="Task name"
+            style={[styles.input, duplicate && styles.inputDuplicate]}
+            accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
           />
           <Pressable
             onPress={() => add(draft)}
@@ -112,7 +109,7 @@ const makeStyles = (colors, isDark) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: 6,
   },
-  row: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm + 2, height: CHIP_ROW, alignItems: 'flex-start' },
+  row: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm + 2 },
   chip: {
     maxWidth: 220,
     flexDirection: 'row',
@@ -149,8 +146,6 @@ const makeStyles = (colors, isDark) => ({
   },
   send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   sendOff: { opacity: 0.35 },
-  // Same height as a row of chips, so swapping between them never moves anything.
-  hintRow: { height: CHIP_ROW, justifyContent: 'center', paddingHorizontal: spacing.lg },
-  hint: { fontSize: 13, color: colors.muted },
-  warn: { color: colors.error, fontWeight: '600' },
+  // Already in the list: the typed text turns red (and send stays off).
+  inputDuplicate: { color: colors.error },
 });
