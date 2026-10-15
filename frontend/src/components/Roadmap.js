@@ -15,7 +15,7 @@ const SUN = 44; // the destination: bigger than a step, with a soft halo
 const HALO = SUN + 22;
 const GAP = 14; // between the road and the words
 const ROAD_MIN = 10;
-const ROAD_MAX = 44; // the longest a stretch of road gets on tall screens
+const ROAD_MAX = 84; // the road stretches to spread the steps over the screen (capped on very tall ones)
 // One stop at a time, calm: each number appears and lights up, then the road runs on to the next.
 const STOP_MS = 1100;
 const END_MS = 1300; // the sun, then the promise
@@ -149,7 +149,7 @@ export default function Roadmap() {
 
 const makeStyles = (colors, isDark) => ({
   // In the middle of the room between the heading and the button; the block itself reads straight down.
-  wrap: { flex: 1, alignSelf: 'center', justifyContent: 'center', paddingVertical: spacing.md },
+  wrap: { flex: 1, alignSelf: 'center', justifyContent: 'center', paddingVertical: spacing.lg },
   // A stop grows only as far as its stretch of road can (so the road always meets the next number).
   stop: { flex: 1, minHeight: NODE + ROAD_MIN + 8, maxHeight: NODE + ROAD_MAX + 8 },
   row: { flexDirection: 'row', alignItems: 'center' },
