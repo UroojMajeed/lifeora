@@ -225,7 +225,9 @@ export function handoffIdeas(item) {
 export const STEPS = [
   // Step 1 'About you' asks for the role and the yearly pay together (the role used to be its own step).
   { key: 'buyback_rate', screen: 'BuybackRate' },
-  { key: 'schedule', screen: 'Schedule' },
+  // Step 2, the time and energy audit: tasks with their time, money and energy, all on one screen.
+  // (The routine screen, Schedule, is still used to edit the routine later and for new rounds.)
+  { key: 'schedule', screen: 'Audit' },
   { key: 'swipe', screen: 'Swipe' },
 ];
 

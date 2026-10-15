@@ -17,8 +17,7 @@ const MAX_ACTIVITIES = 30;
 /**
  * Journey step 2, "Time and energy audit", all in one place: add tasks like a chat (type one or tap a
  * suggestion) and set each one's time, money and energy right on its card. A finished card folds to
- * one line and the next unfinished one opens. (Tried alongside the separate routine and rating
- * screens, which come after it for now.)
+ * one line and the next unfinished one opens. Continue leads to the DRIP Matrix.
  */
 export default function AuditScreen({ navigation }) {
   const { onboarding, saveStep } = useOnboarding();
@@ -102,8 +101,9 @@ export default function AuditScreen({ navigation }) {
     setLoading(true);
     try {
       await saving.current;
-      await saveStep({ schedule: items }, 'schedule');
-      navigation.navigate('Schedule');
+      // Everything is rated already, so the rating screen opens straight on the DRIP Matrix.
+      await saveStep({ schedule: items }, 'swipe');
+      navigation.navigate('Swipe');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -144,7 +144,7 @@ export default function AuditScreen({ navigation }) {
         {!keyboardOpen && items.length ? (
           <View style={styles.actionRow}>
             <Button
-              title={ready ? 'Continue' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
+              title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
               icon={ready ? 'arrow-forward' : undefined}
               onPress={next}
               loading={loading}

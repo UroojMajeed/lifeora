@@ -57,7 +57,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         return;
       }
       await saveStep({ annualIncome: amount, currency }, 'schedule');
-      // Next: the combined time and energy audit (tried before the separate routine and rating screens).
+      // Next: the time and energy audit.
       navigation.navigate('Audit');
     } catch (err) {
       setError(err.message);
