@@ -20,7 +20,7 @@ const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, 
  * Journey step 1, "Know your worth", as one converter card (like a money converter): your yearly pay
  * goes in at the top (light half), your Buyback Rate comes out at the bottom (filled dark half), big,
  * with your hour's worth in an apricot chip and the 2,000 work hours it's based on. Under the card,
- * as a plain line, what it means for you. Everything follows what you type. With `editing` (from
+ * in a warm highlighted box, what it means for you. Everything follows what you type. With `editing` (from
  * Me) it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
@@ -136,9 +136,11 @@ export default function BuybackRateScreen({ navigation, route }) {
           </LinearGradient>
         </View>
 
-        {/* What it means for you: a plain line under the card, not another box. */}
+        {/* What it means for you, on its own under the card: a warm, highlighted box. */}
         <View style={styles.tip}>
-          <Ionicons name="bulb" size={20} color={colors.accentText} style={styles.tipIcon} />
+          <View style={styles.tipIcon}>
+            <Ionicons name="bulb" size={18} color={colors.onColor} />
+          </View>
           <Text style={styles.tipText}>
             Anything someone else can do for{' '}
             <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
@@ -182,9 +184,19 @@ const makeStyles = (colors) => ({
   worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
   worthValue: { color: brand.apricot, fontWeight: '800' },
   basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', marginTop: spacing.sm + 2 },
-  // The tip: a plain line with a bulb, the rate in warm amber.
-  tip: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.xs },
-  tipIcon: { marginTop: 3 },
-  tipText: { flex: 1, color: colors.text, fontSize: 17, lineHeight: 25, fontWeight: '700' },
+  // The tip: warm and filled, with a solid apricot icon, so it reads as the takeaway.
+  tip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 4,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: brand.apricot,
+    backgroundColor: colors.accentSoft,
+  },
+  tipIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
+  tipText: { flex: 1, color: colors.text, fontSize: 16, lineHeight: 23, fontWeight: '700' },
   tipRate: { color: colors.accentText, fontWeight: '800' },
 });
