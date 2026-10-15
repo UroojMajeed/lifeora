@@ -65,7 +65,10 @@ export default function JourneyScreen({ navigation }) {
       <View style={styles.top}>
         <ThemeToggle />
       </View>
-      <Text style={type.title}>How you buy back your time</Text>
+      {/* One line on every phone: it shrinks a little on very narrow screens rather than wrap. */}
+      <Text style={type.title} numberOfLines={1} adjustsFontSizeToFit>
+        Buy back your time
+      </Text>
       <View style={styles.note}>
         <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
         <Text style={styles.noteText}>Setup takes 2 minutes · Private to you</Text>
