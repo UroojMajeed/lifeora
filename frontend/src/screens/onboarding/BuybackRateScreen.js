@@ -17,11 +17,10 @@ import { brand, radius, spacing } from '../../theme';
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
- * Journey step 1, "Know your worth": one answer (what your business pays you a year), then the
- * answer card: your Buyback Rate big in the middle, your hour's worth in an apricot chip, and the
- * 2,000 work hours it comes from on a strip along the card's foot. Above it, what the rate means,
- * in its own soft card. Everything follows what you type. With `editing` (from Me) it saves the
- * new pay.
+ * Journey step 1, "Know your worth": the question (your yearly pay, private to you), then the answer
+ * in one card, read top to bottom: your Buyback Rate big in the middle, your hour's worth in an
+ * apricot chip, the 2,000 work hours it's based on, and what it means for you. Faded until you type,
+ * then it follows what you type. With `editing` (from Me) it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
@@ -116,20 +115,10 @@ export default function BuybackRateScreen({ navigation, route }) {
         />
       </View>
 
-      {/* 2) What it means, in its own soft card, before the numbers. */}
-      <View style={[styles.tip, { marginTop: gap }]}>
-        <View style={styles.tipIcon}>
-          <Ionicons name="bulb" size={18} color={colors.accentText} />
-        </View>
-        <Text style={styles.tipText}>
-          Anything someone else can do for{' '}
-          <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
-        </Text>
-      </View>
-
-      {/* 3) The answer: always here, following what you type ("–" until there's a number). */}
-      <HeroCard style={[styles.hero, { marginTop: spacing.md }]}>
-        <View style={styles.heroBody}>
+      {/* 2) The answer, one card in reading order: the rate, your hour's worth, what it's based on,
+          then what it means. Always here and following what you type; faded until there's a number. */}
+      <View style={[{ marginTop: gap }, !amount && styles.waiting]}>
+        <HeroCard style={styles.hero}>
           <Text style={styles.title}>Buyback Rate</Text>
           <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
             {rateText}
@@ -142,13 +131,20 @@ export default function BuybackRateScreen({ navigation, route }) {
               Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
             </Text>
           </View>
-        </View>
-        {/* The work year it's based on, on a strip along the card's foot. */}
-        <View style={styles.basis}>
-          <Ionicons name="calendar-outline" size={14} color={colors.heroMuted} />
-          <Text style={styles.basisText}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
-        </View>
-      </HeroCard>
+          <Text style={styles.basis}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+
+          {/* What it means for you, last. */}
+          <View style={styles.divider} />
+          <View style={styles.tip}>
+            <Ionicons name="bulb" size={18} color={brand.apricot} style={styles.tipIcon} />
+            <Text style={styles.tipText}>
+              Anything someone else can do for{' '}
+              <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be
+              yours.
+            </Text>
+          </View>
+        </HeroCard>
+      </View>
 
       <ErrorBanner message={error} />
     </Screen>
@@ -162,11 +158,11 @@ const makeStyles = (colors) => ({
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   private: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   privateText: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  // The answer card: the body, then a strip along its foot (so the card carries no outer padding).
-  hero: { padding: 0, overflow: 'hidden' },
-  heroBody: { alignItems: 'center', paddingTop: spacing.lg, paddingBottom: spacing.md + 4, paddingHorizontal: spacing.md + 4 },
+  // The answer card, one centred column.
+  waiting: { opacity: 0.6 },
+  hero: { alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.md + 4 },
   title: { color: colors.heroText, fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
-  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: 2 },
+  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: spacing.xs },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
   worthChip: {
     flexDirection: 'row',
@@ -182,30 +178,10 @@ const makeStyles = (colors) => ({
   },
   worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
   worthValue: { color: brand.apricot, fontWeight: '800' },
-  basis: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.heroChip,
-    borderTopWidth: 1,
-    borderTopColor: colors.heroDivider,
-  },
-  basisText: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
-  // The tip: a soft, warm card of its own.
-  tip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 4,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.goldLine,
-    backgroundColor: colors.accentSoft,
-  },
-  tipIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  tipText: { flex: 1, fontSize: 15, lineHeight: 22, fontWeight: '600', color: colors.text },
-  tipRate: { color: colors.accentText, fontWeight: '800' },
+  basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', marginTop: spacing.sm },
+  divider: { alignSelf: 'stretch', height: 1, backgroundColor: colors.heroDivider, marginVertical: spacing.md },
+  tip: { alignSelf: 'stretch', flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start' },
+  tipIcon: { marginTop: 2 },
+  tipText: { flex: 1, color: colors.heroText, fontSize: 15, lineHeight: 22, fontWeight: '600' },
+  tipRate: { color: brand.apricot, fontWeight: '800' },
 });
