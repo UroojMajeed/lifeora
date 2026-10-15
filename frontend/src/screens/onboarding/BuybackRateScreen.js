@@ -91,7 +91,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         editing={editing}
         eyebrow={editing ? null : 'Step 1 of 4'}
         title={editing ? 'Your yearly pay' : 'Know your worth'}
-        subtitle={editing ? 'A rough number is fine.' : 'One number, and we work out what your time is worth.'}
+        subtitle={editing ? 'A rough number is fine.' : null}
       />
 
       {/* 1) The question */}
