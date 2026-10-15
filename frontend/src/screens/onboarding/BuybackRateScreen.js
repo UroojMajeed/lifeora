@@ -66,7 +66,7 @@ export default function BuybackRateScreen({ navigation, route }) {
     }
   };
 
-  const buttonTitle = editing ? 'Save' : ready ? 'Map your routine' : 'Add your yearly pay';
+  const buttonTitle = editing ? 'Save' : ready ? 'Time and energy audit' : 'Add your yearly pay';
 
   return (
     // Scrolling means 'done typing': the keyboard closes so the whole screen is visible again.
