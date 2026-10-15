@@ -14,6 +14,7 @@ import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { noticeBoughtBack } from '../storage/progress';
+import { loadReminders, setReminder } from '../storage/reminders';
 import { greeting, todaysMove } from '../constants/home';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -32,6 +33,7 @@ export default function HomeScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
   const [startingRound, setStartingRound] = useState(false);
+  const [reminders, setReminders] = useState({}); // "Remind me later" times, kept on this phone
 
   const schedule = onboarding?.schedule || [];
 
@@ -39,6 +41,7 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       refreshHandoffs();
+      loadReminders().then(setReminders);
     }, [refreshHandoffs])
   );
 
@@ -109,7 +112,9 @@ export default function HomeScreen({ navigation }) {
         {/* The journey's last two steps. */}
         <DelegationCard
           handoffs={handoffs}
+          reminders={reminders}
           onDelegated={(activity) => setDelegated(activity, true)}
+          onRemind={(activity, when) => setReminder(activity, when).then(setReminders)}
           onPlan={openHandoff}
           style={styles.block}
         />

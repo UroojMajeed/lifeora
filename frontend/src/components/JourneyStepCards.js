@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { LayoutAnimation, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Card } from './Card';
 import Button from './Button';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
+import { reminderLabel, reminderOptions } from '../storage/reminders';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-const SHOW = 1; // one task at a time on Home; the rest open in the card with "Show all"
 const week = (hoursADay) => formatHours(hoursADay * WORKDAYS_PER_WEEK);
 
 /** The journey's numbered circle and the step's name on the left, a short status on the right. */
@@ -27,94 +28,173 @@ function StepHead({ step, name, status }) {
 }
 
 /**
- * Journey step 3 on Home, one task at a time (the biggest drain first; "Show all" opens the rest in
- * the card), each with one simple question: "Have you delegated it?"
- * Yes marks it handed off (its hours move to Reinvest); No keeps it here, with a way into the
- * handoff steps for help. `onDelegated(activity, yes)` saves the answer.
+ * Journey step 3 on Home, one task at a time: your next handoff, highlighted, with what it frees
+ * ("Delegate it and free up 15h a week…"). "Delegate it now" marks it delegated (its hours move to
+ * Reinvest); "Remind me later" sets it aside until a chosen time (`reminders`: { activity: ISO }),
+ * when it comes back to the top. The other tasks open in the card with "Show all".
  */
-export function DelegationCard({ handoffs = [], onDelegated, onPlan, style }) {
+export function DelegationCard({ handoffs = [], reminders = {}, onDelegated, onRemind, onPlan, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const [saidNo, setSaidNo] = useState(() => new Set());
-  const [all, setAll] = useState(false); // the full list, opened from the card
-  const open = handoffs.filter((h) => h.status !== 'done').sort((a, b) => b.hours - a.hours);
+  const [all, setAll] = useState(false); // the other tasks, opened from the card
+  const [picking, setPicking] = useState(false); // choosing a reminder time
+  const now = Date.now();
 
-  const answer = (activity, yes) => {
-    Haptics.impactAsync(yes ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  const open = handoffs.filter((h) => h.status !== 'done');
+  const remindAt = (h) => (reminders[h.activity] ? new Date(reminders[h.activity]).getTime() : null);
+  // Set aside until later: the reminder is still ahead.
+  const later = open.filter((h) => remindAt(h) > now).sort((a, b) => remindAt(a) - remindAt(b));
+  // Up now: reminders that are due first (they came back), then the biggest drains.
+  const active = open
+    .filter((h) => !(remindAt(h) > now))
+    .sort((a, b) => Boolean(remindAt(b)) - Boolean(remindAt(a)) || b.hours - a.hours);
+  const focus = active[0];
+  const rest = active.slice(1);
+  const due = focus && remindAt(focus);
+
+  const delegate = (activity) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    if (yes) onDelegated(activity);
-    else setSaidNo((s) => new Set(s).add(activity));
+    setPicking(false);
+    onDelegated(activity);
+    if (reminders[activity]) onRemind(activity, null);
+  };
+  const remind = (activity, date) => {
+    Haptics.selectionAsync().catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPicking(false);
+    onRemind(activity, date);
   };
 
   let content;
   if (!handoffs.length) {
-    content = <Text style={styles.note}>Nothing in your routine drains you. Nothing to delegate.</Text>;
+    content = (
+      <Card style={styles.card}>
+        <Text style={styles.note}>Nothing in your routine drains you. Nothing to delegate.</Text>
+      </Card>
+    );
   } else if (!open.length) {
     content = (
-      <View style={styles.noteRow}>
-        <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-        <Text style={styles.noteStrong}>You've delegated everything that drained you.</Text>
-      </View>
+      <Card style={styles.card}>
+        <View style={styles.noteRow}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+          <Text style={styles.noteStrong}>You've delegated everything that drained you.</Text>
+        </View>
+      </Card>
     );
   } else {
-    content = open.slice(0, all ? open.length : SHOW).map((h, i) => (
-      <View key={h.activity} style={[styles.task, i > 0 && styles.line]}>
-        <Text style={styles.name} numberOfLines={1}>
-          {h.activity} <Text style={styles.hours}>· {week(h.hours)} a week</Text>
-        </Text>
-        {saidNo.has(h.activity) ? (
-          // Not yet: the way in to doing it, without nagging.
-          <Pressable onPress={() => onPlan(h.activity)} hitSlop={6} accessibilityRole="button" style={styles.plan}>
-            <Text style={styles.planText}>Not yet. Plan the handoff</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-          </Pressable>
-        ) : (
-          <View style={styles.ask}>
-            <Text style={styles.question}>Have you delegated it?</Text>
-            <Pressable
-              onPress={() => answer(h.activity, false)}
-              accessibilityRole="button"
-              accessibilityLabel={`${h.activity}: not delegated yet`}
-              style={({ pressed }) => [styles.no, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={styles.noText}>No</Text>
+    content = (
+      <>
+        {focus ? (
+          // Your next handoff, highlighted.
+          <LinearGradient colors={colors.cream} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.focus}>
+            <View style={styles.tag}>
+              <Ionicons name={due ? 'alarm' : 'hand-left'} size={13} color={colors.accentText} />
+              <Text style={styles.tagText}>{due ? 'Reminder: time to delegate' : 'Your next handoff'}</Text>
+            </View>
+            <Text style={styles.focusName} numberOfLines={2}>
+              {focus.activity}
+            </Text>
+            <Text style={styles.focusLine}>
+              Delegate it and free up <Text style={styles.focusHours}>{week(focus.hours)} a week</Text> for the work and life you love.
+            </Text>
+            <Button title="Delegate it now" icon="arrow-forward" onPress={() => delegate(focus.activity)} style={styles.focusButton} />
+            {picking ? (
+              <View style={styles.times}>
+                {reminderOptions().map((o) => (
+                  <Pressable
+                    key={o.key}
+                    onPress={() => remind(focus.activity, o.date)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remind me ${o.label}`}
+                    style={({ pressed }) => [styles.time, pressed && { opacity: 0.7 }]}
+                  >
+                    <Text style={styles.timeText}>{o.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setPicking(true);
+                }}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.later, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="alarm-outline" size={16} color={colors.text} />
+                <Text style={styles.laterText}>Remind me later</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={() => onPlan(focus.activity)} hitSlop={6} accessibilityRole="button" style={styles.plan}>
+              <Text style={styles.planText}>Need help? Plan the handoff</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.primary} />
             </Pressable>
-            <Pressable
-              onPress={() => answer(h.activity, true)}
-              accessibilityRole="button"
-              accessibilityLabel={`${h.activity}: yes, delegated`}
-              style={({ pressed }) => [styles.yes, pressed && { opacity: 0.85 }]}
-            >
-              <Ionicons name="checkmark" size={15} color={colors.onColor} />
-              <Text style={styles.yesText}>Yes</Text>
+          </LinearGradient>
+        ) : (
+          <Card style={styles.card}>
+            <Text style={styles.note}>Everything else is set for later. Your reminders are below.</Text>
+          </Card>
+        )}
+
+        {/* Set aside until a reminder. */}
+        {later.map((h) => (
+          <View key={h.activity} style={styles.laterRow}>
+            <Ionicons name="alarm-outline" size={14} color={colors.muted} />
+            <Text style={styles.laterRowText} numberOfLines={1}>
+              {h.activity} · {reminderLabel(reminders[h.activity])}
+            </Text>
+            <Pressable onPress={() => onRemind(h.activity, null)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Cancel the reminder for ${h.activity}`}>
+              <Ionicons name="close" size={16} color={colors.muted} />
             </Pressable>
           </View>
-        )}
-      </View>
-    ));
+        ))}
+
+        {/* The other tasks, opened from the card. */}
+        {rest.length ? (
+          <>
+            {all ? (
+              <Card style={[styles.card, styles.restCard]}>
+                {rest.map((h, i) => (
+                  <View key={h.activity} style={[styles.restRow, i > 0 && styles.line]}>
+                    <Text style={styles.restName} numberOfLines={1}>
+                      {h.activity} <Text style={styles.hours}>· {week(h.hours)} a week</Text>
+                    </Text>
+                    <Pressable
+                      onPress={() => delegate(h.activity)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delegate ${h.activity} now`}
+                      style={({ pressed }) => [styles.small, pressed && { opacity: 0.8 }]}
+                    >
+                      <Text style={styles.smallText}>Delegate</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </Card>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setAll((v) => !v);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: all }}
+              style={styles.link}
+            >
+              <Text style={styles.linkText}>{all ? 'Show less' : `Show all ${active.length} tasks`}</Text>
+              <Ionicons name={all ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
+            </Pressable>
+          </>
+        ) : null}
+      </>
+    );
   }
 
   return (
     <View style={style}>
       <StepHead step={3} name="Delegation" status={open.length ? `${open.length} left` : null} />
-      <Card style={styles.card}>
-        {content}
-        {open.length > SHOW ? (
-          <Pressable
-            onPress={() => {
-              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-              setAll((v) => !v);
-            }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: all }}
-            style={styles.link}
-          >
-            <Text style={styles.linkText}>{all ? 'Show less' : `Show all ${open.length} tasks`}</Text>
-            <Ionicons name={all ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primary} />
-          </Pressable>
-        ) : null}
-      </Card>
+      {content}
     </View>
   );
 }
@@ -194,19 +274,31 @@ const makeStyles = (colors) => ({
   status: { fontSize: 13, fontWeight: '700', color: colors.muted },
   card: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   line: { borderTopWidth: 1, borderTopColor: colors.border },
-  // Delegation: one task, one question.
-  task: { paddingVertical: spacing.sm + 4 },
-  name: { fontSize: 16, fontWeight: '800', color: colors.text },
-  hours: { fontSize: 14, fontWeight: '600', color: colors.muted },
-  ask: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  question: { flex: 1, fontSize: 14, color: colors.muted },
-  no: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border },
-  noText: { fontSize: 14, fontWeight: '700', color: colors.text },
-  yes: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.pill, backgroundColor: colors.primary },
-  yesText: { fontSize: 14, fontWeight: '800', color: colors.onColor },
-  plan: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 6 },
-  planText: { fontSize: 14, fontWeight: '700', color: colors.primary },
-  link: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', paddingTop: spacing.sm, paddingBottom: spacing.xs },
+  // Delegation: your next handoff, highlighted (warm cream with a gold edge).
+  focus: { padding: spacing.md + 4, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.goldLine },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tagText: { fontSize: 12, fontWeight: '800', color: colors.accentText, letterSpacing: 0.8, textTransform: 'uppercase' },
+  focusName: { fontSize: 22, lineHeight: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginTop: 6 },
+  focusLine: { fontSize: 15, lineHeight: 22, color: colors.text, marginTop: 4 },
+  focusHours: { fontWeight: '800', color: colors.accentText },
+  focusButton: { marginTop: spacing.md },
+  later: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 46, marginTop: spacing.sm, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
+  laterText: { fontSize: 15, fontWeight: '700', color: colors.text },
+  times: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  time: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },
+  timeText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+  plan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: spacing.sm + 2 },
+  planText: { fontSize: 13, fontWeight: '700', color: colors.primary },
+  // Reminders set, and the other tasks.
+  laterRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+  laterRowText: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
+  restCard: { marginTop: spacing.sm },
+  restRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 50 },
+  restName: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
+  hours: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  small: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primary },
+  smallText: { fontSize: 13, fontWeight: '700', color: colors.onColor },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', paddingTop: spacing.sm + 2, paddingBottom: spacing.xs, paddingHorizontal: spacing.xs },
   linkText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   note: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.muted, paddingVertical: spacing.sm },
   noteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
