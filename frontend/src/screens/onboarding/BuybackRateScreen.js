@@ -97,7 +97,7 @@ export default function BuybackRateScreen({ navigation, route }) {
       <View style={{ marginTop: gap - spacing.lg }}>
         {!editing ? (
           <View style={styles.leadRow}>
-            <Text style={styles.lead}>Yearly pay</Text>
+            <Text style={styles.lead}>Your yearly pay</Text>
             <View style={styles.private}>
               <Ionicons name="lock-closed" size={12} color={colors.muted} />
               <Text style={styles.privateText}>Private to you</Text>
@@ -119,19 +119,25 @@ export default function BuybackRateScreen({ navigation, route }) {
           full strength, following what you type ("–" until there's a number). */}
       <View style={{ marginTop: gap }}>
         <HeroCard style={styles.hero}>
-          <Text style={styles.title}>Buyback Rate</Text>
-          <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
-            {rateText}
-            {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
-          </Text>
-          {/* Your hour's worth, highlighted in an apricot chip. */}
-          <View style={styles.worthChip}>
-            <Ionicons name="time" size={14} color={brand.apricot} />
-            <Text style={styles.worthText}>
-              Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
+          <View style={styles.heroBody}>
+            <Text style={styles.title}>Your Buyback Rate</Text>
+            <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
+              {rateText}
+              {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
             </Text>
+            {/* Your hour's worth, highlighted in an apricot chip. */}
+            <View style={styles.worthChip}>
+              <Ionicons name="time" size={14} color={brand.apricot} />
+              <Text style={styles.worthText}>
+                Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
+              </Text>
+            </View>
           </View>
-          <Text style={styles.basis}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+          {/* The work year it's based on, stuck to the bottom of the card. */}
+          <View style={styles.basis}>
+            <Ionicons name="calendar-outline" size={14} color={colors.heroMuted} />
+            <Text style={styles.basisText}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+          </View>
         </HeroCard>
       </View>
 
@@ -159,8 +165,10 @@ const makeStyles = (colors) => ({
   private: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   privateText: { fontSize: 13, fontWeight: '600', color: colors.muted },
   // The answer card, one centred column.
-  hero: { alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: spacing.md + 4 },
-  title: { color: colors.heroText, fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
+  // No outer padding: the body, then the hours strip running edge to edge along the bottom.
+  hero: { padding: 0, overflow: 'hidden' },
+  heroBody: { alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.md + 4 },
+  title: { color: colors.heroText, fontSize: 24, lineHeight: 30, fontWeight: '800', letterSpacing: -0.3 },
   big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, marginTop: spacing.xs },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
   worthChip: {
@@ -177,7 +185,18 @@ const makeStyles = (colors) => ({
   },
   worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
   worthValue: { color: brand.apricot, fontWeight: '800' },
-  basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', marginTop: spacing.sm },
+  basis: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.heroChip,
+    borderTopWidth: 1,
+    borderTopColor: colors.heroDivider,
+  },
+  basisText: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
   // The tip: warm and filled, with a solid apricot icon, so it reads as the takeaway.
   tip: {
     flexDirection: 'row',
