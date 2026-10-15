@@ -148,7 +148,7 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
       minutes: 3,
       cta: `Start round ${round + 1}`,
       action: 'nextRound',
-      go: ['Schedule', { editing: true, round: round + 1 }],
+      go: ['Audit', { round: round + 1 }],
     };
   }
   if (left >= 0.25) {

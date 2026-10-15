@@ -19,8 +19,8 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 /**
- * Home, where the journey continues after onboarding, on the journey's sunrise: your progress first
- * (hours back; delegated and reinvested), then the last two steps as cards: Step 3 · Delegation, one
+ * Home, where the journey continues after onboarding: your progress first (hours back, with rings
+ * for delegated and reinvested), then the last two steps as cards: Step 3 · Delegation, one
  * question per draining task ("Have you delegated it?"), and Step 4 · Reinvest, where every yes lands
  * with the hours it freed, ready for a new job. When something else comes first (new tasks to
  * rate, or a finished round), it shows on top with one button.
@@ -84,7 +84,7 @@ export default function HomeScreen({ navigation }) {
     update(activity, { status: yes ? 'done' : 'mine' }).catch((err) => Alert.alert("Couldn't save that", err.message));
 
   return (
-    <Screen edges={['top']} tinted="dawn">
+    <Screen edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.hello} numberOfLines={1}>
           {greeting()}

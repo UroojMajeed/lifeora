@@ -19,7 +19,9 @@ const MAX_ACTIVITIES = 30;
  * suggestion); each task's card has three buttons, Time, Money and Energy, that open their choices.
  * A finished card takes its DRIP quadrant's colour. Continue leads to the full DRIP Matrix.
  */
-export default function AuditScreen({ navigation }) {
+export default function AuditScreen({ navigation, route }) {
+  // A new round of the Loop (after onboarding): the whole routine gets audited again.
+  const round = route.params?.round;
   const { onboarding, saveStep } = useOnboarding();
   const styles = useStyles(makeStyles);
 
@@ -59,10 +61,10 @@ export default function AuditScreen({ navigation }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, 'schedule').catch(() => {});
+      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, round ? 'done' : 'schedule').catch(() => {});
     }, 600);
     return () => clearTimeout(autosave.current);
-  }, [items, saveStep]);
+  }, [items, saveStep, round]);
 
   // Pressing Time, Money or Energy on a card opens its choices there (pressing it again closes them).
   const showField = (name, field) => {
@@ -110,6 +112,11 @@ export default function AuditScreen({ navigation }) {
     try {
       await saving.current;
       // Everything is rated already, so the rating screen opens straight on the DRIP Matrix.
+      if (round) {
+        await saveStep({ schedule: items }, 'done');
+        navigation.navigate('Swipe', { editing: true });
+        return;
+      }
       await saveStep({ schedule: items }, 'swipe');
       navigation.navigate('Swipe');
     } catch (err) {
@@ -125,9 +132,14 @@ export default function AuditScreen({ navigation }) {
         <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <StepHeader
             step={stepNumber('schedule')}
-            eyebrow="Step 2 of 4"
+            editing={Boolean(round)}
+            eyebrow={round ? `Round ${round}` : 'Step 2 of 4'}
             title="Time and energy audit"
-            subtitle="Add your tasks and set each one's time, money and energy."
+            subtitle={
+              round
+                ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
+                : "Add your tasks and set each one's time, money and energy."
+            }
           />
           {items.length ? (
             <>

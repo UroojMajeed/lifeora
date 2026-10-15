@@ -12,14 +12,15 @@ import { radius, spacing } from '../theme';
 const SHOW = 4; // draining tasks shown on Home; the rest are one tap away
 const week = (hoursADay) => formatHours(hoursADay * WORKDAYS_PER_WEEK);
 
-/** "STEP 3 · DELEGATION" on the left, a short status on the right. */
+/** The journey's numbered circle and the step's name on the left, a short status on the right. */
 function StepHead({ step, name, status }) {
   const styles = useStyles(makeStyles);
   return (
-    <View style={styles.head}>
-      <Text style={styles.step}>
-        Step {step} · <Text style={styles.stepName}>{name}</Text>
-      </Text>
+    <View style={styles.head} accessibilityRole="header" accessibilityLabel={`Step ${step}, ${name}${status ? `. ${status}` : ''}`}>
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{step}</Text>
+      </View>
+      <Text style={styles.stepName}>{name}</Text>
       {status ? <Text style={styles.status}>{status}</Text> : null}
     </View>
   );
@@ -175,9 +176,10 @@ export function ReinvestCard({ handoffs = [], summary, fills = [], onUndo, onFil
 }
 
 const makeStyles = (colors) => ({
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.sm },
-  step: { fontSize: 12, fontWeight: '800', color: colors.primary, letterSpacing: 1, textTransform: 'uppercase' },
-  stepName: { color: colors.text },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  badge: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  badgeText: { fontSize: 12, fontWeight: '800', color: colors.onColor },
+  stepName: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   status: { fontSize: 13, fontWeight: '700', color: colors.muted },
   card: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   line: { borderTopWidth: 1, borderTopColor: colors.border },
