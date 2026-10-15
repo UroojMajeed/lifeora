@@ -15,7 +15,7 @@ const STOPS = [
 ];
 const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
 
-const PILL = 46; // a step: one pill with its icon inside and the label beside it
+const PILL = 46; // a step: one pill, "STEP 1 │ name" with its icon at the end
 const ICON = 36;
 const SUN = 52;
 const GLOW = SUN + 24;
@@ -58,18 +58,18 @@ function Stop({ t, i, stop, done }) {
 
   return (
     <View style={styles.stop}>
-      {/* The icon and its label together, in one pill. */}
+      {/* One line, read left to right: "STEP 1 │ Know your worth", the icon lighting up at the end. */}
       <Animated.View style={[styles.pill, done ? null : appear]}>
+        <Text style={styles.step}>Step {i + 1}</Text>
+        <View style={styles.divider} />
+        <Text style={styles.label} numberOfLines={1}>
+          {stop.label}
+        </Text>
         <View style={styles.icon}>
+          <Ionicons name={stop.icon} size={16} color={colors.primary} />
           <Animated.View style={[styles.iconLit, done ? null : lit]}>
-            <Ionicons name={stop.icon} size={18} color={colors.onColor} />
+            <Ionicons name={stop.icon} size={16} color={colors.onColor} />
           </Animated.View>
-        </View>
-        <View>
-          <Text style={styles.step}>Step {i + 1}</Text>
-          <Text style={styles.label} numberOfLines={1}>
-            {stop.label}
-          </Text>
         </View>
       </Animated.View>
       <View style={styles.road}>
@@ -158,8 +158,8 @@ const makeStyles = (colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingLeft: 5,
-    paddingRight: 18,
+    paddingLeft: 16,
+    paddingRight: 5,
     borderRadius: PILL / 2,
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -169,6 +169,8 @@ const makeStyles = (colors) => ({
     width: ICON,
     height: ICON,
     borderRadius: ICON / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primarySoft,
     overflow: 'hidden',
   },
@@ -182,8 +184,9 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  step: { fontSize: 10, lineHeight: 12, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1 },
-  label: { fontSize: 15, lineHeight: 19, fontWeight: '700', color: colors.text },
+  step: { fontSize: 12, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1 },
+  divider: { width: 1, height: 18, backgroundColor: colors.border },
+  label: { fontSize: 15, fontWeight: '700', color: colors.text },
   // A stretch of road: faint until it's drawn in teal from the top.
   road: { flex: 1, minHeight: ROAD_MIN, maxHeight: ROAD_MAX, width: 4, borderRadius: 2, marginVertical: 2, backgroundColor: colors.border, overflow: 'hidden' },
   roadDrawn: { width: 4, borderRadius: 2, backgroundColor: colors.primary },
