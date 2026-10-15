@@ -1,54 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, Animated, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import AnimatedLogo from '../components/AnimatedLogo';
 import Wordmark from '../components/Wordmark';
-import Button from '../components/Button';
-import ThemeToggle from '../components/ThemeToggle';
 import { useOnboarding } from '../context/OnboardingContext';
 import { resetTo } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, radius, spacing } from '../theme';
+import { brand, spacing } from '../theme';
 
 const MIN_SPLASH_MS = 1400;
 
-// Starting out (or reopening the app before step 1 is done) opens the journey first, so the road map
-// is never skipped; "Let's start" then goes on to step 1. Anything further along resumes where it was.
-const routeFor = (next) => (next === 'BuybackRate' ? { index: 0, routes: [{ name: 'Journey' }] } : resetTo(next));
+// New here (or reopening before step 1 is done): the journey comes first, and "Let's start" there
+// begins. Anything further along resumes where it was.
+const JOURNEY = { index: 0, routes: [{ name: 'Journey' }] };
+const routeFor = (next) => (!next || next === 'BuybackRate' ? JOURNEY : resetTo(next));
 
-const PERKS = [
-  { icon: 'timer-outline', label: '1-minute setup' },
-  { icon: 'person-outline', label: 'No sign-up' },
-  { icon: 'gift-outline', label: 'Free' },
-];
-
+/** The splash: the logo while the app loads, then straight on (the journey, or where you left off). */
 export default function LandingScreen({ navigation }) {
-  const { bootstrap, startAsGuest } = useOnboarding();
+  const { bootstrap } = useOnboarding();
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
-  const [ready, setReady] = useState(false);
-  const [starting, setStarting] = useState(false);
-  const [error, setError] = useState('');
 
   const logoScale = useRef(new Animated.Value(0.6)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const ctaOpacity = useRef(new Animated.Value(0)).current;
-  const ctaRise = useRef(new Animated.Value(16)).current;
-
-  const getStarted = async () => {
-    setError('');
-    setStarting(true);
-    try {
-      const next = await startAsGuest();
-      navigation.reset(routeFor(next));
-    } catch (err) {
-      setError(err.message);
-      setStarting(false);
-    }
-  };
 
   useEffect(() => {
     Animated.parallel([
@@ -59,21 +35,12 @@ export default function LandingScreen({ navigation }) {
     let cancelled = false;
     (async () => {
       const [next] = await Promise.all([bootstrap(), new Promise((r) => setTimeout(r, MIN_SPLASH_MS))]);
-      if (cancelled) return;
-      if (next) {
-        navigation.reset(routeFor(next));
-      } else {
-        setReady(true);
-        Animated.parallel([
-          Animated.timing(ctaOpacity, { toValue: 1, duration: 450, useNativeDriver: true }),
-          Animated.timing(ctaRise, { toValue: 0, duration: 450, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-        ]).start();
-      }
+      if (!cancelled) navigation.reset(routeFor(next));
     })();
     return () => {
       cancelled = true;
     };
-  }, [bootstrap, navigation, logoScale, logoOpacity, ctaOpacity, ctaRise]);
+  }, [bootstrap, navigation, logoScale, logoOpacity]);
 
   return (
     <LinearGradient colors={colors.landing} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fill}>
@@ -83,52 +50,18 @@ export default function LandingScreen({ navigation }) {
 
       <SafeAreaView style={styles.fill} edges={['top', 'bottom']}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        <View style={styles.topBar}>
-          <ThemeToggle />
+        <View style={styles.center}>
+          <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
+            <AnimatedLogo size={128} />
+          </Animated.View>
+          <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
+            <Wordmark height={52} color={colors.text} />
+            <Text style={styles.tagline}>Buy back your time.</Text>
+          </Animated.View>
         </View>
-
-        <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false} bounces={false}>
-          <View style={styles.center}>
-            <Animated.View style={[styles.logoShadow, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-              <AnimatedLogo size={128} />
-            </Animated.View>
-            <Animated.View style={[styles.brand, { opacity: logoOpacity }]}>
-              <Wordmark height={52} color={colors.text} />
-              <Text style={styles.tagline}>Buy back your time.</Text>
-            </Animated.View>
-
-          </View>
-
-          <View style={styles.bottom}>
-            {ready ? (
-              <Animated.View style={[styles.ctas, { opacity: ctaOpacity, transform: [{ translateY: ctaRise }] }]}>
-                <View style={styles.perks}>
-                  {PERKS.map((p) => (
-                    <View key={p.label} style={styles.perk}>
-                      <Ionicons name={p.icon} size={14} color={colors.primaryDark} />
-                      <Text style={styles.perkText}>{p.label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Button title="Get started" icon="arrow-forward" onPress={getStarted} loading={starting} />
-                {error ? <Text style={styles.error}>{error}</Text> : null}
-                <Pressable
-                  onPress={() => navigation.navigate('Account', { mode: 'signin' })}
-                  disabled={starting}
-                  accessibilityRole="button"
-                  hitSlop={8}
-                  style={({ pressed }) => [styles.signIn, pressed && { opacity: 0.7 }]}
-                >
-                  <Text style={styles.signInText}>
-                    I already have an account. <Text style={styles.signInLink}>Sign in</Text>
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            ) : (
-              <ActivityIndicator color={colors.primary} />
-            )}
-          </View>
-        </ScrollView>
+        <View style={styles.bottom}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -139,8 +72,6 @@ const makeStyles = (colors, isDark) => ({
   glow: { position: 'absolute', width: 340, height: 340, borderRadius: 170 },
   glowTop: { top: -90, right: -110, backgroundColor: colors.glowA },
   glowBottom: { bottom: 80, left: -150, backgroundColor: colors.glowB },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  page: { flexGrow: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   logoShadow: {
     shadowColor: brand.teal,
@@ -151,23 +82,5 @@ const makeStyles = (colors, isDark) => ({
   },
   brand: { alignItems: 'center', marginTop: spacing.lg },
   tagline: { fontSize: 18, fontWeight: '600', color: colors.primary, marginTop: spacing.sm },
-  bottom: { minHeight: 170, justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
-  ctas: { gap: spacing.md },
-  perks: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: spacing.sm },
-  perk: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: radius.pill,
-    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.75)',
-    borderWidth: 1,
-    borderColor: isDark ? colors.border : 'rgba(255,255,255,0.9)',
-  },
-  perkText: { fontSize: 13, fontWeight: '600', color: colors.text },
-  error: { color: colors.error, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  signIn: { alignItems: 'center', paddingVertical: spacing.xs },
-  signInText: { fontSize: 14, color: colors.muted },
-  signInLink: { color: colors.primaryDark, fontWeight: '700' },
+  bottom: { height: 96, alignItems: 'center', justifyContent: 'center' },
 });
