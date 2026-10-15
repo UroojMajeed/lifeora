@@ -91,7 +91,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
           onChangeText={onChangeText}
           placeholder={placeholder}
           // Lighter than typed text, so an example never looks like a real value.
-          placeholderTextColor={withAlpha(colors.muted, 0.45)}
+          placeholderTextColor={withAlpha(colors.muted, 0.6)}
           keyboardType="decimal-pad"
           returnKeyType="done"
           onSubmitEditing={onSubmitEditing}

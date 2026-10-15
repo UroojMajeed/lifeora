@@ -96,7 +96,7 @@ export default function BuybackRateScreen({ navigation, route }) {
 
       {/* One card: the pay goes in at the top, the Buyback Rate comes out at the bottom. */}
       <View style={[styles.card, cardShadow(colors, isDark), { marginTop: gap - spacing.lg }]}>
-        {/* In: your yearly pay (light half). */}
+        {/* In: your yearly pay (light half), in a soft filled field so it reads as "type here". */}
         <View style={styles.cardTop}>
           {!editing ? (
             <View style={styles.leadRow}>
@@ -109,7 +109,6 @@ export default function BuybackRateScreen({ navigation, route }) {
           ) : null}
           <MoneyInput
             large
-            bare
             currency={currency}
             onCurrencyChange={setCurrency}
             value={groupDigits(income)}
