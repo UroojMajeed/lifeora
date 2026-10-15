@@ -5,6 +5,7 @@ import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { isAudited } from '../../components/AuditTaskCard';
+import LiveMatrix from '../../components/LiveMatrix';
 import DayComposer from '../../components/DayComposer';
 import EmptyRoutine from '../../components/EmptyRoutine';
 import { useOnboarding } from '../../context/OnboardingContext';
@@ -119,21 +120,28 @@ export default function AuditScreen({ navigation }) {
             step={stepNumber('schedule')}
             eyebrow="Step 2 of 4"
             title="Time and energy audit"
-            subtitle="Add your tasks, then set each one's time, money and energy."
+            subtitle="Add your tasks and set each one's time, money and energy."
           />
           {items.length ? (
-            <View style={styles.rows}>
-              {items.map((item) => (
-                <AuditTaskCard
-                  key={item.activity}
-                  item={item}
-                  open={openName === item.activity}
-                  onToggle={() => toggle(item.activity)}
-                  onChange={(patch) => change(item.activity, patch)}
-                  onRemove={() => remove(item.activity)}
-                />
-              ))}
-            </View>
+            <>
+              {/* The DRIP Matrix, building live: finished tasks drop into their quadrant (tap to change). */}
+              <LiveMatrix items={items} onSelect={(name) => toggle(name)} style={styles.matrix} />
+              {/* The tasks still being audited (and the one reopened to change). */}
+              <View style={styles.rows}>
+                {items
+                  .filter((it) => !isAudited(it) || openName === it.activity)
+                  .map((item) => (
+                    <AuditTaskCard
+                      key={item.activity}
+                      item={item}
+                      open={openName === item.activity}
+                      onToggle={() => toggle(item.activity)}
+                      onChange={(patch) => change(item.activity, patch)}
+                      onRemove={() => remove(item.activity)}
+                    />
+                  ))}
+              </View>
+            </>
           ) : (
             <EmptyRoutine />
           )}
@@ -164,6 +172,7 @@ const makeStyles = () => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
+  matrix: { marginBottom: spacing.md },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
