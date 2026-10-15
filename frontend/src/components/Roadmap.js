@@ -6,19 +6,14 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, radius, spacing } from '../theme';
 
 // The journey as a simple flow: one short action per stop, walking down the road to your time back.
+// The book's journey in four steps (each pill reads "Step 1" over its name).
 const STOPS = [
-  { icon: 'cash', label: "Know your hour's worth" },
-  { icon: 'list', label: 'Map your routine' },
-  { icon: 'pie-chart', label: 'See what drains you' },
-  { icon: 'hand-left', label: 'Hand it off' },
+  { icon: 'cash', label: 'Know your worth' },
+  { icon: 'pulse', label: 'Time and energy audit' },
+  { icon: 'hand-left', label: 'Delegation' },
+  { icon: 'trending-up', label: 'Reinvest' },
 ];
 const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
-// What the time is for: concrete pictures motivate more than the word "time".
-const FOR = [
-  { icon: 'heart', label: 'Family' },
-  { icon: 'fitness', label: 'Health' },
-  { icon: 'rocket', label: 'Growth' },
-];
 
 const PILL = 46; // a step: one pill with its icon inside and the label beside it
 const ICON = 36;
@@ -70,9 +65,12 @@ function Stop({ t, i, stop, done }) {
             <Ionicons name={stop.icon} size={18} color={colors.onColor} />
           </Animated.View>
         </View>
-        <Text style={styles.label} numberOfLines={1}>
-          {stop.label}
-        </Text>
+        <View>
+          <Text style={styles.step}>Step {i + 1}</Text>
+          <Text style={styles.label} numberOfLines={1}>
+            {stop.label}
+          </Text>
+        </View>
       </Animated.View>
       <View style={styles.road}>
         <Animated.View style={[styles.roadDrawn, done ? styles.roadFull : drawn]} />
@@ -82,10 +80,10 @@ function Stop({ t, i, stop, done }) {
 }
 
 /**
- * The journey screen's road map, centred: four steps down the middle, each one pill with its icon
- * and one short action ("Know your hour's worth" → "Map your routine" → "See what drains you" → "Hand
- * it off"), joined by the road, ending at the sun and the promise: "Your time back, for the work
- * and life you love", and what it's for. The road stretches to fill the screen. Plays once, one stop
+ * The journey screen's road map, centred: the book's four steps down the middle, each one pill with
+ * its icon, "Step N" and its name (Know your worth → Time and energy audit → Delegation → Reinvest),
+ * joined by the road, ending at the sun and the promise: "Your time back, for the work and life you
+ * love". The road stretches to fill the screen. Plays once, one stop
  * at a time; shown complete when reduce-motion is on, and for sure once the run is over.
  */
 export default function Roadmap() {
@@ -129,7 +127,7 @@ export default function Roadmap() {
     <View
       style={styles.wrap}
       accessible
-      accessibilityLabel={`Your journey: ${STOPS.map((s) => s.label).join(', then ')}. Then: your time back, for the work and life you love: family, health, growth.`}
+      accessibilityLabel={`Your journey: ${STOPS.map((s, i) => `step ${i + 1}, ${s.label}`).join('; ')}. Then: your time back, for the work and life you love.`}
     >
       {STOPS.map((stop, i) => (
         <Stop key={stop.label} t={t} i={i} stop={stop} done={done} />
@@ -145,14 +143,6 @@ export default function Roadmap() {
       <Animated.View style={[styles.dest, done ? null : dest]}>
         <Text style={styles.destTitle}>{DESTINATION.title}</Text>
         <Text style={styles.destLine}>{DESTINATION.line}</Text>
-        <View style={styles.forRow}>
-          {FOR.map((f) => (
-            <View key={f.label} style={styles.forChip}>
-              <Ionicons name={f.icon} size={13} color={colors.accentText} />
-              <Text style={styles.forText}>{f.label}</Text>
-            </View>
-          ))}
-        </View>
       </Animated.View>
     </View>
   );
@@ -192,7 +182,8 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  label: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: colors.text },
+  step: { fontSize: 10, lineHeight: 12, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1 },
+  label: { fontSize: 15, lineHeight: 19, fontWeight: '700', color: colors.text },
   // A stretch of road: faint until it's drawn in teal from the top.
   road: { flex: 1, minHeight: ROAD_MIN, maxHeight: ROAD_MAX, width: 4, borderRadius: 2, marginVertical: 2, backgroundColor: colors.border, overflow: 'hidden' },
   roadDrawn: { width: 4, borderRadius: 2, backgroundColor: colors.primary },
@@ -205,17 +196,4 @@ const makeStyles = (colors) => ({
   // The payoff reads as one statement: a big headline, then who it's for, warm like the sun.
   destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
   destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center' },
-  forRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  forChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.goldLine,
-  },
-  forText: { fontSize: 13, fontWeight: '700', color: colors.text },
 });
