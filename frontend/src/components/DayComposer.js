@@ -7,6 +7,7 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const CHIP_ROW = 44; // the suggestions row's height (chips, or a hint in their place)
 
 /**
  * Adding tasks to "Your routine", like a chat: type a task (or tap a suggestion) and it drops straight
@@ -25,6 +26,7 @@ export default function DayComposer({ role, items, onAdd }) {
     .filter((n) => !taken(n))
     .filter((n) => !query || n.toLowerCase().includes(query));
   const canSend = Boolean(draft.trim()) && !taken(draft);
+  const duplicate = Boolean(draft.trim()) && taken(draft);
 
   const add = (name) => {
     const clean = name.trim().slice(0, 60);
@@ -36,26 +38,35 @@ export default function DayComposer({ role, items, onAdd }) {
 
   return (
     <View>
-      {/* Suggestions: outlined chips on the page itself, above the chat bar. */}
-      {suggestions.length ? (
+      {/* Suggestions: outlined chips on the page itself, above the chat bar. While you type, this area
+          keeps its height (matches, or a short hint in the same spot), so nothing above it jumps. */}
+      {suggestions.length || query ? (
         <>
           <Text style={styles.label}>{query ? 'Matches' : 'Suggestions'}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
-            {suggestions.slice(0, 12).map((n) => (
-              <Pressable
-                key={n}
-                onPress={() => add(n)}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${n}`}
-                style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
-              >
-                <Ionicons name="add" size={15} color={colors.primary} />
-                <Text style={styles.chipText} numberOfLines={1}>
-                  {n}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {duplicate || !suggestions.length ? (
+            <View style={styles.hintRow}>
+              <Text style={[styles.hint, duplicate && styles.warn]} numberOfLines={1}>
+                {duplicate ? "That's already in your routine." : `No match. Tap ↑ to add “${draft.trim()}”.`}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.row}>
+              {suggestions.slice(0, 12).map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => add(n)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${n}`}
+                  style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}
+                >
+                  <Ionicons name="add" size={15} color={colors.primary} />
+                  <Text style={styles.chipText} numberOfLines={1}>
+                    {n}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
         </>
       ) : null}
 
@@ -86,7 +97,6 @@ export default function DayComposer({ role, items, onAdd }) {
             <Ionicons name="arrow-up" size={20} color={colors.onColor} />
           </Pressable>
         </View>
-        {draft.trim() && taken(draft) ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
       </View>
     </View>
   );
@@ -102,7 +112,7 @@ const makeStyles = (colors, isDark) => ({
     paddingHorizontal: spacing.lg,
     marginBottom: 6,
   },
-  row: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm + 2 },
+  row: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm + 2, height: CHIP_ROW, alignItems: 'flex-start' },
   chip: {
     maxWidth: 220,
     flexDirection: 'row',
@@ -139,5 +149,8 @@ const makeStyles = (colors, isDark) => ({
   },
   send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   sendOff: { opacity: 0.35 },
-  warn: { fontSize: 13, color: colors.error, paddingHorizontal: spacing.lg },
+  // Same height as a row of chips, so swapping between them never moves anything.
+  hintRow: { height: CHIP_ROW, justifyContent: 'center', paddingHorizontal: spacing.lg },
+  hint: { fontSize: 13, color: colors.muted },
+  warn: { color: colors.error, fontWeight: '600' },
 });
