@@ -8,17 +8,18 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import { HeroCard } from '../../components/Card';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { calculateBuybackRate, stepNumber } from '../../constants/content';
+import { WORK_HOURS_PER_YEAR, calculateBuybackRate, stepNumber } from '../../constants/content';
 import { defaultCurrency } from '../../constants/currencies';
 import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
 import { useStyles } from '../../theme/ThemeContext';
-import { brand, radius, spacing } from '../../theme';
+import { brand, spacing } from '../../theme';
 
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
- * "What's your time worth?" (onboarding step 1): one answer, what your business pays you a year, and
- * the Buyback Rate card under it (always there, following what you type). With `editing` (from Me)
+ * "What's your time worth?" (onboarding step 1): one answer, what your business pays you a year. Under
+ * it, what the rate means (one line), then the card: your Buyback Rate big in the middle, with your
+ * hour's worth and the 2,000 work hours it comes from (always there, following what you type). With `editing` (from Me)
  * it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
@@ -43,8 +44,9 @@ export default function BuybackRateScreen({ navigation, route }) {
   const gap = screenHeight < 740 ? spacing.md : spacing.lg - 4; // 16 on short phones, 20 otherwise
   const money = (n) => (amount ? formatMoney(n, currency) : '–');
   const rateText = money(buybackRate);
-  // Both rates in one size that fits beside their labels.
-  const rateFont = fitFontSize(`${formatMoney(Math.max(effectiveHourlyRate, buybackRate), currency)}/h`, columnWidth - 48 - 24 - 110, 22, 13);
+  // The big Buyback Rate fills the card's width at most; the two small numbers share it in halves.
+  const bigFont = fitFontSize(`${rateText}/hr`, columnWidth - 48, 44, 22);
+  const smallFont = fitFontSize(`${money(effectiveHourlyRate)}/hr`, (columnWidth - 48) / 2 - 16, 18, 12);
 
   const next = async () => {
     if (!ready) return;
@@ -103,44 +105,37 @@ export default function BuybackRateScreen({ navigation, route }) {
         />
       </View>
 
-      {/* The answer, always here: it follows what you type ("–" until there's a number). */}
-      <HeroCard style={[styles.hero, { marginTop: gap }]}>
-        {/* The main message first: what the rate means for you. */}
-        <View style={styles.tip}>
-          <Ionicons name="bulb" size={20} color={brand.apricot} />
-          <Text style={styles.tipText}>
-            {amount ? (
-              <>
-                Anything someone else can do for <Text style={styles.tipRate}>{rateText}/hr</Text> or less shouldn't be
-                yours.
-              </>
-            ) : (
-              <>
-                Anything someone else can do for <Text style={styles.tipRate}>your Buyback Rate</Text> or less shouldn't
-                be yours.
-              </>
-            )}
-          </Text>
-        </View>
+      {/* What the rate means, said first, above the card. */}
+      <View style={[styles.tip, { marginTop: gap }]}>
+        <Ionicons name="bulb" size={18} color={brand.apricot} />
+        <Text style={styles.tipText}>
+          Anything someone else can do for{' '}
+          <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
+        </Text>
+      </View>
+
+      {/* The answer, always here and following what you type ("–" until there's a number):
+          the Buyback Rate big in the middle, how it's worked out small underneath. */}
+      <HeroCard style={[styles.hero, { marginTop: spacing.md }]}>
+        <Text style={styles.bigLabel}>Your Buyback Rate</Text>
+        <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
+          {rateText}
+          {amount ? <Text style={styles.bigPer}>/hr</Text> : null}
+        </Text>
         <View style={styles.divider} />
-        {/* Two rows in the same type: what your hour is worth, then your Buyback Rate. */}
-        <View style={styles.rateRow}>
-          <Text style={styles.rateLabel} numberOfLines={2}>
-            Your hour is worth
-          </Text>
-          <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
-            {money(effectiveHourlyRate)}
-            {amount ? <Text style={styles.per}>/hr</Text> : null}
-          </Text>
-        </View>
-        <View style={[styles.rateRow, styles.rateMain]}>
-          <Text style={[styles.rateLabel, styles.rateLabelMain]} numberOfLines={2}>
-            Your Buyback Rate
-          </Text>
-          <Text style={[styles.rateValue, { fontSize: rateFont }]} numberOfLines={1}>
-            {rateText}
-            {amount ? <Text style={styles.per}>/hr</Text> : null}
-          </Text>
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Your hour is worth</Text>
+            <Text style={[styles.statValue, { fontSize: smallFont }]} numberOfLines={1}>
+              {money(effectiveHourlyRate)}
+              {amount ? <Text style={styles.per}>/hr</Text> : null}
+            </Text>
+          </View>
+          <View style={styles.statLine} />
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Work hours a year</Text>
+            <Text style={[styles.statValue, { fontSize: 18 }]}>{WORK_HOURS_PER_YEAR.toLocaleString('en-US')}</Text>
+          </View>
         </View>
       </HeroCard>
 
@@ -153,15 +148,18 @@ const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
-  hero: { padding: spacing.md + 4 },
-  tip: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start' },
-  tipText: { flex: 1, fontSize: 17, lineHeight: 24, fontWeight: '800', color: colors.heroText, letterSpacing: -0.2 },
-  tipRate: { color: brand.apricot },
-  divider: { height: 1, backgroundColor: colors.heroDivider, marginVertical: spacing.md },
-  rateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingHorizontal: 12, paddingVertical: 8 },
-  rateMain: { marginTop: 6, borderRadius: radius.md, backgroundColor: colors.heroChip, borderWidth: 1, borderColor: 'rgba(245,185,113,0.6)' },
-  rateLabel: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.heroMuted, letterSpacing: 0.6, textTransform: 'uppercase' },
-  rateLabelMain: { color: brand.apricot },
-  rateValue: { fontWeight: '800', color: colors.heroText, letterSpacing: -0.4 },
-  per: { fontSize: 13, fontWeight: '600', color: colors.heroMuted },
+  hero: { paddingVertical: spacing.lg, paddingHorizontal: spacing.md + 4, alignItems: 'center' },
+  tip: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  tipText: { flex: 1, fontSize: 16, lineHeight: 23, fontWeight: '700', color: colors.text },
+  tipRate: { color: colors.accentText, fontWeight: '800' },
+  bigLabel: { fontSize: 12, fontWeight: '800', color: brand.apricot, letterSpacing: 1, textTransform: 'uppercase' },
+  big: { fontWeight: '800', color: colors.heroText, letterSpacing: -1, marginTop: 4 },
+  bigPer: { fontSize: 18, fontWeight: '700', color: colors.heroMuted, letterSpacing: 0 },
+  divider: { alignSelf: 'stretch', height: 1, backgroundColor: colors.heroDivider, marginVertical: spacing.md },
+  stats: { alignSelf: 'stretch', flexDirection: 'row' },
+  stat: { flex: 1, alignItems: 'center', gap: 2 },
+  statLine: { width: 1, backgroundColor: colors.heroDivider },
+  statLabel: { fontSize: 12, fontWeight: '600', color: colors.heroMuted },
+  statValue: { fontWeight: '800', color: colors.heroText },
+  per: { fontSize: 12, fontWeight: '600', color: colors.heroMuted },
 });
