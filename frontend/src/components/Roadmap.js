@@ -3,27 +3,21 @@ import { AccessibilityInfo, Text, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, radius, spacing } from '../theme';
+import { brand, spacing } from '../theme';
 
-// The journey as a simple flow: one short action per stop, walking down the road to your time back.
-// The book's journey in four steps (each pill reads "Step 1" over its name).
-const STOPS = [
-  { icon: 'cash', label: 'Know your worth' },
-  { icon: 'pulse', label: 'Time and energy audit' },
-  { icon: 'hand-left', label: 'Delegation' },
-  { icon: 'trending-up', label: 'Reinvest' },
-];
+// The book's journey in four steps: just a number on the road and the name beside it.
+const STOPS = ['Know your worth', 'Time and energy audit', 'Delegation', 'Reinvest'];
 const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
 
-const PILL = 46; // a step: one pill, "STEP 1 │ name" with its icon at the end
-const ICON = 36;
-const SUN = 52;
-const GLOW = SUN + 24;
-const ROAD_MAX = 56; // the longest a stretch of road gets on tall screens
+const COL = 36; // the road's column: numbers and the sun are centred in it
+const NODE = 30;
+const SUN = 36;
+const GAP = 14; // between the road and the words
 const ROAD_MIN = 10;
-// One stop at a time, calm: each fades in and lights up, then the road runs on to the next.
-const STOP_MS = 1200;
-const END_MS = 1400; // the sun, then the promise
+const ROAD_MAX = 44; // the longest a stretch of road gets on tall screens
+// One stop at a time, calm: each number appears and lights up, then the road runs on to the next.
+const STOP_MS = 1100;
+const END_MS = 1300; // the sun, then the promise
 const TOTAL_MS = STOPS.length * STOP_MS + END_MS;
 
 const between = (v, a, b) => {
@@ -42,49 +36,49 @@ const ending = (t, a, b) => {
   return between(t * TOTAL_MS, start + a * END_MS, start + b * END_MS);
 };
 
-function Stop({ t, i, stop, done }) {
-  const { colors } = useTheme();
+function Stop({ t, i, label, done }) {
   const styles = useStyles(makeStyles);
 
-  // The stop and its label fade in together…
+  // The number and its words fade in…
   const appear = useAnimatedStyle(() => {
     const p = between(local(t.value, i), 0, 0.35);
-    return { opacity: p, transform: [{ translateY: 6 * (1 - p) }] };
+    return { opacity: p, transform: [{ translateY: 4 * (1 - p) }] };
   });
-  // …it lights up…
+  // …the number lights up…
   const lit = useAnimatedStyle(() => ({ opacity: between(local(t.value, i), 0.3, 0.55) }));
   // …and the road runs down to the next stop (the last one runs to the sun).
   const drawn = useAnimatedStyle(() => ({ height: `${100 * between(local(t.value, i), 0.6, 1)}%` }));
 
   return (
     <View style={styles.stop}>
-      {/* One line, read left to right: "STEP 1 │ Know your worth", the icon lighting up at the end. */}
-      <Animated.View style={[styles.pill, done ? null : appear]}>
-        <Text style={styles.step}>Step {i + 1}</Text>
-        <View style={styles.divider} />
-        <Text style={styles.label} numberOfLines={1}>
-          {stop.label}
-        </Text>
-        <View style={styles.icon}>
-          <Ionicons name={stop.icon} size={16} color={colors.primary} />
-          <Animated.View style={[styles.iconLit, done ? null : lit]}>
-            <Ionicons name={stop.icon} size={16} color={colors.onColor} />
-          </Animated.View>
+      <Animated.View style={[styles.row, done ? null : appear]}>
+        <View style={styles.col}>
+          <View style={styles.node}>
+            <Text style={styles.num}>{i + 1}</Text>
+            <Animated.View style={[styles.nodeLit, done ? null : lit]}>
+              <Text style={[styles.num, styles.numLit]}>{i + 1}</Text>
+            </Animated.View>
+          </View>
         </View>
+        <Text style={styles.label} numberOfLines={1}>
+          {label}
+        </Text>
       </Animated.View>
-      <View style={styles.road}>
-        <Animated.View style={[styles.roadDrawn, done ? styles.roadFull : drawn]} />
+      <View style={styles.roadCol}>
+        <View style={styles.road}>
+          <Animated.View style={[styles.roadDrawn, done ? styles.roadFull : drawn]} />
+        </View>
       </View>
     </View>
   );
 }
 
 /**
- * The journey screen's road map, centred: the book's four steps down the middle, each one pill with
- * its icon, "Step N" and its name (Know your worth → Time and energy audit → Delegation → Reinvest),
- * joined by the road, ending at the sun and the promise: "Your time back, for the work and life you
- * love". The road stretches to fill the screen. Plays once, one stop
- * at a time; shown complete when reduce-motion is on, and for sure once the run is over.
+ * The journey screen's road map, kept to numbers and words: the book's four steps (Know your worth →
+ * Time and energy audit → Delegation → Reinvest) as numbered stops down one road, ending at the sun
+ * with the promise beside it: "Your time back, for the work and life you love". The block sits in the
+ * middle of the screen and the road stretches to fill it. Plays once, one stop at a time; shown
+ * complete when reduce-motion is on, and for sure once the run is over.
  */
 export default function Roadmap() {
   const styles = useStyles(makeStyles);
@@ -117,64 +111,56 @@ export default function Roadmap() {
     const p = ending(t.value, 0, 0.45);
     return { opacity: p, transform: [{ scale: 0.85 + 0.15 * p }] };
   });
-  const glow = useAnimatedStyle(() => ({ opacity: 0.35 * ending(t.value, 0, 0.45) }));
   const dest = useAnimatedStyle(() => {
-    const p = ending(t.value, 0.35, 1);
-    return { opacity: p, transform: [{ translateY: 6 * (1 - p) }] };
+    const p = ending(t.value, 0.3, 1);
+    return { opacity: p, transform: [{ translateY: 4 * (1 - p) }] };
   });
 
   return (
     <View
       style={styles.wrap}
       accessible
-      accessibilityLabel={`Your journey: ${STOPS.map((s, i) => `step ${i + 1}, ${s.label}`).join('; ')}. Then: your time back, for the work and life you love.`}
+      accessibilityLabel={`Your journey: ${STOPS.map((s, i) => `step ${i + 1}, ${s}`).join('; ')}. Then: your time back, for the work and life you love.`}
     >
-      {STOPS.map((stop, i) => (
-        <Stop key={stop.label} t={t} i={i} stop={stop} done={done} />
+      {STOPS.map((label, i) => (
+        <Stop key={label} t={t} i={i} label={label} done={done} />
       ))}
 
-      {/* The destination: the sun at the end of the road, the promise under it. */}
-      <View style={styles.sunWrap}>
-        <Animated.View style={[styles.glow, done ? styles.glowDone : glow]} />
-        <Animated.View style={[styles.sun, done ? null : sun]}>
-          <Ionicons name="sunny" size={26} color={colors.onColor} />
+      {/* The destination: the sun on the road, the promise beside it. */}
+      <View style={styles.row}>
+        <View style={styles.col}>
+          <Animated.View style={[styles.sun, done ? null : sun]}>
+            <Ionicons name="sunny" size={20} color={colors.onColor} />
+          </Animated.View>
+        </View>
+        <Animated.View style={[styles.destText, done ? null : dest]}>
+          <Text style={styles.destTitle}>{DESTINATION.title}</Text>
+          <Text style={styles.destLine}>{DESTINATION.line}</Text>
         </Animated.View>
       </View>
-      <Animated.View style={[styles.dest, done ? null : dest]}>
-        <Text style={styles.destTitle}>{DESTINATION.title}</Text>
-        <Text style={styles.destLine}>{DESTINATION.line}</Text>
-      </Animated.View>
     </View>
   );
 }
 
-const makeStyles = (colors) => ({
-  // Fills the room between the heading and the button (no scrolling); the road stretches share it.
-  wrap: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
-  // A step grows only as far as its stretch of road can (so the road always meets the next pill).
-  stop: { flex: 1, minHeight: PILL + 4 + ROAD_MIN, maxHeight: PILL + 4 + ROAD_MAX, alignItems: 'center' },
-  pill: {
-    height: PILL,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingLeft: 16,
-    paddingRight: 5,
-    borderRadius: PILL / 2,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  icon: {
-    width: ICON,
-    height: ICON,
-    borderRadius: ICON / 2,
+const makeStyles = (colors, isDark) => ({
+  // In the middle of the room between the heading and the button; the block itself reads straight down.
+  wrap: { flex: 1, alignSelf: 'center', justifyContent: 'center', paddingVertical: spacing.md },
+  // A stop grows only as far as its stretch of road can (so the road always meets the next number).
+  stop: { flex: 1, minHeight: NODE + ROAD_MIN + 8, maxHeight: NODE + ROAD_MAX + 8 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  col: { width: COL, alignItems: 'center' },
+  node: {
+    width: NODE,
+    height: NODE,
+    borderRadius: NODE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
     overflow: 'hidden',
   },
-  iconLit: {
+  nodeLit: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -184,19 +170,28 @@ const makeStyles = (colors) => ({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  step: { fontSize: 12, fontWeight: '800', color: colors.primary, textTransform: 'uppercase', letterSpacing: 1 },
-  divider: { width: 1, height: 18, backgroundColor: colors.border },
-  label: { fontSize: 15, fontWeight: '700', color: colors.text },
-  // A stretch of road: faint until it's drawn in teal from the top.
-  road: { flex: 1, minHeight: ROAD_MIN, maxHeight: ROAD_MAX, width: 4, borderRadius: 2, marginVertical: 2, backgroundColor: colors.border, overflow: 'hidden' },
-  roadDrawn: { width: 4, borderRadius: 2, backgroundColor: colors.primary },
+  num: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  numLit: { color: colors.onColor },
+  label: { marginLeft: GAP, fontSize: 17, fontWeight: '700', color: colors.text },
+  // A stretch of road under the number: faint until it's drawn in teal from the top.
+  roadCol: { flex: 1, width: COL, alignItems: 'center', paddingVertical: 4 },
+  road: { flex: 1, width: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
+  roadDrawn: { width: 3, borderRadius: 2, backgroundColor: colors.primary },
   roadFull: { height: '100%' },
-  sunWrap: { alignItems: 'center', justifyContent: 'center', width: GLOW, height: GLOW },
-  glow: { position: 'absolute', width: GLOW, height: GLOW, borderRadius: GLOW / 2, backgroundColor: brand.apricot },
-  glowDone: { opacity: 0.35 },
-  sun: { width: SUN, height: SUN, borderRadius: SUN / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
-  dest: { alignItems: 'center', marginTop: 4 },
-  // The payoff reads as one statement: a big headline, then who it's for, warm like the sun.
-  destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
-  destLine: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.accentText, textAlign: 'center' },
+  sun: {
+    width: SUN,
+    height: SUN,
+    borderRadius: SUN / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: brand.apricot,
+    shadowColor: brand.apricot,
+    shadowOpacity: isDark ? 0.5 : 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
+  },
+  destText: { marginLeft: GAP },
+  destTitle: { fontSize: 20, lineHeight: 25, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  destLine: { fontSize: 14, lineHeight: 19, fontWeight: '700', color: colors.accentText },
 });

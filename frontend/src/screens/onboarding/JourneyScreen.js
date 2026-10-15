@@ -65,7 +65,6 @@ export default function JourneyScreen({ navigation }) {
       <View style={styles.top}>
         <ThemeToggle />
       </View>
-      <Text style={[type.label, styles.eyebrow]}>Your journey</Text>
       <Text style={type.title}>How you buy back your time</Text>
       <View style={styles.note}>
         <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
@@ -78,7 +77,6 @@ export default function JourneyScreen({ navigation }) {
 
 const makeStyles = (colors) => ({
   top: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, marginBottom: spacing.sm },
-  eyebrow: { color: colors.primary, marginBottom: spacing.sm },
   note: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   noteText: { fontSize: 13, color: colors.muted },
   error: { color: colors.error, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: spacing.sm },
