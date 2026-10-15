@@ -135,13 +135,10 @@ export default function BuybackRateScreen({ navigation, route }) {
             </Text>
           </View>
         </View>
-        {/* How it's worked out, on a strip along the card's foot. */}
+        {/* The work year it's based on, on a strip along the card's foot. */}
         <View style={styles.basis}>
-          <Ionicons name="calculator-outline" size={14} color={colors.heroMuted} />
-          <Text style={styles.basisText}>
-            {amount ? `${formatMoney(amount, currency, { decimals: 0 })} ÷ ` : ''}
-            {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year
-          </Text>
+          <Ionicons name="calendar-outline" size={14} color={colors.heroMuted} />
+          <Text style={styles.basisText}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
         </View>
       </HeroCard>
 
