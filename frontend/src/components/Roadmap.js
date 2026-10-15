@@ -9,9 +9,10 @@ import { brand, spacing } from '../theme';
 const STOPS = ['Know your worth', 'Time and energy audit', 'Delegation', 'Reinvest'];
 const DESTINATION = { title: 'Your time back', line: 'for the work and life you love' };
 
-const COL = 36; // the road's column: numbers and the sun are centred in it
+const COL = 44; // the road's column: numbers and the sun are centred in it
 const NODE = 30;
-const SUN = 36;
+const SUN = 44; // the destination: bigger than a step, with a soft halo
+const HALO = SUN + 22;
 const GAP = 14; // between the road and the words
 const ROAD_MIN = 10;
 const ROAD_MAX = 44; // the longest a stretch of road gets on tall screens
@@ -36,7 +37,7 @@ const ending = (t, a, b) => {
   return between(t * TOTAL_MS, start + a * END_MS, start + b * END_MS);
 };
 
-function Stop({ t, i, label, done }) {
+function Stop({ t, i, label, done, last }) {
   const styles = useStyles(makeStyles);
 
   // The number and its words fade in…
@@ -65,8 +66,9 @@ function Stop({ t, i, label, done }) {
         </Text>
       </Animated.View>
       <View style={styles.roadCol}>
-        <View style={styles.road}>
-          <Animated.View style={[styles.roadDrawn, done ? styles.roadFull : drawn]} />
+        {/* The last stretch, into the sun, is gold: the work leads to the reward. */}
+        <View style={[styles.road, last && styles.roadGold]}>
+          <Animated.View style={[styles.roadDrawn, last && styles.roadDrawnGold, done ? styles.roadFull : drawn]} />
         </View>
       </View>
     </View>
@@ -123,14 +125,17 @@ export default function Roadmap() {
       accessibilityLabel={`Your journey: ${STOPS.map((s, i) => `step ${i + 1}, ${s}`).join('; ')}. Then: your time back, for the work and life you love.`}
     >
       {STOPS.map((label, i) => (
-        <Stop key={label} t={t} i={i} label={label} done={done} />
+        <Stop key={label} t={t} i={i} label={label} done={done} last={i === STOPS.length - 1} />
       ))}
 
       {/* The destination: the sun on the road, the promise beside it. */}
       <View style={styles.row}>
         <View style={styles.col}>
-          <Animated.View style={[styles.sun, done ? null : sun]}>
-            <Ionicons name="sunny" size={20} color={colors.onColor} />
+          <Animated.View style={[styles.sunWrap, done ? null : sun]}>
+            <View style={styles.halo} />
+            <View style={styles.sun}>
+              <Ionicons name="sunny" size={24} color={colors.onColor} />
+            </View>
           </Animated.View>
         </View>
         <Animated.View style={[styles.destText, done ? null : dest]}>
@@ -177,7 +182,11 @@ const makeStyles = (colors, isDark) => ({
   roadCol: { flex: 1, width: COL, alignItems: 'center', paddingVertical: 4 },
   road: { flex: 1, width: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
   roadDrawn: { width: 3, borderRadius: 2, backgroundColor: colors.primary },
+  roadGold: { backgroundColor: colors.goldLine },
+  roadDrawnGold: { backgroundColor: brand.apricot },
   roadFull: { height: '100%' },
+  sunWrap: { width: HALO, height: HALO, alignItems: 'center', justifyContent: 'center', marginVertical: -(HALO - SUN) / 2 },
+  halo: { position: 'absolute', width: HALO, height: HALO, borderRadius: HALO / 2, backgroundColor: brand.apricot, opacity: isDark ? 0.18 : 0.24 },
   sun: {
     width: SUN,
     height: SUN,
@@ -192,6 +201,7 @@ const makeStyles = (colors, isDark) => ({
     elevation: 4,
   },
   destText: { marginLeft: GAP },
-  destTitle: { fontSize: 20, lineHeight: 25, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
-  destLine: { fontSize: 14, lineHeight: 19, fontWeight: '700', color: colors.accentText },
+  // The payoff: bigger than the steps, and warm.
+  destTitle: { fontSize: 24, lineHeight: 30, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
+  destLine: { fontSize: 15, lineHeight: 20, fontWeight: '700', color: colors.accentText },
 });
