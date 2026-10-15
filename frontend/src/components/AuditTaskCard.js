@@ -10,6 +10,7 @@ const ENERGY = [
   { key: 'draining', label: 'Drains', icon: 'battery-dead', tone: 'error' },
   { key: 'energizing', label: 'Energizes', icon: 'flash', tone: 'success' },
 ];
+export const FIELDS = ['hours', 'money', 'energy'];
 
 const short = (h) => (h < 1 ? `${h * 60}m` : `${h}h`);
 
@@ -17,125 +18,148 @@ const short = (h) => (h < 1 ? `${h * 60}m` : `${h}h`);
 export const isAudited = (it) => Boolean(it.hours && it.money && it.energy);
 
 /**
- * One task in the time and energy audit, kept brief: three short rows on one card (Time, Money,
- * Energy), small choices and no extra words. Folded, it's one line saying what's still to set.
+ * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy). A set
+ * button shows its value; pressing one opens its choices under the buttons (`field` is the one open).
  * Picking calls `onChange(patch)`.
  */
-export default function AuditTaskCard({ item, open, onToggle, onChange, onRemove }) {
+export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const usual = usualHours(item.activity);
-  const missing = [!item.hours && 'time', !item.money && 'money', !item.energy && 'energy'].filter(Boolean);
+  const energy = ENERGY.find((e) => e.key === item.energy);
+  const done = isAudited(item);
 
   const pick = (patch) => {
     Haptics.selectionAsync().catch(() => {});
     onChange(patch);
   };
 
+  // The three buttons: a set one shows its value, an open one is outlined.
+  const buttons = [
+    { key: 'hours', icon: 'time-outline', text: item.hours ? short(item.hours) : 'Time', set: Boolean(item.hours) },
+    { key: 'money', icon: 'cash-outline', text: item.money ? dollars(item.money) : 'Money', set: Boolean(item.money) },
+    {
+      key: 'energy',
+      icon: energy ? energy.icon : 'pulse',
+      text: energy ? energy.label : 'Energy',
+      set: Boolean(energy),
+      tone: energy?.tone,
+    },
+  ];
+
   return (
-    <View style={[styles.card, open && styles.cardOpen]}>
+    <View style={[styles.card, field && styles.cardOpen]}>
       <View style={styles.top}>
-        <Pressable
-          onPress={onToggle}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: open }}
-          accessibilityLabel={`${item.activity}. ${missing.length ? `Still to set: ${missing.join(', ')}` : 'All set'}.`}
-          style={({ pressed }) => [styles.head, pressed && { opacity: 0.6 }]}
-        >
-          <Text style={styles.name} numberOfLines={1}>
-            {item.activity}
-          </Text>
-          {!open && missing.length ? <Text style={styles.todo}>Set {missing.join(', ')}</Text> : null}
-        </Pressable>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.activity}
+        </Text>
+        {done ? <Ionicons name="checkmark-circle" size={18} color={colors.success} /> : null}
         <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
       </View>
 
-      {open ? (
-        <View style={styles.body}>
-          {/* Time a day */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Time</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.options}>
-              {HOUR_OPTIONS.map((h) => {
-                const on = h === item.hours;
-                const hint = !item.hours && h === usual;
-                return (
-                  <Pressable
-                    key={h}
-                    onPress={() => pick({ hours: h, per: 'day' })}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: on }}
-                    accessibilityLabel={`${short(h)} a day`}
-                    style={[styles.pill, on && styles.pillOn, hint && styles.pillHint]}
-                  >
-                    <Text style={[styles.pillText, on && styles.pillTextOn]}>{short(h)}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
+      <View style={styles.buttons}>
+        {buttons.map((b) => {
+          const open = field === b.key;
+          const tint = b.tone ? colors[b.tone] : b.key === 'money' && b.set ? colors.accentText : colors.primaryDark;
+          return (
+            <Pressable
+              key={b.key}
+              onPress={() => onField(open ? null : b.key)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: open }}
+              accessibilityLabel={`${b.key === 'hours' ? 'Time' : b.key === 'money' ? 'Money' : 'Energy'}: ${b.set ? b.text : 'not set'}`}
+              style={({ pressed }) => [
+                styles.button,
+                b.set && styles.buttonSet,
+                b.set && b.tone && { backgroundColor: colors[`${b.tone}Soft`] },
+                open && styles.buttonOpen,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Ionicons name={b.icon} size={15} color={b.set ? tint : colors.muted} />
+              <Text style={[styles.buttonText, b.set && { color: tint }]} numberOfLines={1}>
+                {b.text}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-          {/* Money it makes, $ to $$$$$ (gold when picked) */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Money</Text>
-            <View style={styles.options}>
-              {MONEY_LEVELS.map((m) => {
-                const on = item.money === m;
-                return (
-                  <Pressable
-                    key={m}
-                    onPress={() => pick({ money: m })}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: on }}
-                    accessibilityLabel={`${m} of 5, from less money to more`}
-                    style={[styles.coin, on && styles.coinOn]}
-                  >
-                    {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinFill} /> : null}
-                    <Text style={[styles.coinText, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
-                      {dollars(m)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Energy: drains or energizes */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Energy</Text>
-            <View style={styles.options}>
-              {ENERGY.map((e) => {
-                const on = item.energy === e.key;
-                return (
-                  <Pressable
-                    key={e.key}
-                    onPress={() => pick({ energy: e.key })}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: on }}
-                    accessibilityLabel={e.key === 'draining' ? 'Drains me' : 'Energizes me'}
-                    style={[styles.pill, styles.energy, on && { borderColor: colors[e.tone], backgroundColor: colors[`${e.tone}Soft`] }]}
-                  >
-                    <Ionicons name={e.icon} size={14} color={on ? colors[e.tone] : colors.muted} />
-                    <Text style={[styles.pillText, on && { color: colors[e.tone] }]}>{e.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+      {/* The open button's choices. */}
+      {field === 'hours' ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.choices}>
+          {HOUR_OPTIONS.map((h) => {
+            const on = h === item.hours;
+            const hint = !item.hours && h === usual;
+            return (
+              <Pressable
+                key={h}
+                onPress={() => pick({ hours: h, per: 'day' })}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={`${short(h)} a day`}
+                style={[styles.pill, on && styles.pillOn, hint && styles.pillHint]}
+              >
+                <Text style={[styles.pillText, on && styles.pillTextOn]}>{short(h)}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
+      {field === 'money' ? (
+        <View style={styles.choices}>
+          {MONEY_LEVELS.map((m) => {
+            const on = item.money === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => pick({ money: m })}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={`${m} of 5, from less money to more`}
+                style={[styles.coin, on && styles.coinOn]}
+              >
+                {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinFill} /> : null}
+                <Text style={[styles.coinText, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
+                  {dollars(m)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+      {field === 'energy' ? (
+        <View style={styles.choices}>
+          {ENERGY.map((e) => {
+            const on = item.energy === e.key;
+            return (
+              <Pressable
+                key={e.key}
+                onPress={() => pick({ energy: e.key })}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={e.key === 'draining' ? 'Drains me' : 'Energizes me'}
+                style={[styles.pill, styles.energy, on && { borderColor: colors[e.tone], backgroundColor: colors[`${e.tone}Soft`] }]}
+              >
+                <Ionicons name={e.icon} size={14} color={on ? colors[e.tone] : colors.muted} />
+                <Text style={[styles.pillText, on && { color: colors[e.tone] }]}>{e.label}</Text>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
     </View>
   );
 }
 
-const COIN = 34;
-const LABEL = 56;
+const COIN = 38;
 
 const makeStyles = (colors, isDark) => ({
   card: {
     paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm + 4,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1.5,
@@ -143,18 +167,31 @@ const makeStyles = (colors, isDark) => ({
     ...cardShadow(colors, isDark),
   },
   cardOpen: { borderColor: colors.primary },
-  top: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  head: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'stretch' },
-  name: { flexShrink: 1, fontSize: 16, fontWeight: '800', color: colors.text },
-  todo: { marginLeft: 'auto', fontSize: 12, fontWeight: '700', color: colors.accentText },
-  body: { paddingBottom: spacing.sm + 4, gap: spacing.sm + 2 },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  label: { width: LABEL, fontSize: 12, fontWeight: '700', color: colors.muted },
-  options: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  top: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  name: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  // The three buttons, side by side.
+  buttons: { flexDirection: 'row', gap: spacing.sm },
+  button: {
+    flex: 1,
+    height: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  buttonSet: { borderStyle: 'solid', borderColor: 'transparent', backgroundColor: colors.surfaceAlt },
+  buttonOpen: { borderStyle: 'solid', borderColor: colors.primary },
+  buttonText: { fontSize: 13, fontWeight: '700', color: colors.muted },
+  // The open button's choices.
+  choices: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm + 2 },
   pill: {
-    height: 32,
-    minWidth: 40,
-    paddingHorizontal: 10,
+    height: 34,
+    minWidth: 44,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.pill,
@@ -166,7 +203,7 @@ const makeStyles = (colors, isDark) => ({
   pillHint: { borderStyle: 'dashed', borderColor: colors.primary },
   pillText: { fontSize: 13, fontWeight: '700', color: colors.text },
   pillTextOn: { color: colors.primaryDark },
-  energy: { flexDirection: 'row', gap: 4 },
+  energy: { flex: 1, flexDirection: 'row', gap: 4 },
   coin: {
     width: COIN,
     height: COIN,

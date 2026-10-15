@@ -4,7 +4,7 @@ import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
-import AuditTaskCard, { isAudited } from '../../components/AuditTaskCard';
+import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import LiveMatrix from '../../components/LiveMatrix';
 import DayComposer from '../../components/DayComposer';
 import EmptyRoutine from '../../components/EmptyRoutine';
@@ -17,8 +17,9 @@ const MAX_ACTIVITIES = 30;
 
 /**
  * Journey step 2, "Time and energy audit", all in one place: add tasks like a chat (type one or tap a
- * suggestion) and set each one's time, money and energy right on its card. A finished card folds to
- * one line and the next unfinished one opens. Continue leads to the DRIP Matrix.
+ * suggestion); each task's card has three buttons, Time, Money and Energy, that open their choices.
+ * Above the tasks, the DRIP Matrix builds live: a dot drops into its quadrant as each task is
+ * finished. Continue leads to the full DRIP Matrix.
  */
 export default function AuditScreen({ navigation }) {
   const { onboarding, saveStep } = useOnboarding();
@@ -29,8 +30,12 @@ export default function AuditScreen({ navigation }) {
       .filter((i) => i.hours)
       .map(({ activity, hours, value, money, per, energy }) => ({ activity, hours, value, money: money ?? null, per: per || 'day', energy: energy ?? null }))
   );
-  // The card that's open: the first task still missing something.
-  const [openName, setOpenName] = useState(() => items.find((i) => !isAudited(i))?.activity ?? null);
+  // Which task's choices are open, and for which button (Time, Money or Energy).
+  const firstUnset = (it) => FIELDS.find((k) => !it[k]) ?? null;
+  const [open, setOpen] = useState(() => {
+    const it = items.find((i) => !isAudited(i));
+    return it ? { name: it.activity, field: firstUnset(it) } : null;
+  });
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
@@ -61,9 +66,10 @@ export default function AuditScreen({ navigation }) {
     return () => clearTimeout(autosave.current);
   }, [items, saveStep]);
 
-  const toggle = (name) => {
+  // Pressing Time, Money or Energy on a card opens its choices there (pressing it again closes them).
+  const showField = (name, field) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setOpenName((cur) => (cur === name ? null : name));
+    setOpen(field ? { name, field } : null);
   };
 
   // A new task joins the list straight away with its card open.
@@ -71,19 +77,22 @@ export default function AuditScreen({ navigation }) {
     if (items.length >= MAX_ACTIVITIES) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => [...list, { ...newActivity(name, null), per: 'day' }]);
-    setOpenName(name);
+    setOpen({ name, field: 'hours' });
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
   };
 
-  // Picking on a card; once all three are set, it folds and the next unfinished task opens.
+  // Picking a choice: the card's next unset button opens; once all three are set, the task's dot
+  // drops into the matrix and the next unfinished task opens.
   const change = (name, patch) => {
     const updated = items.map((it) =>
       it.activity === name ? { ...it, ...patch, ...(patch.money ? { value: valueForMoney(patch.money) } : null) } : it
     );
     const now = updated.find((it) => it.activity === name);
-    if (isAudited(now)) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setOpenName(updated.find((it) => !isAudited(it))?.activity ?? null);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    if (!isAudited(now)) setOpen({ name, field: firstUnset(now) });
+    else {
+      const nextTask = updated.find((it) => !isAudited(it));
+      setOpen(nextTask ? { name: nextTask.activity, field: firstUnset(nextTask) } : null);
     }
     setItems(updated);
   };
@@ -124,22 +133,20 @@ export default function AuditScreen({ navigation }) {
           />
           {items.length ? (
             <>
-              {/* The DRIP Matrix, building live: finished tasks drop into their quadrant (tap to change). */}
-              <LiveMatrix items={items} onSelect={(name) => toggle(name)} style={styles.matrix} />
-              {/* The tasks still being audited (and the one reopened to change). */}
+              {/* The DRIP Matrix, building live: each finished task drops in as a dot. */}
+              <LiveMatrix items={items} style={styles.matrix} />
+              {/* Every task stays in its place; each card has its Time, Money and Energy buttons. */}
               <View style={styles.rows}>
-                {items
-                  .filter((it) => !isAudited(it) || openName === it.activity)
-                  .map((item) => (
-                    <AuditTaskCard
-                      key={item.activity}
-                      item={item}
-                      open={openName === item.activity}
-                      onToggle={() => toggle(item.activity)}
-                      onChange={(patch) => change(item.activity, patch)}
-                      onRemove={() => remove(item.activity)}
-                    />
-                  ))}
+                {items.map((item) => (
+                  <AuditTaskCard
+                    key={item.activity}
+                    item={item}
+                    field={open?.name === item.activity ? open.field : null}
+                    onField={(field) => showField(item.activity, field)}
+                    onChange={(patch) => change(item.activity, patch)}
+                    onRemove={() => remove(item.activity)}
+                  />
+                ))}
               </View>
             </>
           ) : (
