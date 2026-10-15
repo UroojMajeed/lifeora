@@ -17,10 +17,10 @@ import { brand, cardShadow, radius, spacing } from '../../theme';
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
- * Journey step 1, "Know your worth": your yearly pay (private to you), then your Buyback Rate in a
- * filled card, big, with your hour's worth in an apricot chip and the 2,000 work hours it's based
- * on, then what it means for you in a warm highlighted box. All three are centred together, and
- * follow what you type. With `editing` (from Me) it saves the new pay.
+ * Journey step 1, "Know your worth": your yearly income (private to you), then your Buyback Rate in a
+ * filled card, big, with your hour's worth in an apricot chip and, on a strip along the card's
+ * bottom, the 2,000 work hours it's based on. Under it, what it means for you as a small plain line.
+ * All centred together, following what you type. With `editing` (from Me) it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
   const editing = Boolean(route.params?.editing);
@@ -97,7 +97,7 @@ export default function BuybackRateScreen({ navigation, route }) {
         {/* The question: your yearly pay, on the page itself. */}
         {!editing ? (
           <View style={styles.leadRow}>
-            <Text style={styles.lead}>Your yearly pay</Text>
+            <Text style={styles.lead}>Enter yearly income</Text>
             <View style={styles.private}>
               <Ionicons name="lock-closed" size={12} color={colors.muted} />
               <Text style={styles.privateText}>Private to you</Text>
@@ -111,7 +111,7 @@ export default function BuybackRateScreen({ navigation, route }) {
           value={groupDigits(income)}
           onChangeText={(t) => setIncome(sanitizeAmount(t))}
           placeholder="120,000"
-          accessibilityLabel="Your yearly pay"
+          accessibilityLabel="Enter yearly income"
         />
 
         {/* The answer: your Buyback Rate, a filled card. */}
@@ -129,15 +129,17 @@ export default function BuybackRateScreen({ navigation, route }) {
                 Your hour is worth <Text style={styles.worthValue}>{amount ? `${money(effectiveHourlyRate)}/hr` : '–'}</Text>
               </Text>
             </View>
-            <Text style={styles.basis}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
           </LinearGradient>
+          {/* The work year it's based on, on a strip stuck to the bottom of the card. */}
+          <View style={styles.basis}>
+            <Ionicons name="calendar-outline" size={14} color={colors.heroMuted} />
+            <Text style={styles.basisText}>Based on {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+          </View>
         </View>
 
-        {/* What it means for you, on its own under the card: a warm, highlighted box. */}
+        {/* What it means for you: a small plain line under the card. */}
         <View style={styles.tip}>
-          <View style={styles.tipIcon}>
-            <Ionicons name="bulb" size={18} color={colors.onColor} />
-          </View>
+          <Ionicons name="bulb" size={18} color={colors.accentText} style={styles.tipIcon} />
           <Text style={styles.tipText}>
             Anything someone else can do for{' '}
             <Text style={styles.tipRate}>{amount ? `${rateText}/hr` : 'your Buyback Rate'}</Text> or less shouldn't be yours.
@@ -179,20 +181,21 @@ const makeStyles = (colors) => ({
   },
   worthText: { color: colors.heroText, fontSize: 15, fontWeight: '600' },
   worthValue: { color: brand.apricot, fontWeight: '800' },
-  basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', marginTop: spacing.sm + 2 },
-  // The tip: warm and filled, with a solid apricot icon, so it reads as the takeaway.
-  tip: {
+  basis: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm + 4,
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: brand.apricot,
-    backgroundColor: colors.accentSoft,
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.heroTo,
+    borderTopWidth: 1,
+    borderTopColor: colors.heroDivider,
   },
-  tipIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot },
-  tipText: { flex: 1, color: colors.text, fontSize: 16, lineHeight: 23, fontWeight: '700' },
+  basisText: { color: colors.heroMuted, fontSize: 13, fontWeight: '600' },
+  // The tip: a small plain line with a bulb, the rate in warm amber.
+  tip: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.xs },
+  tipIcon: { marginTop: 2 },
+  tipText: { flex: 1, color: colors.text, fontSize: 15, lineHeight: 22, fontWeight: '600' },
   tipRate: { color: colors.accentText, fontWeight: '800' },
 });
