@@ -96,7 +96,15 @@ export default function BuybackRateScreen({ navigation, route }) {
 
       {/* 1) The question */}
       <View style={{ marginTop: gap - spacing.lg }}>
-        {!editing ? <Text style={styles.lead}>My business pays me each year…</Text> : null}
+        {!editing ? (
+          <View style={styles.leadRow}>
+            <Text style={styles.lead}>Yearly pay</Text>
+            <View style={styles.private}>
+              <Ionicons name="lock-closed" size={12} color={colors.muted} />
+              <Text style={styles.privateText}>Private to you</Text>
+            </View>
+          </View>
+        ) : null}
         <MoneyInput
           large
           currency={currency}
@@ -150,7 +158,10 @@ export default function BuybackRateScreen({ navigation, route }) {
 const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
-  lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
+  leadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm + 2 },
+  lead: { fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
+  private: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  privateText: { fontSize: 13, fontWeight: '600', color: colors.muted },
   // The answer card: the body, then a strip along its foot (so the card carries no outer padding).
   hero: { padding: 0, overflow: 'hidden' },
   heroBody: { alignItems: 'center', paddingTop: spacing.lg, paddingBottom: spacing.md + 4, paddingHorizontal: spacing.md + 4 },
