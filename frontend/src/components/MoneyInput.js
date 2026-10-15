@@ -10,8 +10,9 @@ import { fitFontSize } from '../utils/format';
 /**
  * Amount field with a currency dropdown on its left, e.g. [🇵🇰 PKR ▾ | 6,000,000].
  * The list floats over the screen (a transparent modal under the field), so a tap anywhere outside closes it.
+ * `bare` (with `large`): no box of its own, for a field that sits inside a card.
  */
-export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing, onBlur, large = false, suffix }) {
+export default function MoneyInput({ label, currency, onCurrencyChange, value, onChangeText, placeholder, accessibilityLabel, onSubmitEditing, onBlur, large = false, bare = false, suffix }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(false);
@@ -55,7 +56,7 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
   // Large mode: big digits that shrink as the number grows, so it never runs off the field.
   // Room for digits = screen - page padding - currency chip - "a year" - inner padding.
   const [boxWidth, setBoxWidth] = useState(screenWidth - 48);
-  const largeFont = fitFontSize(value || placeholder, boxWidth - 104 - (suffix ? 56 : 0) - 28, 30, 14);
+  const largeFont = fitFontSize(value || placeholder, boxWidth - 104 - (suffix ? 56 : 0) - (bare ? 12 : 28), 30, 14);
 
   const top = anchor ? anchor.y + anchor.height + 6 : 0;
   // Keep the list on screen: shrink it if the field sits low.
@@ -69,14 +70,14 @@ export default function MoneyInput({ label, currency, onCurrencyChange, value, o
         ref={boxRef}
         collapsable={false}
         onLayout={(e) => setBoxWidth(e.nativeEvent.layout.width)}
-        style={[styles.box, large && styles.boxLarge, (focused || open) && styles.boxFocused]}
+        style={[styles.box, large && styles.boxLarge, bare ? styles.boxBare : (focused || open) && styles.boxFocused]}
       >
         <Pressable
           onPress={toggle}
           accessibilityRole="button"
           accessibilityLabel={`Currency: ${current?.name || currency}. Tap to change.`}
           accessibilityState={{ expanded: open }}
-          style={({ pressed }) => [styles.currency, large && styles.currencyLarge, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.currency, large && styles.currencyLarge, bare && styles.currencyBare, pressed && { opacity: 0.7 }]}
         >
           <Text style={styles.flag}>{current?.flag}</Text>
           <Text style={styles.code}>{currency}</Text>
@@ -173,6 +174,9 @@ const makeStyles = (colors) => ({
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
   },
+  // Bare: the field sits inside a card, so it draws no box; the currency chip keeps a soft fill.
+  boxBare: { minHeight: 52, borderWidth: 0, backgroundColor: 'transparent', borderRadius: 0, paddingRight: 0 },
+  currencyBare: { marginLeft: 0, backgroundColor: colors.surfaceAlt },
   inputLarge: { fontSize: 30, fontWeight: '800', letterSpacing: -0.5, paddingHorizontal: spacing.sm + 2 },
   suffix: { fontSize: 15, fontWeight: '600', color: colors.muted, flexShrink: 0 },
   currency: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: spacing.md, paddingRight: spacing.sm, height: '100%' },
