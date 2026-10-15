@@ -50,8 +50,16 @@ export default function Screen({ children, footer, scroll = true, scrollEnabled 
         behavior={Platform.OS === 'ios' || avoidKeyboard ? 'padding' : undefined}
       >
         <Body {...bodyProps}>{children}</Body>
-        {/* The footer hides while typing, unless keepFooter: then it rides above the keyboard. */}
-        {footer && (!keyboardOpen || keepFooter) ? <View style={styles.footer}>{footer}</View> : null}
+        {/* The footer hides while typing, unless keepFooter: then it rides above the keyboard. On Android
+            (where the keyboard covers the screen without resizing it) it keeps its space while hidden, so
+            nothing on the page jumps when the keyboard closes. */}
+        {footer && (!keyboardOpen || keepFooter) ? (
+          <View style={styles.footer}>{footer}</View>
+        ) : footer && Platform.OS === 'android' && !avoidKeyboard ? (
+          <View style={[styles.footer, styles.footerHidden]} pointerEvents="none" importantForAccessibility="no-hide-descendants">
+            {footer}
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -67,4 +75,5 @@ const makeStyles = (colors) => ({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
+  footerHidden: { opacity: 0 },
 });
