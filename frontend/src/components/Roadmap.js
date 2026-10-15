@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Text, View } from 'react-native';
+import { AccessibilityInfo, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -14,8 +14,10 @@ const NODE = 30;
 const SUN = 44; // the destination: bigger than a step, with a soft halo
 const HALO = SUN + 22;
 const GAP = 14; // between the road and the words
-const ROAD_MIN = 10;
-const ROAD_MAX = 84; // the road stretches to spread the steps over the screen (capped on very tall ones)
+const ROAD = 28; // a stretch of road between two steps, on a phone ~800pt tall
+// Responsive without stretching: everything grows or shrinks together with the screen height,
+// within a small range (so the steps never drift apart on tall phones or cram on small ones).
+const scaleFor = (height) => Math.min(1.15, Math.max(0.85, height / 800));
 // One stop at a time, calm: each number appears and lights up, then the road runs on to the next.
 const STOP_MS = 1100;
 const END_MS = 1300; // the sun, then the promise
@@ -37,7 +39,7 @@ const ending = (t, a, b) => {
   return between(t * TOTAL_MS, start + a * END_MS, start + b * END_MS);
 };
 
-function Stop({ t, i, label, done, last }) {
+function Stop({ t, i, label, done, last, road, node }) {
   const styles = useStyles(makeStyles);
 
   // The number and its words fade in…
@@ -51,10 +53,10 @@ function Stop({ t, i, label, done, last }) {
   const drawn = useAnimatedStyle(() => ({ height: `${100 * between(local(t.value, i), 0.6, 1)}%` }));
 
   return (
-    <View style={styles.stop}>
+    <View>
       <Animated.View style={[styles.row, done ? null : appear]}>
         <View style={styles.col}>
-          <View style={styles.node}>
+          <View style={[styles.node, { width: node, height: node, borderRadius: node / 2 }]}>
             <Text style={styles.num}>{i + 1}</Text>
             <Animated.View style={[styles.nodeLit, done ? null : lit]}>
               <Text style={[styles.num, styles.numLit]}>{i + 1}</Text>
@@ -65,7 +67,7 @@ function Stop({ t, i, label, done, last }) {
           {label}
         </Text>
       </Animated.View>
-      <View style={styles.roadCol}>
+      <View style={[styles.roadCol, { height: road }]}>
         {/* The last stretch, into the sun, is gold: the work leads to the reward. */}
         <View style={[styles.road, last && styles.roadGold]}>
           <Animated.View style={[styles.roadDrawn, last && styles.roadDrawnGold, done ? styles.roadFull : drawn]} />
@@ -85,6 +87,10 @@ function Stop({ t, i, label, done, last }) {
 export default function Roadmap() {
   const styles = useStyles(makeStyles);
   const { colors } = useTheme();
+  const { height } = useWindowDimensions();
+  const s = scaleFor(height);
+  const road = Math.round(ROAD * s);
+  const node = Math.round(NODE * s);
   const t = useSharedValue(0);
   const [done, setDone] = useState(false);
 
@@ -125,7 +131,7 @@ export default function Roadmap() {
       accessibilityLabel={`Your journey: ${STOPS.map((s, i) => `step ${i + 1}, ${s}`).join('; ')}. Then: your time back, for the work and life you love.`}
     >
       {STOPS.map((label, i) => (
-        <Stop key={label} t={t} i={i} label={label} done={done} last={i === STOPS.length - 1} />
+        <Stop key={label} t={t} i={i} label={label} done={done} last={i === STOPS.length - 1} road={road} node={node} />
       ))}
 
       {/* The destination: the sun on the road, the promise beside it. */}
@@ -149,9 +155,10 @@ export default function Roadmap() {
 
 const makeStyles = (colors, isDark) => ({
   // In the middle of the room between the heading and the button; the block itself reads straight down.
-  wrap: { flex: 1, alignSelf: 'center', justifyContent: 'center', paddingVertical: spacing.lg },
+  // Natural size, in the middle of the room between the heading and the button, lifted a little
+  // above centre (the optical centre looks balanced; the true centre looks low).
+  wrap: { flex: 1, alignSelf: 'center', justifyContent: 'center', paddingTop: spacing.md, paddingBottom: spacing.xl },
   // A stop grows only as far as its stretch of road can (so the road always meets the next number).
-  stop: { flex: 1, minHeight: NODE + ROAD_MIN + 8, maxHeight: NODE + ROAD_MAX + 8 },
   row: { flexDirection: 'row', alignItems: 'center' },
   col: { width: COL, alignItems: 'center' },
   node: {
@@ -179,7 +186,7 @@ const makeStyles = (colors, isDark) => ({
   numLit: { color: colors.onColor },
   label: { marginLeft: GAP, fontSize: 17, fontWeight: '700', color: colors.text },
   // A stretch of road under the number: faint until it's drawn in teal from the top.
-  roadCol: { flex: 1, width: COL, alignItems: 'center', paddingVertical: 4 },
+  roadCol: { width: COL, alignItems: 'center', paddingVertical: 4 },
   road: { flex: 1, width: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
   roadDrawn: { width: 3, borderRadius: 2, backgroundColor: colors.primary },
   roadGold: { backgroundColor: colors.goldLine },
