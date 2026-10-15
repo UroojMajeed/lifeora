@@ -5,6 +5,7 @@ import LandingScreen from '../screens/LandingScreen';
 import ProfileScreen from '../screens/onboarding/ProfileScreen';
 import JourneyScreen from '../screens/onboarding/JourneyScreen';
 import BuybackRateScreen from '../screens/onboarding/BuybackRateScreen';
+import AuditScreen from '../screens/onboarding/AuditScreen';
 import ScheduleScreen from '../screens/onboarding/ScheduleScreen';
 import SwipeScreen from '../screens/onboarding/SwipeScreen';
 import HandoffDetailScreen from '../screens/HandoffDetailScreen';
@@ -31,6 +32,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Journey" component={JourneyScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="BuybackRate" component={BuybackRateScreen} />
+      <Stack.Screen name="Audit" component={AuditScreen} />
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Swipe" component={SwipeScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
