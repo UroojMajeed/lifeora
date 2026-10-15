@@ -12,15 +12,14 @@ import { WORK_HOURS_PER_YEAR, calculateBuybackRate, stepNumber } from '../../con
 import { defaultCurrency } from '../../constants/currencies';
 import { fitFontSize, formatMoney, groupDigits, sanitizeAmount } from '../../utils/format';
 import { useStyles } from '../../theme/ThemeContext';
-import { brand, radius, spacing } from '../../theme';
+import { brand, spacing } from '../../theme';
 
 const MAX_COLUMN = 520; // tablets and big phones: a comfortable reading width, centred
 
 /**
  * "What's your time worth?" (onboarding step 1): one answer, what your business pays you a year. Under
- * it, what the rate means (one line), then the card: your Buyback Rate big in the middle, your
- * hour's worth beside its label and the 2,000 work hours it comes from (always there, following
- * what you type). With `editing` (from Me)
+ * it, what the rate means (one line), then the card, one centred stack: "Buyback Rate", the rate big
+ * (a blank until you type), then your hour's worth and the 2,000 work hours in small text. With `editing` (from Me)
  * it saves the new pay.
  */
 export default function BuybackRateScreen({ navigation, route }) {
@@ -116,23 +115,16 @@ export default function BuybackRateScreen({ navigation, route }) {
 
       {/* The answer, always here and following what you type ("–" until there's a number):
           the Buyback Rate big in the middle, how it's worked out small underneath. */}
+      {/* One simple stack in the middle: the name, the number (a blank until you type), then where it
+          comes from in small text. */}
       <HeroCard style={[styles.hero, { marginTop: spacing.md }]}>
-        {/* Top: what it is, and what your hour is worth. */}
-        <View style={styles.heroTop}>
-          <Text style={styles.heroLabel}>Your Buyback Rate</Text>
-          <View style={styles.worth}>
-            <Text style={styles.worthText} numberOfLines={1}>
-              Your hour is worth {amount ? formatMoney(effectiveHourlyRate, currency, { decimals: 0 }) : '–'}
-            </Text>
-          </View>
-        </View>
-        {/* The rate itself, big in the middle. */}
+        <Text style={styles.title}>Buyback Rate</Text>
         <Text style={[styles.big, { fontSize: bigFont, lineHeight: Math.round(bigFont * 1.2) }]} numberOfLines={1}>
           {rateText}
           {amount ? <Text style={[styles.per, { fontSize: Math.max(14, Math.round(bigFont * 0.42)) }]}>/hr</Text> : null}
         </Text>
-        {/* Where it comes from, quietly. */}
-        <Text style={styles.basis}>From {WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
+        <Text style={styles.small}>Your hour is worth {amount ? `${formatMoney(effectiveHourlyRate, currency)}/hr` : '–'}</Text>
+        <Text style={styles.small}>{WORK_HOURS_PER_YEAR.toLocaleString('en-US')} work hours a year</Text>
       </HeroCard>
 
       <ErrorBanner message={error} />
@@ -144,15 +136,12 @@ const makeStyles = (colors) => ({
   column: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   button: { width: '100%', maxWidth: MAX_COLUMN, alignSelf: 'center' },
   lead: { fontSize: 16, fontWeight: '800', color: colors.text, marginBottom: spacing.sm + 2, letterSpacing: -0.2 },
-  hero: { padding: spacing.md + 4 },
+  hero: { paddingVertical: spacing.lg, paddingHorizontal: spacing.md + 4 },
   tip: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   tipText: { flex: 1, fontSize: 16, lineHeight: 23, fontWeight: '700', color: colors.text },
   tipRate: { color: colors.accentText, fontWeight: '800' },
-  heroTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  heroLabel: { color: brand.apricot, fontSize: 12, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
-  worth: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.heroChip },
-  worthText: { color: colors.heroText, fontSize: 12, fontWeight: '700' },
-  big: { color: colors.heroText, fontWeight: '800', letterSpacing: -1, textAlign: 'center', marginTop: spacing.md },
+  title: { color: colors.heroText, fontSize: 24, fontWeight: '800', letterSpacing: -0.3, textAlign: 'center' },
+  big: { color: brand.apricot, fontWeight: '800', letterSpacing: -1, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.sm },
   per: { fontWeight: '600', color: colors.heroMuted, letterSpacing: 0 },
-  basis: { color: colors.heroMuted, fontSize: 12, fontWeight: '600', textAlign: 'center', marginTop: spacing.sm },
+  small: { color: colors.heroMuted, fontSize: 13, lineHeight: 19, fontWeight: '600', textAlign: 'center' },
 });
