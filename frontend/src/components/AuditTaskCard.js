@@ -162,7 +162,7 @@ export function AuditFields({ item, field, onField, onChange }) {
  * Tapping the name edits it in place; Enter or tapping away saves it (`onRename(name)`, which may
  * say no, e.g. for an empty or duplicate name, and then the old name stays).
  */
-export default function AuditTaskCard({ item, field, onField, onChange, onRename, onRemove }) {
+export default function AuditTaskCard({ item, field, onField, onChange, onRename, onEditStart, onRemove }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [editing, setEditing] = useState(false);
@@ -198,6 +198,7 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRename
             onPress={() => {
               setDraft(item.activity);
               setEditing(true);
+              onEditStart?.();
             }}
             accessibilityRole="button"
             accessibilityLabel={`${item.activity}. Tap to rename.`}

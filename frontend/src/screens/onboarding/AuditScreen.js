@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
@@ -49,37 +49,28 @@ export default function AuditScreen({ navigation, route }) {
     const it = items.find((i) => !isAudited(i));
     return it ? { name: it.activity, field: firstUnset(it) } : null;
   });
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-  // On the form, only the button bar rides up with the keyboard (a smooth slide); the page stays still.
-  // How far: measured, not guessed: from the bar's real bottom edge to where the keyboard really starts
-  // (phones report the keyboard's height differently, especially drawing edge to edge).
-  const lift = useRef(new Animated.Value(0)).current;
-  const lifted = useRef(0);
-  const barRef = useRef(null);
+  // The keyboard simply slides over the bottom of the screen: the page never resizes for it, so nothing
+  // jumps. Its height only makes room at the end of the list, so a card being renamed can scroll above it.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   useEffect(() => {
-    const slide = (to, duration) => {
-      lifted.current = to;
-      Animated.timing(lift, { toValue: to, duration: duration || 200, useNativeDriver: true }).start();
-    };
-    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
-      setKeyboardOpen(true);
-      const keyboardTop = e?.endCoordinates?.screenY;
-      if (!barRef.current || !keyboardTop) return;
-      barRef.current.measureInWindow((x, y, w, h) => {
-        // Where the bar's bottom would be with no lift, and how much of it the keyboard covers.
-        const bottom = y + h - lifted.current;
-        slide(-Math.max(0, bottom - keyboardTop + 4), e?.duration);
-      });
-    });
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
-      setKeyboardOpen(false);
-      slide(0, e?.duration);
-    });
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
+      setKeyboardHeight(e?.endCoordinates?.height || 0)
+    );
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardHeight(0));
     return () => {
       show.remove();
       hide.remove();
     };
-  }, [lift]);
+  }, []);
+  // Where each card sits in the list, so the one being renamed can be scrolled into view.
+  const rowsY = useRef(0);
+  const cardY = useRef({});
+  const bringIntoView = (name) => {
+    setTimeout(() => {
+      const y = rowsY.current + (cardY.current[name] || 0);
+      listRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+    }, 250);
+  };
   const listRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -171,9 +162,8 @@ export default function AuditScreen({ navigation, route }) {
   };
 
   return (
-    // The form sits near the top, so the keyboard never covers the task box: the screen stays still while
-    // you type (nothing to lift, nothing to jump). The list lifts, so renaming a task lower down stays in view.
-    <Screen scroll={false} avoidKeyboard={mode === 'list'} tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+    // The screen stays still while you type (the keyboard slides over the bottom; nothing is lifted or resized).
+    <Screen scroll={false} tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
         <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <StepHeader
@@ -218,32 +208,32 @@ export default function AuditScreen({ navigation, route }) {
                   </Pressable>
                 ) : null}
               </View>
-              <View style={styles.rows}>
+              <View style={styles.rows} onLayout={(e) => (rowsY.current = e.nativeEvent.layout.y)}>
                 {items.map((item) => (
-                  <AuditTaskCard
-                    key={item.activity}
-                    item={item}
-                    field={open?.name === item.activity ? open.field : null}
-                    onField={(field) => showField(item.activity, field)}
-                    onChange={(patch) => change(item.activity, patch)}
-                    onRename={(name) => rename(item.activity, name)}
-                    onRemove={() => remove(item.activity)}
-                  />
+                  <View key={item.activity} onLayout={(e) => (cardY.current[item.activity] = e.nativeEvent.layout.y)}>
+                    <AuditTaskCard
+                      item={item}
+                      field={open?.name === item.activity ? open.field : null}
+                      onField={(field) => showField(item.activity, field)}
+                      onChange={(patch) => change(item.activity, patch)}
+                      onRename={(name) => rename(item.activity, name)}
+                      onEditStart={() => bringIntoView(item.activity)}
+                      onRemove={() => remove(item.activity)}
+                    />
+                  </View>
                 ))}
               </View>
             </>
           )}
           <ErrorBanner message={error} />
+          {/* Room under the list while the keyboard is up (invisible; it doesn't move anything). */}
+          {keyboardHeight ? <View style={{ height: keyboardHeight }} /> : null}
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach: Done and Save & next on the form. While you type it slides up and
-            sits just above the keyboard (the page itself doesn't move), and slides back down after. */}
+        {/* The sticky bar, in thumb reach: Done and Save & next on the form. It stays put (the keyboard
+            covers it while you type), so nothing moves. */}
         {mode === 'form' ? (
-          <Animated.View
-            ref={barRef}
-            collapsable={false}
-            style={[styles.bar, keyboardOpen && styles.barLifted, { transform: [{ translateY: lift }] }]}
-          >
+          <View style={styles.bar}>
             {items.length ? (
               <Button
                 title={`Done · ${items.length}`}
@@ -260,11 +250,11 @@ export default function AuditScreen({ navigation, route }) {
               disabled={!formReady}
               style={[styles.barButton, styles.barMain]}
             />
-          </Animated.View>
+          </View>
         ) : null}
 
-        {/* From the routine on to the DRIP Matrix (out of the way while typing). */}
-        {mode === 'list' && !keyboardOpen && items.length ? (
+        {/* From the routine on to the DRIP Matrix (it stays put; the keyboard covers it while you type). */}
+        {mode === 'list' && items.length ? (
           <View style={styles.actionRow}>
             <Button
               title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
@@ -290,9 +280,7 @@ const makeStyles = (colors) => ({
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
   listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   // The sticky bar.
-  bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, zIndex: 2 },
-  // Riding on the keyboard: a solid strip, so the page underneath doesn't show through.
-  barLifted: { backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: spacing.sm },
+  bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },
   barMain: { flex: 1 },
   // "Done": short and outlined, so it never competes with "Save & next".
