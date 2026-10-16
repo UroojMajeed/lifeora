@@ -157,7 +157,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
       {/* Time, Money and Energy: their own section (a hairline and a label), so they never blend with
           the suggestions above. The same buttons as on the routine's cards. */}
       <View style={styles.fields}>
-        <Text style={styles.sectionLabel}>Set its time, money and energy</Text>
+        <Text style={styles.sectionLabel}>How long · What it pays · How it feels</Text>
         <AuditFields
           item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }}
           field={field}
