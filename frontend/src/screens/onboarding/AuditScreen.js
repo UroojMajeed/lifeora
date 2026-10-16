@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
@@ -50,18 +51,25 @@ export default function AuditScreen({ navigation, route }) {
     return it ? { name: it.activity, field: firstUnset(it) } : null;
   });
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  // On the form, only the button bar rides up with the keyboard (a smooth slide); the page stays still.
+  const insets = useSafeAreaInsets();
+  const lift = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
-    // The bottom buttons come back as the keyboard goes: eased in, so the screen doesn't jerk.
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    const slide = (to, duration) =>
+      Animated.timing(lift, { toValue: to, duration: duration || 200, useNativeDriver: true }).start();
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
+      setKeyboardOpen(true);
+      slide(-Math.max(0, (e?.endCoordinates?.height || 0) - insets.bottom), e?.duration);
+    });
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
       setKeyboardOpen(false);
+      slide(0, e?.duration);
     });
     return () => {
       show.remove();
       hide.remove();
     };
-  }, []);
+  }, [lift, insets.bottom]);
   const listRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -218,10 +226,10 @@ export default function AuditScreen({ navigation, route }) {
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach: Done and Save & next on the form. It stays put (the keyboard just
-            covers it while you type), so nothing moves when the keyboard opens or closes. */}
+        {/* The sticky bar, in thumb reach: Done and Save & next on the form. While you type it slides up and
+            sits just above the keyboard (the page itself doesn't move), and slides back down after. */}
         {mode === 'form' ? (
-          <View style={styles.bar}>
+          <Animated.View style={[styles.bar, keyboardOpen && styles.barLifted, { transform: [{ translateY: lift }] }]}>
             {items.length ? (
               <Button
                 title={`Done · ${items.length}`}
@@ -238,7 +246,7 @@ export default function AuditScreen({ navigation, route }) {
               disabled={!formReady}
               style={[styles.barButton, styles.barMain]}
             />
-          </View>
+          </Animated.View>
         ) : null}
 
         {/* From the routine on to the DRIP Matrix (out of the way while typing). */}
@@ -268,7 +276,9 @@ const makeStyles = (colors) => ({
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
   listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   // The sticky bar.
-  bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, zIndex: 2 },
+  // Riding on the keyboard: a solid strip, so the page underneath doesn't show through.
+  barLifted: { backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: spacing.sm },
   barButton: { minHeight: 52 },
   barMain: { flex: 1 },
   // "Done": short and outlined, so it never competes with "Save & next".
