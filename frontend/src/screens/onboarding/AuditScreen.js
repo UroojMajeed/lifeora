@@ -7,9 +7,9 @@ import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import AuditForm from '../../components/AuditForm';
+import AuditStats from '../../components/AuditStats';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
-import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
@@ -108,13 +108,20 @@ export default function AuditScreen({ navigation, route }) {
     setItems(updated);
   };
 
+  // A new name for a task (from its card). Empty or already in the list: no (the card keeps the old one).
+  const rename = (oldName, newName) => {
+    if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
+    setItems((list) => list.map((it) => (it.activity === oldName ? { ...it, activity: newName } : it)));
+    setOpen((o) => (o?.name === oldName ? { ...o, name: newName } : o));
+    return true;
+  };
+
   const remove = (name) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((it) => it.activity !== name));
   };
 
   const unfinished = items.filter((it) => !isAudited(it)).length;
-  const totalHours = items.reduce((t, it) => t + (it.hours || 0), 0);
   // The form's "Save & next" lives in the sticky bar; the form says when it can save.
   const formRef = useRef(null);
   const [formReady, setFormReady] = useState(false);
@@ -154,12 +161,14 @@ export default function AuditScreen({ navigation, route }) {
               round
                 ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
                 : mode === 'list'
-                ? 'Tap Time, Money or Energy on a task to change it.'
+                ? 'Everything you do on a normal work day.'
                 : 'Add the tasks of a normal work day, one at a time.'
             }
           />
           {mode === 'form' ? (
             <>
+              {/* Your totals so far, big and clear. */}
+              {items.length ? <AuditStats items={items} style={styles.stats} /> : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
@@ -174,11 +183,10 @@ export default function AuditScreen({ navigation, route }) {
           ) : (
             <>
               {/* The routine, shown once: each card can still be changed. */}
-              {/* On top, so it's there without scrolling: the count, and a way to add another task. */}
+              {/* On top, so it's there without scrolling: your totals, and a way to add another task. */}
+              <AuditStats items={items} style={styles.stats} />
               <View style={styles.listTop}>
-                <Text style={styles.listHead}>
-                  {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
-                </Text>
+                <Text style={styles.listHead}>Tap a name or a button to change it</Text>
                 {items.length < MAX_ACTIVITIES ? (
                   <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
                     <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
@@ -194,6 +202,7 @@ export default function AuditScreen({ navigation, route }) {
                     field={open?.name === item.activity ? open.field : null}
                     onField={(field) => showField(item.activity, field)}
                     onChange={(patch) => change(item.activity, patch)}
+                    onRename={(name) => rename(item.activity, name)}
                     onRemove={() => remove(item.activity)}
                   />
                 ))}
@@ -248,8 +257,9 @@ const makeStyles = (colors) => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
+  stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
-  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4 },
+  listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   // The sticky bar.
   bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },

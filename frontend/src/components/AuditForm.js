@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { AuditFields, FIELDS } from './AuditTaskCard';
 import { suggestionsFor, valueForMoney } from '../constants/content';
-import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, cardShadow, radius, spacing } from '../theme';
 
@@ -30,7 +29,6 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
   const taken = (n) => items.some((i) => sameName(i.activity, n));
   const duplicate = Boolean(name) && taken(name);
   const suggestions = suggestionsFor(role).filter((n) => !taken(n));
-  const totalHours = items.reduce((t, it) => t + (it.hours || 0), 0);
   const ready = Boolean(name) && !duplicate && Boolean(form.hours && form.money && form.energy);
 
   useEffect(() => {
@@ -87,11 +85,6 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </LinearGradient>
         <View style={styles.headText}>
           <Text style={styles.headTitle}>Add a task</Text>
-          {items.length ? (
-            <Text style={styles.headSub}>
-              {items.length} added · {formatHours(totalHours)} a day so far
-            </Text>
-          ) : null}
         </View>
         <View style={styles.count}>
           <Text style={styles.countText}>Task {items.length + 1}</Text>
@@ -191,7 +184,6 @@ const makeStyles = (colors, isDark) => ({
   headIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headText: { flex: 1 },
   headTitle: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
-  headSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
   count: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   countText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },

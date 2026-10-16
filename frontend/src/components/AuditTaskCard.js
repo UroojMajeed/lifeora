@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -158,17 +159,55 @@ export function AuditFields({ item, field, onField, onChange }) {
  * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy), each in
  * its own colour (teal, gold, green) even before it's set. A set button shows its value; pressing one
  * opens its choices under the buttons (`field` is the one open). Picking calls `onChange(patch)`.
+ * Tapping the name edits it in place; Enter or tapping away saves it (`onRename(name)`, which may
+ * say no, e.g. for an empty or duplicate name, and then the old name stays).
  */
-export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
-  const { colors } = useTheme();
+export default function AuditTaskCard({ item, field, onField, onChange, onRename, onRemove }) {
+  const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.activity);
+
+  const finish = () => {
+    setEditing(false);
+    const next = draft.replace(/\s+/g, ' ').trim();
+    if (next && next !== item.activity && onRename?.(next)) return;
+    setDraft(item.activity); // nothing to change, or it wasn't allowed: keep the old name
+  };
 
   return (
     <View style={[styles.card, field && styles.cardOpen]}>
       <View style={styles.top}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.activity}
-        </Text>
+        {editing ? (
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            onSubmitEditing={finish}
+            onBlur={finish}
+            autoFocus
+            selectTextOnFocus
+            maxLength={60}
+            returnKeyType="done"
+            keyboardAppearance={isDark ? 'dark' : 'light'}
+            style={[styles.name, styles.nameInput]}
+            accessibilityLabel="Task name"
+          />
+        ) : (
+          <Pressable
+            onPress={() => {
+              setDraft(item.activity);
+              setEditing(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.activity}. Tap to rename.`}
+            style={styles.nameTap}
+          >
+            <Text style={styles.name} numberOfLines={1}>
+              {item.activity}
+            </Text>
+            <Ionicons name="pencil" size={13} color={colors.muted} />
+          </Pressable>
+        )}
         <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
@@ -193,7 +232,18 @@ const makeStyles = (colors, isDark) => ({
   },
   cardOpen: { borderColor: colors.primary },
   top: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  name: { flexShrink: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  nameTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'stretch' },
+  nameInput: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    marginLeft: -spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
   // The three buttons, side by side.
   buttons: { flexDirection: 'row', gap: spacing.sm },
   button: {
