@@ -288,13 +288,14 @@ const makeStyles = (colors, isDark) => ({
     justifyContent: 'center',
     paddingHorizontal: 2,
     overflow: 'hidden',
+    // Gold even before it's picked (a gold edge on a light gold tint); picked, it's a full gold coin.
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: colors.gold[1],
+    backgroundColor: colors.accentSoft,
   },
-  coinOn: { borderColor: colors.gold[1] },
+  coinOn: { borderColor: colors.gold[1], borderWidth: 2 },
   coinFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  coinText: { fontSize: 12, fontWeight: '700', color: colors.muted },
+  coinText: { fontSize: 12, fontWeight: '800', color: colors.accentText },
   coinTextOn: { color: colors.goldInk, fontWeight: '800' },
   moneyScale: { fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 6 },
 });
