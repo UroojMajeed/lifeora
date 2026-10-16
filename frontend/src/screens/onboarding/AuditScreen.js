@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, LayoutAnimation, Platform, ScrollView, View } from 'react-native';
+import { Keyboard, LayoutAnimation, Platform, ScrollView, Text, View } from 'react-native';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
-import DayComposer from '../../components/DayComposer';
-import EmptyRoutine from '../../components/EmptyRoutine';
+import AuditForm from '../../components/AuditForm';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { newActivity, stepNumber, valueForMoney } from '../../constants/content';
+import { stepNumber, valueForMoney } from '../../constants/content';
+import { formatHours } from '../../utils/format';
 import { useStyles } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
 const MAX_ACTIVITIES = 30;
 
 /**
- * Journey step 2, "Time and energy audit", all in one place: add tasks like a chat (type one or tap a
- * suggestion); each task's card has three buttons, Time, Money and Energy, that open their choices.
- * A finished card takes its DRIP quadrant's colour. Continue leads to the full DRIP Matrix.
+ * Journey step 2, "Time and energy audit", all in one place: a form at the top adds one task at a time
+ * (its name, time, money and energy; "Save & add next"), and your routine is listed under it, each
+ * task's card with its Time, Money and Energy buttons to change them. A finished card takes its DRIP
+ * quadrant's colour. "Done" finishes the routine and leads to the full DRIP Matrix.
  */
 export default function AuditScreen({ navigation, route }) {
   // A new round of the Loop (after onboarding): the whole routine gets audited again.
@@ -72,13 +73,11 @@ export default function AuditScreen({ navigation, route }) {
     setOpen(field ? { name, field } : null);
   };
 
-  // A new task joins the list straight away with its card open.
-  const add = (name) => {
+  // The form's "Save & add next": the finished task joins the routine list (its card closed).
+  const add = (task) => {
     if (items.length >= MAX_ACTIVITIES) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setItems((list) => [...list, { ...newActivity(name, null), per: 'day' }]);
-    setOpen({ name, field: 'hours' });
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+    setItems((list) => [...list, task]);
   };
 
   // Picking a choice: the card's next unset button opens; once all three are set, the task's dot
@@ -103,6 +102,7 @@ export default function AuditScreen({ navigation, route }) {
   };
 
   const unfinished = items.filter((it) => !isAudited(it)).length;
+  const totalHours = items.reduce((t, it) => t + (it.hours || 0), 0);
   const ready = items.length > 0 && !unfinished;
 
   const next = async () => {
@@ -138,12 +138,18 @@ export default function AuditScreen({ navigation, route }) {
             subtitle={
               round
                 ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
-                : "Add your tasks and set each one's time, money and energy."
+                : 'Add your tasks one at a time. Tap Done when your routine is complete.'
             }
           />
+          {/* Add a task: one at a time. */}
+          {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} /> : null}
+
+          {/* Your routine, as it is: each card keeps its Time, Money and Energy buttons to change them. */}
           {items.length ? (
             <>
-              {/* Every task stays in its place; each card has its Time, Money and Energy buttons. */}
+              <Text style={styles.listHead}>
+                Your routine · {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
+              </Text>
               <View style={styles.rows}>
                 {items.map((item) => (
                   <AuditTaskCard
@@ -157,17 +163,15 @@ export default function AuditScreen({ navigation, route }) {
                 ))}
               </View>
             </>
-          ) : (
-            <EmptyRoutine />
-          )}
+          ) : null}
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* The way on, on its own above the chat bar (hidden while typing). */}
+        {/* Done: the routine is finished (hidden while typing). */}
         {!keyboardOpen && items.length ? (
           <View style={styles.actionRow}>
             <Button
-              title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
+              title={ready ? 'Done, see your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
               icon={ready ? 'arrow-forward' : undefined}
               onPress={next}
               loading={loading}
@@ -177,16 +181,16 @@ export default function AuditScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {items.length < MAX_ACTIVITIES ? <DayComposer role={onboarding?.role} items={items} onAdd={add} /> : null}
       </View>
     </Screen>
   );
 }
 
-const makeStyles = () => ({
+const makeStyles = (colors) => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
+  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginTop: spacing.lg, marginBottom: spacing.sm },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
