@@ -16,8 +16,9 @@ import { spacing } from '../../theme';
 const MAX_ACTIVITIES = 30;
 
 /**
- * Journey step 2, "Time and energy audit", in two clean parts. First the form, one question at a time
- * (the task, its time, its money, its energy), task after task. "Done, that's my routine" then shows
+ * Journey step 2, "Time and energy audit", in two clean parts. First the form on one card, each
+ * question opening under the last as you answer (the task, its time, its money, its energy), task
+ * after task. "Done, that's my routine" then shows
  * the routine once, as a list: each card with its Time, Money and Energy buttons to change them, in
  * its DRIP quadrant's colour. From there, the full DRIP Matrix.
  */
@@ -157,7 +158,7 @@ export default function AuditScreen({ navigation, route }) {
           {mode === 'form' ? (
             <>
               {/* One question at a time, task after task. */}
-              {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} /> : null}
+              {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} onReveal={() => listRef.current?.scrollToEnd({ animated: true })} /> : null}
               {items.length ? (
                 <View style={styles.doneRow}>
                   <Text style={styles.count}>
