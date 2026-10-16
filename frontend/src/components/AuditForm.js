@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
   const [form, setForm] = useState(EMPTY);
   const [field, setField] = useState(null); // the open button: 'hours' | 'money' | 'energy'
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
 
   const name = form.name.trim();
   const taken = (n) => items.some((i) => sameName(i.activity, n));
@@ -88,14 +89,20 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </View>
       </View>
 
-      {/* The task: a roomy writing area (about three lines), calm text, a teal glow while you type. */}
+      {/* The task: a roomy writing area (about three lines), calm text, a teal edge while you type. */}
       <View style={styles.labelRow}>
         <Text style={styles.label}>Task</Text>
         <Text style={styles.counter}>{form.name.length}/60</Text>
       </View>
-      <View style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}>
+      {/* The whole area opens the keyboard on the first tap (not just the line with the text). */}
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
+        accessible={false}
+        style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
+      >
         <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
         <TextInput
+          ref={inputRef}
           value={form.name}
           // One line of meaning, but room to see it all: Return finishes (no new lines).
           onChangeText={(t) => setForm((f) => ({ ...f, name: t.replace(/\n/g, ' ') }))}
@@ -113,7 +120,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           style={[styles.input, duplicate && { color: colors.error }]}
           accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
         />
-      </View>
+      </Pressable>
       {duplicate ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
 
       {/* Suggestions: right under the task box while it's empty (one line, scroll sideways for more). */}
@@ -192,19 +199,11 @@ const makeStyles = (colors, isDark) => ({
     borderColor: colors.primarySoft,
     backgroundColor: colors.surfaceAlt,
   },
-  // Typing: a white area with a teal edge and a soft teal glow.
-  inputBoxFocused: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 2,
-  },
+  // Typing: a white area with a teal edge.
+  inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
   inputBoxError: { borderColor: colors.error },
   inputIcon: { marginTop: 2 },
-  input: { flex: 1, minHeight: 66, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
+  input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // One line of suggestions, edge to edge inside the card (scrolls sideways).
   suggestionsLine: { marginTop: spacing.sm + 2, marginHorizontal: -(spacing.md + 4) },
