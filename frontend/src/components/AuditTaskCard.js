@@ -142,10 +142,11 @@ export function AuditFields({ item, field, onField, onChange }) {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: on }}
                 accessibilityLabel={e.key === 'draining' ? 'Drains me' : 'Energizes me'}
-                style={[styles.pill, styles.energy, on && { borderColor: colors[e.tone], backgroundColor: colors[`${e.tone}Soft`] }]}
+                // Always in its colour (red drains, green energizes); picked, it fills with a soft tint.
+                style={[styles.pill, styles.energy, { borderColor: colors[e.tone] }, on && { backgroundColor: colors[`${e.tone}Soft`], borderWidth: 2 }]}
               >
-                <Ionicons name={e.icon} size={14} color={on ? colors[e.tone] : colors.muted} />
-                <Text style={[styles.pillText, on && { color: colors[e.tone] }]}>{e.label}</Text>
+                <Ionicons name={e.icon} size={15} color={colors[e.tone]} />
+                <Text style={[styles.pillText, { color: colors[e.tone] }, on && styles.pillTextPicked]}>{e.label}</Text>
               </Pressable>
             );
           })}
@@ -277,6 +278,7 @@ const makeStyles = (colors, isDark) => ({
   pillHint: { borderStyle: 'dashed', borderColor: colors.primary },
   pillText: { fontSize: 13, fontWeight: '700', color: colors.text },
   pillTextOn: { color: colors.primaryDark },
+  pillTextPicked: { fontWeight: '800' },
   energy: { flex: 1, flexDirection: 'row', gap: 4 },
   coin: {
     width: COIN,
