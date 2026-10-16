@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
@@ -52,14 +51,25 @@ export default function AuditScreen({ navigation, route }) {
   });
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   // On the form, only the button bar rides up with the keyboard (a smooth slide); the page stays still.
-  const insets = useSafeAreaInsets();
+  // How far: measured, not guessed: from the bar's real bottom edge to where the keyboard really starts
+  // (phones report the keyboard's height differently, especially drawing edge to edge).
   const lift = useRef(new Animated.Value(0)).current;
+  const lifted = useRef(0);
+  const barRef = useRef(null);
   useEffect(() => {
-    const slide = (to, duration) =>
+    const slide = (to, duration) => {
+      lifted.current = to;
       Animated.timing(lift, { toValue: to, duration: duration || 200, useNativeDriver: true }).start();
+    };
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
       setKeyboardOpen(true);
-      slide(-Math.max(0, (e?.endCoordinates?.height || 0) - insets.bottom), e?.duration);
+      const keyboardTop = e?.endCoordinates?.screenY;
+      if (!barRef.current || !keyboardTop) return;
+      barRef.current.measureInWindow((x, y, w, h) => {
+        // Where the bar's bottom would be with no lift, and how much of it the keyboard covers.
+        const bottom = y + h - lifted.current;
+        slide(-Math.max(0, bottom - keyboardTop + 4), e?.duration);
+      });
     });
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', (e) => {
       setKeyboardOpen(false);
@@ -69,7 +79,7 @@ export default function AuditScreen({ navigation, route }) {
       show.remove();
       hide.remove();
     };
-  }, [lift, insets.bottom]);
+  }, [lift]);
   const listRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -229,7 +239,11 @@ export default function AuditScreen({ navigation, route }) {
         {/* The sticky bar, in thumb reach: Done and Save & next on the form. While you type it slides up and
             sits just above the keyboard (the page itself doesn't move), and slides back down after. */}
         {mode === 'form' ? (
-          <Animated.View style={[styles.bar, keyboardOpen && styles.barLifted, { transform: [{ translateY: lift }] }]}>
+          <Animated.View
+            ref={barRef}
+            collapsable={false}
+            style={[styles.bar, keyboardOpen && styles.barLifted, { transform: [{ translateY: lift }] }]}
+          >
             {items.length ? (
               <Button
                 title={`Done · ${items.length}`}
