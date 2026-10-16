@@ -52,7 +52,11 @@ export default function AuditScreen({ navigation, route }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardOpen(true));
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardOpen(false));
+    // The bottom buttons come back as the keyboard goes: eased in, so the screen doesn't jerk.
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setKeyboardOpen(false);
+    });
     return () => {
       show.remove();
       hide.remove();
@@ -212,10 +216,9 @@ export default function AuditScreen({ navigation, route }) {
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach: Done and Save & next on the form. While typing it's hidden but
-            keeps its place, so nothing jumps when the keyboard closes. */}
-        {mode === 'form' ? (
-          <View style={[styles.bar, keyboardOpen && styles.hidden]} pointerEvents={keyboardOpen ? 'none' : 'auto'}>
+        {/* The sticky bar, in thumb reach: Done and Save & next on the form (out of the way while typing). */}
+        {mode === 'form' && !keyboardOpen ? (
+          <View style={styles.bar}>
             {items.length ? (
               <Button
                 title={`Done · ${items.length}`}
@@ -235,9 +238,9 @@ export default function AuditScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* From the routine on to the DRIP Matrix (hidden while typing, but keeping its place). */}
-        {mode === 'list' && items.length ? (
-          <View style={[styles.actionRow, keyboardOpen && styles.hidden]} pointerEvents={keyboardOpen ? 'none' : 'auto'}>
+        {/* From the routine on to the DRIP Matrix (out of the way while typing). */}
+        {mode === 'list' && !keyboardOpen && items.length ? (
+          <View style={styles.actionRow}>
             <Button
               title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
               icon={ready ? 'arrow-forward' : undefined}
@@ -261,7 +264,6 @@ const makeStyles = (colors) => ({
   stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
   listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
-  hidden: { opacity: 0 },
   // The sticky bar.
   bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },
