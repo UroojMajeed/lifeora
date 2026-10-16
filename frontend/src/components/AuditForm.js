@@ -16,7 +16,7 @@ const EMPTY = { name: '', hours: null, money: null, energy: null };
 /**
  * The audit's quick-add card: a friendly header with the task number, a big task box (typed, or a
  * suggestion from the scrolling line under it), and the same Time, Money and Energy buttons as the
- * routine's cards, all on show at once. "Add to my routine" adds the task (\`onAdd(task)\`), with a
+ * routine's cards, all on show at once. "Save & next" adds the task (\`onAdd(task)\`), with a
  * small "added" moment, and the card is ready for the next one. \`onReveal\` scrolls new choices into
  * view.
  */
@@ -26,6 +26,7 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
   const [form, setForm] = useState(EMPTY);
   const [field, setField] = useState(null); // the open button: 'hours' | 'money' | 'energy'
   const [justAdded, setJustAdded] = useState(null);
+  const [focused, setFocused] = useState(false); // typing in the task box
 
   const name = form.name.trim();
   const taken = (n) => items.some((i) => sameName(i.activity, n));
@@ -87,8 +88,8 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
       ) : null}
 
       {/* The task box */}
-      <View style={[styles.inputBox, duplicate && styles.inputBoxError]}>
-        <Ionicons name="create-outline" size={20} color={duplicate ? colors.error : colors.primary} />
+      <View style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}>
+        <Ionicons name="create-outline" size={22} color={duplicate ? colors.error : colors.primary} />
         <TextInput
           value={form.name}
           onChangeText={(t) => {
@@ -99,6 +100,8 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
             Keyboard.dismiss();
             if (name && !form.hours) setField('hours');
           }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="What do you do on a work day?"
           placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
@@ -110,8 +113,8 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
       </View>
       {duplicate ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
 
-      {/* Suggestions: one line, scroll sideways for more. */}
-      {suggestions.length ? (
+      {/* Suggestions: right under the task box while it's empty (one line, scroll sideways for more). */}
+      {suggestions.length && !form.name ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -152,8 +155,8 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
       </View>
 
       <Button
-        title={ready ? 'Add to my routine' : `Add ${missing.join(', ')}`}
-        icon={ready ? 'checkmark' : undefined}
+        title="Save & next"
+        icon="arrow-forward"
         onPress={save}
         disabled={!ready}
         style={styles.save}
@@ -190,16 +193,17 @@ const makeStyles = (colors, isDark) => ({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 56,
+    gap: spacing.sm + 2,
+    minHeight: 64,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.primarySoft,
     backgroundColor: colors.surfaceAlt,
   },
+  inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
   inputBoxError: { borderColor: colors.error },
-  input: { flex: 1, fontSize: 17, fontWeight: '600', color: colors.text, paddingVertical: 12 },
+  input: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text, paddingVertical: 14 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // One line of suggestions, edge to edge inside the card (scrolls sideways).
   suggestionsLine: { marginTop: spacing.sm + 2, marginHorizontal: -(spacing.md + 4) },

@@ -160,15 +160,13 @@ export default function AuditScreen({ navigation, route }) {
               {/* One question at a time, task after task. */}
               {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} onReveal={() => listRef.current?.scrollToEnd({ animated: true })} /> : null}
               {items.length ? (
-                <View style={styles.doneRow}>
-                  <Text style={styles.count}>
-                    {items.length} {items.length === 1 ? 'task' : 'tasks'} added
-                  </Text>
-                  <Pressable onPress={() => show('list')} hitSlop={8} accessibilityRole="button" style={styles.doneLink}>
-                    <Text style={styles.doneText}>Done, that's my routine</Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-                  </Pressable>
-                </View>
+                <Button
+                  title={`Done · ${items.length} ${items.length === 1 ? 'task' : 'tasks'}`}
+                  icon="checkmark"
+                  variant="secondary"
+                  onPress={() => show('list')}
+                  style={styles.done}
+                />
               ) : null}
             </>
           ) : (
@@ -224,9 +222,8 @@ const makeStyles = (colors) => ({
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginBottom: spacing.sm },
-  doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, paddingHorizontal: spacing.xs },
-  count: { fontSize: 14, fontWeight: '700', color: colors.muted },
-  doneLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  // "Done": clear and short, outlined so it never competes with "Save & next".
+  done: { marginTop: spacing.md, borderColor: colors.primary },
   doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
   addMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.md, paddingVertical: spacing.sm },
   rows: { gap: spacing.sm + 2 },
