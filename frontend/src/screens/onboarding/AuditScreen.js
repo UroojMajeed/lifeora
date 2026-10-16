@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, LayoutAnimation, Platform, ScrollView, Text, View } from 'react-native';
+import { Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
 import Button from '../../components/Button';
@@ -9,21 +10,22 @@ import AuditForm from '../../components/AuditForm';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
 import { formatHours } from '../../utils/format';
-import { useStyles } from '../../theme/ThemeContext';
+import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
 
 const MAX_ACTIVITIES = 30;
 
 /**
- * Journey step 2, "Time and energy audit", all in one place: a form at the top adds one task at a time
- * (its name, time, money and energy; "Save & add next"), and your routine is listed under it, each
- * task's card with its Time, Money and Energy buttons to change them. A finished card takes its DRIP
- * quadrant's colour. "Done" finishes the routine and leads to the full DRIP Matrix.
+ * Journey step 2, "Time and energy audit", in two clean parts. First the form, one question at a time
+ * (the task, its time, its money, its energy), task after task. "Done, that's my routine" then shows
+ * the routine once, as a list: each card with its Time, Money and Energy buttons to change them, in
+ * its DRIP quadrant's colour. From there, the full DRIP Matrix.
  */
 export default function AuditScreen({ navigation, route }) {
   // A new round of the Loop (after onboarding): the whole routine gets audited again.
   const round = route.params?.round;
   const { onboarding, saveStep } = useOnboarding();
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
   const [items, setItems] = useState(() =>
@@ -31,6 +33,15 @@ export default function AuditScreen({ navigation, route }) {
       .filter((i) => i.hours)
       .map(({ activity, hours, value, money, per, energy }) => ({ activity, hours, value, money: money ?? null, per: per || 'day', energy: energy ?? null }))
   );
+  // 'form': adding tasks one question at a time. 'list': the routine, shown once it's done. Coming
+  // back with tasks already there (or a new round) opens on the list.
+  const [modeChoice, setMode] = useState(() => (items.length ? 'list' : 'form'));
+  const mode = items.length ? modeChoice : 'form'; // no tasks left: back to the form
+  const show = (m) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setMode(m);
+    listRef.current?.scrollTo({ y: 0, animated: false });
+  };
   // Which task's choices are open, and for which button (Time, Money or Energy).
   const firstUnset = (it) => FIELDS.find((k) => !it[k]) ?? null;
   const [open, setOpen] = useState(() => {
@@ -134,21 +145,36 @@ export default function AuditScreen({ navigation, route }) {
             step={stepNumber('schedule')}
             editing={Boolean(round)}
             eyebrow={round ? `Round ${round}` : 'Step 2 of 4'}
-            title="Time and energy audit"
+            title={mode === 'list' ? 'Your routine' : 'Time and energy audit'}
             subtitle={
               round
                 ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
-                : 'Add your tasks one at a time. Tap Done when your routine is complete.'
+                : mode === 'list'
+                ? 'Tap Time, Money or Energy on a task to change it.'
+                : 'Add the tasks of a normal work day, one at a time.'
             }
           />
-          {/* Add a task: one at a time. */}
-          {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} /> : null}
-
-          {/* Your routine, as it is: each card keeps its Time, Money and Energy buttons to change them. */}
-          {items.length ? (
+          {mode === 'form' ? (
             <>
+              {/* One question at a time, task after task. */}
+              {items.length < MAX_ACTIVITIES ? <AuditForm role={onboarding?.role} items={items} onAdd={add} /> : null}
+              {items.length ? (
+                <View style={styles.doneRow}>
+                  <Text style={styles.count}>
+                    {items.length} {items.length === 1 ? 'task' : 'tasks'} added
+                  </Text>
+                  <Pressable onPress={() => show('list')} hitSlop={8} accessibilityRole="button" style={styles.doneLink}>
+                    <Text style={styles.doneText}>Done, that's my routine</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </Pressable>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {/* The routine, shown once: each card can still be changed. */}
               <Text style={styles.listHead}>
-                Your routine · {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
+                {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
               </Text>
               <View style={styles.rows}>
                 {items.map((item) => (
@@ -162,16 +188,22 @@ export default function AuditScreen({ navigation, route }) {
                   />
                 ))}
               </View>
+              {items.length < MAX_ACTIVITIES ? (
+                <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
+                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Text style={styles.doneText}>Add another task</Text>
+                </Pressable>
+              ) : null}
             </>
-          ) : null}
+          )}
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* Done: the routine is finished (hidden while typing). */}
-        {!keyboardOpen && items.length ? (
+        {/* From the routine on to the DRIP Matrix (hidden while typing). */}
+        {mode === 'list' && !keyboardOpen && items.length ? (
           <View style={styles.actionRow}>
             <Button
-              title={ready ? 'Done, see your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
+              title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
               icon={ready ? 'arrow-forward' : undefined}
               onPress={next}
               loading={loading}
@@ -190,7 +222,12 @@ const makeStyles = (colors) => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
-  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginTop: spacing.lg, marginBottom: spacing.sm },
+  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginBottom: spacing.sm },
+  doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md, paddingHorizontal: spacing.xs },
+  count: { fontSize: 14, fontWeight: '700', color: colors.muted },
+  doneLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
+  addMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.md, paddingVertical: spacing.sm },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
