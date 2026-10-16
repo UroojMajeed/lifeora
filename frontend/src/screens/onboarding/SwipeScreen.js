@@ -82,6 +82,7 @@ export default function SwipeScreen({ navigation, route }) {
   // After onboarding only the new (unswiped) activities need rating; during onboarding every one needs both.
   const needsRating = useCallback((it) => (editing ? !it.energy : !it.energy || !it.money), [editing]);
   const [selected, setSelected] = useState(null); // an activity tapped on the graph, to change it
+  const [oneBox, setOneBox] = useState(false); // the finished matrix: tasks by quadrant, or all in one box
   const current = selected ?? items.find(needsRating)?.activity ?? null;
   const item = items.find((it) => it.activity === current) || null;
 
@@ -246,7 +247,9 @@ export default function SwipeScreen({ navigation, route }) {
           smallSubtitle={finished}
           subtitle={
             finished
-              ? 'Each dot is a task: higher makes more money, further right gives you energy. Tap one to change it.'
+              ? oneBox
+                ? 'Each dot is a task: higher makes more money, further right gives you energy. Tap one to change it.'
+                : 'Each task sits in its quadrant. Tap one to change it.'
               : 'Sort each task by the money it makes and how it makes you feel.'
           }
         />
@@ -282,13 +285,43 @@ export default function SwipeScreen({ navigation, route }) {
 
         {/* While rating: the four quadrants filling up. When done: the full graph, in the same place, for good. */}
         {finished ? (
-          <DripGraph
-            items={items}
-            stagger={REVEAL_STAGGER}
-            selected={selected}
-            onSelect={(name) => setSelected(name)}
-            height={Math.min(360, screenHeight * 0.42)}
-          />
+          <>
+            {/* Two ways to see it: your tasks as chips in their quadrants, or all as dots in one box. */}
+            <View style={styles.toggle} accessibilityRole="tablist">
+              {[
+                { key: false, label: 'By quadrant', icon: 'grid-outline' },
+                { key: true, label: 'All in one box', icon: 'square-outline' },
+              ].map((o) => {
+                const on = oneBox === o.key;
+                return (
+                  <Pressable
+                    key={o.label}
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setOneBox(o.key);
+                    }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    style={[styles.toggleOption, on && styles.toggleOn]}
+                  >
+                    <Ionicons name={o.icon} size={14} color={on ? colors.onColor : colors.primaryDark} />
+                    <Text style={[styles.toggleText, on && styles.toggleTextOn]}>{o.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {oneBox ? (
+              <DripGraph
+                items={items}
+                stagger={REVEAL_STAGGER}
+                selected={selected}
+                onSelect={(name) => setSelected(name)}
+                height={Math.min(360, screenHeight * 0.42)}
+              />
+            ) : (
+              <QuadrantBoard items={items} selected={selected} onSelect={(name) => setSelected(name)} />
+            )}
+          </>
         ) : (
           <QuadrantBoard
             items={items}
@@ -344,6 +377,11 @@ const makeStyles = (colors) => ({
   back: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   backText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
   nudge: { fontSize: 13, color: colors.accentText, marginTop: spacing.sm, textAlign: 'center' },
+  toggle: { flexDirection: 'row', alignSelf: 'flex-start', gap: 4, padding: 3, marginBottom: spacing.md, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
+  toggleOption: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill },
+  toggleOn: { backgroundColor: colors.primary },
+  toggleText: { fontSize: 13, fontWeight: '700', color: colors.primaryDark },
+  toggleTextOn: { color: colors.onColor },
   doneTitle: { fontSize: 16, fontWeight: '800', color: colors.text },
   finish: { marginTop: spacing.sm + 2 },
 });
