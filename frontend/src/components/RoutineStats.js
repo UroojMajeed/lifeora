@@ -1,23 +1,24 @@
 import { useState } from 'react';
 import { LayoutAnimation, Pressable, Text, View } from 'react-native';
-import { Card } from './Card';
 import { DRIP, quadrantFor, valueForMoney } from '../constants/content';
+import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { cardShadow, radius, spacing } from '../theme';
 
-// The four quadrants in the book's order of value, each in its fixed chart colour.
+// The four quadrants in the book's order of value; the two that drain you are marked under the graph.
 const ORDER = ['production', 'replacement', 'investment', 'delegation'];
-const PLOT = 160; // the bars' area, in px
+const DRAINS = new Set(['replacement', 'delegation']);
+const PLOT = 128; // the columns' area, in px
 const AXIS = 26; // room for the hour labels on the left
 
 const quadrantOf = (it) => it.quadrant || quadrantFor({ value: it.money ? valueForMoney(it.money) : it.value, energy: it.energy });
+const h = (n) => `${Math.round(n * 10) / 10} h`;
 
-/** A round top for the hours axis (1, 2, 3, 4… or 2, 4, 6… for longer days), and its ticks. */
+/** A round top for the hours axis (1, 2, 3, 4… or 2, 4, 6… for longer days), with headroom, and its ticks. */
 function scaleFor(max) {
   const step = max > 6 ? 2 : 1;
   let top = Math.max(step, Math.ceil(max / step) * step);
-  // Headroom for the hours written on top of the tallest column.
   if (top - max < step * 0.4) top += step;
   const ticks = [];
   for (let v = 0; v <= top; v += step) ticks.push(v);
@@ -25,9 +26,10 @@ function scaleFor(max) {
 }
 
 /**
- * Where your time goes, as a bar graph: an hours axis with light grid lines, one column per quadrant
- * (its height the hours a day it takes), the hours on top of each column and its name and number of
- * tasks under it. Tapping a column shows which tasks are in it. `items` is the routine as it is now.
+ * Home's first look on a first visit: your routine. Its size (hours a day, tasks), a bar graph with an
+ * hours axis and a column per quadrant ("drains" marked under the two that drain you; tap a column
+ * for its tasks), and the graph said in words: how much drains you, your biggest drain, and the hours
+ * a week handing it off would free. `items` is the routine as it is now.
  */
 export default function RoutineStats({ items = [], style }) {
   const { colors } = useTheme();
@@ -42,107 +44,131 @@ export default function RoutineStats({ items = [], style }) {
   const { top, ticks } = scaleFor(Math.max(...ORDER.map(hoursOf)));
   const yOf = (v) => PLOT - (v / top) * PLOT;
 
+  const draining = rated.filter((it) => it.energy === 'draining');
+  const drainHours = draining.reduce((t, it) => t + it.hours, 0);
+  const biggest = [...draining].sort((a, b) => b.hours - a.hours)[0];
+
   const toggle = (k) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpen((cur) => (cur === k ? null : k));
   };
 
   return (
-    <View style={style}>
-      <View style={styles.head}>
-        <Text style={styles.title}>Where your time goes</Text>
-        <Text style={styles.total}>{formatHours(total)} a day</Text>
-      </View>
-      <Card style={styles.card}>
-        <Text style={styles.unit}>hours a day</Text>
-        <View style={styles.chart}>
-          {/* The hours axis: labels on the left, light grid lines across. */}
-          {ticks.map((v) => (
-            <View key={v} pointerEvents="none" style={[styles.gridRow, { top: yOf(v) - 7 }]}>
-              <Text style={styles.tick}>{v}</Text>
-              <View style={[styles.gridLine, v === 0 && styles.baseline]} />
-            </View>
-          ))}
+    <View style={[styles.card, style]}>
+      <Text style={styles.label}>Your routine</Text>
+      <Text style={styles.total}>
+        {h(total)} <Text style={styles.totalSub}>a day · {rated.length} {rated.length === 1 ? 'task' : 'tasks'}</Text>
+      </Text>
 
-          {/* The columns: one per quadrant, hours on top. */}
-          <View style={styles.columns}>
-            {ORDER.map((k) => {
-              const hours = hoursOf(k);
-              const h = (hours / top) * PLOT;
-              const on = open === k;
-              return (
-                <Pressable
-                  key={k}
-                  onPress={() => toggle(k)}
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: on }}
-                  accessibilityLabel={`${DRIP[k].name}: ${formatHours(hours)} a day, ${by[k].length} tasks. Tap to see them.`}
-                  style={styles.slot}
-                >
-                  <Text style={[styles.barValue, { marginBottom: 4 }]}>{hours ? formatHours(hours) : '0h'}</Text>
-                  <View style={[styles.bar, { height: Math.max(hours ? 4 : 0, h), backgroundColor: colors.chart[k] }, on && styles.barOn]} />
-                </Pressable>
-              );
-            })}
+      {/* The graph: an hours axis with light grid lines, a column per quadrant with its hours on top. */}
+      <View style={styles.chart}>
+        {ticks.map((v) => (
+          <View key={v} pointerEvents="none" style={[styles.gridRow, { top: yOf(v) - 7 }]}>
+            <Text style={styles.tick}>{v ? `${v}h` : '0'}</Text>
+            <View style={[styles.gridLine, v === 0 && styles.baseline]} />
           </View>
+        ))}
+        <View style={styles.columns}>
+          {ORDER.map((k) => {
+            const hours = hoursOf(k);
+            const on = open === k;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => toggle(k)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: on }}
+                accessibilityLabel={`${DRIP[k].name}: ${formatHours(hours)} a day${DRAINS.has(k) ? ', drains you' : ''}. Tap to see its tasks.`}
+                style={styles.slot}
+              >
+                <Text style={styles.colValue}>{hours ? formatHours(hours) : ''}</Text>
+                <View style={[styles.col, { height: Math.max(hours ? 4 : 0, (hours / top) * PLOT), backgroundColor: colors.chart[k] }, on && styles.colOn]} />
+              </Pressable>
+            );
+          })}
         </View>
-
-        {/* Names and task counts under the columns. */}
-        <View style={styles.xLabels}>
-          {ORDER.map((k) => (
-            <Pressable key={k} onPress={() => toggle(k)} style={styles.xLabel} accessibilityElementsHidden>
-              <Text style={[styles.xName, open === k && styles.xNameOn]} numberOfLines={1} adjustsFontSizeToFit>
-                {DRIP[k].name}
-              </Text>
+      </View>
+      <View style={styles.xLabels}>
+        {ORDER.map((k) => (
+          <Pressable key={k} onPress={() => toggle(k)} style={styles.xLabel} accessibilityElementsHidden>
+            <Text style={[styles.xName, open === k && styles.xNameOn]} numberOfLines={1} adjustsFontSizeToFit>
+              {DRIP[k].name}
+            </Text>
+            {DRAINS.has(k) ? (
+              <Text style={styles.xDrains}>drains</Text>
+            ) : (
               <Text style={styles.xCount}>
                 {by[k].length} {by[k].length === 1 ? 'task' : 'tasks'}
               </Text>
-            </Pressable>
-          ))}
-        </View>
+            )}
+          </Pressable>
+        ))}
+      </View>
 
-        {/* The tapped column's tasks. */}
-        {open ? (
-          <View style={styles.tasks}>
-            <View style={[styles.key, { backgroundColor: colors.chart[open] }]} />
-            <Text style={styles.tasksText}>
-              <Text style={styles.tasksName}>{DRIP[open].name}: </Text>
-              {by[open].length ? by[open].map((t) => `${t.activity} (${formatHours(t.hours)})`).join(' · ') : 'no tasks here.'}
-            </Text>
-          </View>
-        ) : (
-          <Text style={styles.hint}>Tap a column to see its tasks</Text>
-        )}
-      </Card>
+      {open ? (
+        <View style={styles.tasks}>
+          <View style={[styles.key, { backgroundColor: colors.chart[open] }]} />
+          <Text style={styles.tasksText}>
+            <Text style={styles.tasksName}>{DRIP[open].name}: </Text>
+            {by[open].length ? by[open].map((t) => `${t.activity} (${formatHours(t.hours)})`).join(' · ') : 'no tasks here.'}
+          </Text>
+        </View>
+      ) : (
+        <Text style={styles.hint}>Tap a column to see its tasks</Text>
+      )}
+
+      {/* The graph, said in words. */}
+      {biggest ? (
+        <View style={styles.insight}>
+          <View style={styles.insightDot} />
+          <Text style={styles.insightText}>
+            <Text style={styles.insightStrong}>{h(drainHours)} a day drains you.</Text> Your biggest drain is {biggest.activity.toLowerCase()} (
+            {h(biggest.hours)}). Handing it off frees {h(biggest.hours * WORKDAYS_PER_WEEK)} a week.
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
-const makeStyles = (colors) => ({
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: spacing.sm },
-  title: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
-  total: { fontSize: 13, fontWeight: '700', color: colors.muted },
-  card: { paddingVertical: spacing.md },
-  unit: { fontSize: 11, fontWeight: '700', color: colors.muted, marginBottom: spacing.sm },
+const makeStyles = (colors, isDark) => ({
+  card: {
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: isDark ? colors.border : 'transparent',
+    ...cardShadow(colors, isDark),
+  },
+  label: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
+  total: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6, marginTop: 4 },
+  totalSub: { fontSize: 13, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
   // The plot: grid rows behind, columns in front.
-  chart: { height: PLOT, marginTop: 4 },
+  chart: { height: PLOT, marginTop: spacing.lg },
   gridRow: { position: 'absolute', left: 0, right: 0, height: 14, flexDirection: 'row', alignItems: 'center' },
   tick: { width: AXIS - 6, textAlign: 'right', marginRight: 6, fontSize: 10, fontWeight: '600', color: colors.muted },
-  gridLine: { flex: 1, height: 1, backgroundColor: colors.border, opacity: 0.6 },
-  baseline: { opacity: 1, height: 1.5 },
-  columns: { position: 'absolute', left: AXIS, right: 0, top: 0, bottom: 0, flexDirection: 'row' },
-  slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  bar: { width: '52%', maxWidth: 46, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  barOn: { borderWidth: 2, borderColor: colors.text, borderBottomWidth: 0 },
-  barValue: { fontSize: 12, fontWeight: '800', color: colors.text },
-  xLabels: { flexDirection: 'row', marginLeft: AXIS, marginTop: 6 },
-  xLabel: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
-  xName: { fontSize: 11, fontWeight: '700', color: colors.text },
+  // Light grid lines (solid: Android doesn't draw a one-sided dashed border reliably).
+  gridLine: { flex: 1, height: 1, backgroundColor: colors.border, opacity: 0.7 },
+  baseline: { height: 1.5, backgroundColor: colors.muted, opacity: 0.5 },
+  columns: { position: 'absolute', left: AXIS, right: 0, top: 0, bottom: 0, flexDirection: 'row', gap: 12, paddingHorizontal: 6 },
+  slot: { flex: 1, alignItems: 'stretch', justifyContent: 'flex-end' },
+  col: { borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  colOn: { borderWidth: 2, borderColor: colors.text, borderBottomWidth: 0 },
+  colValue: { textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.text, marginBottom: 3 },
+  xLabels: { flexDirection: 'row', gap: 12, marginLeft: AXIS, paddingHorizontal: 6, marginTop: 6 },
+  xLabel: { flex: 1, alignItems: 'center', minWidth: 0 },
+  xName: { fontSize: 10, fontWeight: '700', color: colors.text },
   xNameOn: { fontWeight: '800', textDecorationLine: 'underline' },
-  xCount: { fontSize: 10, fontWeight: '600', color: colors.muted, marginTop: 1 },
-  hint: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: spacing.sm + 2 },
-  tasks: { flexDirection: 'row', gap: 6, marginTop: spacing.sm + 2, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  xCount: { fontSize: 10, fontWeight: '500', color: colors.muted, marginTop: 1 },
+  xDrains: { fontSize: 10, fontWeight: '700', color: colors.error, marginTop: 1 },
+  hint: { fontSize: 10, color: colors.muted, textAlign: 'center', marginTop: 6 },
+  tasks: { flexDirection: 'row', gap: 6, marginTop: spacing.sm, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   key: { width: 10, height: 10, borderRadius: 3, marginTop: 4 },
-  tasksText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
+  tasksText: { flex: 1, fontSize: 12, lineHeight: 18, color: colors.text },
   tasksName: { fontWeight: '800' },
+  // The insight: the graph in words.
+  insight: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  insightDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginTop: 6 },
+  insightText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
+  insightStrong: { fontWeight: '800', color: colors.error },
 });

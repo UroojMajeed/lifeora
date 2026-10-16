@@ -63,7 +63,38 @@ export async function noticeBoughtBack(hours) {
   }
 }
 
+// Hours bought back, week by week (for Home's weekly chart): { [weekKey]: hours a week }.
+const HISTORY_KEY = 'lifeora.boughtBackByWeek';
+
+async function readHistory() {
+  try {
+    const map = JSON.parse((await AsyncStorage.getItem(HISTORY_KEY)) || '{}');
+    return map && typeof map === 'object' ? map : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Notes this week's hours bought back (a week keeps its highest). Returns the last `count` weeks, oldest first. */
+export async function recordWeeklyBoughtBack(hoursAWeek, count = 5) {
+  const map = await readHistory();
+  const now = weekKey();
+  map[now] = Math.max(map[now] || 0, hoursAWeek);
+  const keys = Object.keys(map).sort().slice(-MAX_WEEKS);
+  const kept = Object.fromEntries(keys.map((k) => [k, map[k]]));
+  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(kept)).catch(() => {});
+  // The last `count` weeks up to this one, with empty weeks as 0.
+  const weeks = [];
+  const cursor = new Date();
+  for (let i = 0; i < count; i += 1) {
+    const k = weekKey(cursor);
+    weeks.unshift({ key: k, hours: kept[k] || 0, now: i === 0 });
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return weeks;
+}
+
 /** Forget everything (used by "Start over"). */
 export function clearProgress() {
-  return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY]).catch(() => {});
+  return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY, HISTORY_KEY]).catch(() => {});
 }
