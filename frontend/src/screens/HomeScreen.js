@@ -110,8 +110,8 @@ export default function HomeScreen({ navigation }) {
           </Card>
         ) : null}
 
-        {/* First, your routine at a glance: where your day goes, quadrant by quadrant. */}
-        <RoutineStats items={routineNow} onOpen={() => navigation.navigate('MyDay')} />
+        {/* First, where your time goes: a bar for each quadrant, by hours a day. */}
+        <RoutineStats items={routineNow} />
 
         {/* Then the journey's last two steps. */}
         <DelegationCard

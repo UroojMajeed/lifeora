@@ -42,6 +42,8 @@ export const lightColors = {
   info: '#2F6A8A', // Investment
   infoSoft: '#DCECF4',
   error: '#B3463D', // Delegation
+  // Chart fills for the four quadrants (validated: lightness band, chroma, colour-blind separation, contrast).
+  chart: { production: '#008F7C', replacement: '#B5651A', investment: '#2370A8', delegation: '#C2453B' },
   errorSoft: '#F7E2DF',
 
   white: '#FFFFFF',
@@ -97,6 +99,7 @@ export const darkColors = {
   info: '#7FB8DA',
   infoSoft: 'rgba(127,184,218,0.14)',
   error: '#EF8C82',
+  chart: { production: '#1F9E83', replacement: '#C9822A', investment: '#4C9BD6', delegation: '#E0675C' },
   errorSoft: 'rgba(239,140,130,0.14)',
 
   white: '#FFFFFF',
