@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Card } from './Card';
 import Button from './Button';
@@ -21,6 +24,53 @@ export function MoveCard({ move, first, onPress, loading, style }) {
       <Text style={styles.moveTitle}>{move.title}</Text>
       <Text style={styles.moveBody}>{move.body}</Text>
       <Button title={first && move.stage === 'transfer' ? 'Start my first handoff' : move.cta} icon="arrow-forward" onPress={onPress} loading={loading} style={styles.moveButton} />
+    </View>
+  );
+}
+
+/**
+ * The first move, kept simple: your biggest drain and one question, "Have you delegated it?". Yes marks
+ * it delegated (\`onYes\`); No keeps it, with a quiet way into planning the handoff (\`onPlan\`).
+ */
+export function DelegateAsk({ task, onYes, onPlan, style }) {
+  const { colors } = useTheme();
+  const styles = useStyles(makeStyles);
+  const [saidNo, setSaidNo] = useState(false);
+  if (!task) return null;
+  return (
+    <View style={[styles.move, style]}>
+      <Text style={styles.tag}>Your first move</Text>
+      <Text style={styles.moveTitle}>{task.activity}</Text>
+      <Text style={styles.moveBody}>
+        {h(task.hours)} a day · frees {h(task.hours * 5)} a week
+      </Text>
+      <Text style={styles.ask}>Have you delegated it?</Text>
+      <View style={styles.answers}>
+        <Button
+          title="No"
+          variant="secondary"
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setSaidNo(true);
+          }}
+          style={styles.answer}
+        />
+        <Button
+          title="Yes"
+          icon="checkmark"
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+            onYes(task.activity);
+          }}
+          style={styles.answer}
+        />
+      </View>
+      {saidNo ? (
+        <Pressable onPress={() => onPlan(task.activity)} hitSlop={8} accessibilityRole="button" style={styles.plan}>
+          <Text style={styles.planText}>Not yet? Plan the handoff</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -162,6 +212,11 @@ const makeStyles = (colors, isDark) => ({
   moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2, marginTop: 6 },
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
+  ask: { fontSize: 15, fontWeight: '800', color: colors.text, marginTop: spacing.md },
+  answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 2 },
+  answer: { flex: 1, minHeight: 48 },
+  plan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: spacing.sm + 2 },
+  planText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   // Waiting progress
   empty: {
     flexDirection: 'row',

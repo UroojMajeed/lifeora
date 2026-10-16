@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
-import { DrainCompare, MoveCard, ProgressHero, ProgressWaiting, WeeklyChart } from '../components/HomeCards';
+import { DelegateAsk, DrainCompare, MoveCard, ProgressHero, ProgressWaiting, WeeklyChart } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
@@ -27,7 +27,7 @@ import { spacing } from '../theme';
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, summary, refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs, fills, summary, refresh: refreshHandoffs, update } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
@@ -67,6 +67,10 @@ export default function HomeScreen({ navigation }) {
   }, [isFocused, summary?.boughtBackHours]);
 
   const move = summary ? todaysMove({ schedule, handoffs, summary }) : null;
+  // The first move: the biggest drain not handed off yet, asked simply (have you delegated it?).
+  const firstTask = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours)[0];
+  const delegated = (activity) =>
+    update(activity, { status: 'done' }).catch((err) => Alert.alert("Couldn't save that", err.message));
 
   // The move's button; a finished round starts the next one first.
   const doMove = async () => {
@@ -123,7 +127,12 @@ export default function HomeScreen({ navigation }) {
           <>
             {/* First visit: the routine, said in a graph and in words; the first move; progress waits. */}
             <RoutineStats items={routineNow} />
-            <MoveCard move={move} first onPress={doMove} loading={startingRound} />
+            {/* New tasks to rate come first; otherwise one simple question about the biggest drain. */}
+            {move?.stage === 'audit' || !firstTask ? (
+              <MoveCard move={move} first onPress={doMove} loading={startingRound} />
+            ) : (
+              <DelegateAsk task={firstTask} onYes={delegated} onPlan={(activity) => navigation.navigate('HandoffDetail', { activity })} />
+            )}
             <ProgressWaiting />
           </>
         )}
