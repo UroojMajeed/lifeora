@@ -182,10 +182,11 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRename
           <TextInput
             value={draft}
             onChangeText={setDraft}
+            // Enter only saves (it never adds a line or replaces the text).
+            blurOnSubmit
             onSubmitEditing={finish}
             onBlur={finish}
             autoFocus
-            selectTextOnFocus
             maxLength={60}
             returnKeyType="done"
             keyboardAppearance={isDark ? 'dark' : 'light'}
