@@ -127,32 +127,37 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 
       {/* Suggestions: right under the task box while it's empty (one line, scroll sideways for more). */}
       {suggestions.length && !form.name ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          style={styles.suggestionsLine}
-          contentContainerStyle={styles.suggestions}
-        >
-          {suggestions.slice(0, 14).map((n) => (
-            <Pressable
-              key={n}
-              onPress={() => pickSuggestion(n)}
-              accessibilityRole="button"
-              accessibilityLabel={`Use ${n}`}
-              style={({ pressed }) => [styles.suggestion, pressed && { opacity: 0.7 }]}
-            >
-              <Ionicons name="add" size={14} color={colors.primary} />
-              <Text style={styles.suggestionText} numberOfLines={1}>
-                {n}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <>
+          <Text style={[styles.sectionLabel, styles.suggestionsLabel]}>Suggestions</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            style={styles.suggestionsLine}
+            contentContainerStyle={styles.suggestions}
+          >
+            {suggestions.slice(0, 14).map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => pickSuggestion(n)}
+                accessibilityRole="button"
+                accessibilityLabel={`Use ${n}`}
+                style={({ pressed }) => [styles.suggestion, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="add" size={14} color={colors.muted} />
+                <Text style={styles.suggestionText} numberOfLines={1}>
+                  {n}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </>
       ) : null}
 
-      {/* Time, Money and Energy: all on show, the same buttons as on the routine's cards. */}
+      {/* Time, Money and Energy: their own section (a hairline and a label), so they never blend with
+          the suggestions above. The same buttons as on the routine's cards. */}
       <View style={styles.fields}>
+        <Text style={styles.sectionLabel}>Set its time, money and energy</Text>
         <AuditFields
           item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }}
           field={field}
@@ -208,20 +213,22 @@ const makeStyles = (colors, isDark) => ({
   inputIcon: { marginTop: 2 },
   input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
-  // One line of suggestions, edge to edge inside the card (scrolls sideways).
-  suggestionsLine: { marginTop: spacing.sm + 2, marginHorizontal: -(spacing.md + 4) },
+  sectionLabel: { fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm },
+  suggestionsLabel: { marginTop: spacing.md },
+  // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
+  // no outline, so they never look like the Time / Money / Energy buttons.
+  suggestionsLine: { marginHorizontal: -(spacing.md + 4) },
   suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
   suggestion: {
     maxWidth: 200,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
   },
-  suggestionText: { fontSize: 13, fontWeight: '600', color: colors.primaryDark, flexShrink: 1 },
-  fields: { marginTop: spacing.md + 2 },
+  suggestionText: { fontSize: 13, fontWeight: '600', color: colors.text, flexShrink: 1 },
+  fields: { marginTop: spacing.md + 4, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
 });
