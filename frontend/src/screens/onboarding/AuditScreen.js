@@ -153,7 +153,9 @@ export default function AuditScreen({ navigation, route }) {
   };
 
   return (
-    <Screen scroll={false} avoidKeyboard tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+    // The form sits near the top, so the keyboard never covers the task box: the screen stays still while
+    // you type (nothing to lift, nothing to jump). The list lifts, so renaming a task lower down stays in view.
+    <Screen scroll={false} avoidKeyboard={mode === 'list'} tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
         <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <StepHeader
@@ -216,8 +218,9 @@ export default function AuditScreen({ navigation, route }) {
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach: Done and Save & next on the form (out of the way while typing). */}
-        {mode === 'form' && !keyboardOpen ? (
+        {/* The sticky bar, in thumb reach: Done and Save & next on the form. It stays put (the keyboard just
+            covers it while you type), so nothing moves when the keyboard opens or closes. */}
+        {mode === 'form' ? (
           <View style={styles.bar}>
             {items.length ? (
               <Button
