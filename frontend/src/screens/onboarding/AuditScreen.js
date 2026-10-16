@@ -115,7 +115,6 @@ export default function AuditScreen({ navigation, route }) {
 
   const unfinished = items.filter((it) => !isAudited(it)).length;
   const totalHours = items.reduce((t, it) => t + (it.hours || 0), 0);
-  const drainHours = items.filter((it) => it.energy === 'draining').reduce((t, it) => t + (it.hours || 0), 0);
   // The form's "Save & next" lives in the sticky bar; the form says when it can save.
   const formRef = useRef(null);
   const [formReady, setFormReady] = useState(false);
@@ -161,30 +160,12 @@ export default function AuditScreen({ navigation, route }) {
           />
           {mode === 'form' ? (
             <>
-              {/* Your day so far: grows with every task; the red part is what drains you. */}
-              {items.length ? (
-                <View style={styles.meter} accessible accessibilityLabel={`Your day so far: ${formatHours(totalHours)}, ${formatHours(drainHours)} drains you`}>
-                  <View style={styles.meterHead}>
-                    <Text style={styles.meterLabel}>Your day so far</Text>
-                    <Text style={styles.meterValue}>
-                      {formatHours(totalHours)} · <Text style={styles.meterDrain}>{formatHours(drainHours)} drains you</Text>
-                    </Text>
-                  </View>
-                  <View style={styles.track}>
-                    {/* Filled against an 8-hour day (it just fills up beyond that). */}
-                    {drainHours ? <View style={[styles.part, { flex: drainHours, backgroundColor: colors.error }]} /> : null}
-                    {totalHours - drainHours ? <View style={[styles.part, { flex: totalHours - drainHours, backgroundColor: colors.success }]} /> : null}
-                    {totalHours < 8 ? <View style={{ flex: 8 - totalHours }} /> : null}
-                  </View>
-                </View>
-              ) : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
                   role={onboarding?.role}
                   items={items}
                   onAdd={add}
-                  onRemove={remove}
                   onReadyChange={setFormReady}
                   onReveal={() => listRef.current?.scrollToEnd({ animated: true })}
                 />
@@ -265,14 +246,6 @@ const makeStyles = (colors) => ({
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginBottom: spacing.sm },
-  // Your day so far: a slim bar, red for what drains you, green for what gives you energy.
-  meter: { marginBottom: spacing.md },
-  meterHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },
-  meterLabel: { fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
-  meterValue: { fontSize: 13, fontWeight: '800', color: colors.text },
-  meterDrain: { color: colors.error },
-  track: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.border, gap: 2 },
-  part: { height: 8 },
   // The sticky bar.
   bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },

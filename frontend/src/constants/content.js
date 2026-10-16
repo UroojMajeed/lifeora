@@ -174,13 +174,6 @@ export const weeklyOf = (item) => round2(item.hours * WORKDAYS);
 export const timeText = (item) =>
   item.per === 'week' ? `${weeklyOf(item)}h a week` : `${hoursLabel(item.hours)} a day`;
 export const usualHours = (name) => ACTIVITIES[name]?.hours ?? null;
-/** What we can guess for a known task: its usual time a day, and a typical $ level from its value. */
-export function defaultsFor(name) {
-  const known = ACTIVITIES[name];
-  if (!known) return {};
-  return { hours: known.hours ?? null, money: known.value === 'high' ? 4 : 2 };
-}
-
 export const hoursLabel = (h) => (h < 1 ? `${h * 60} min` : `${h} ${h === 1 ? 'hour' : 'hours'}`);
 
 // Handing off a draining task: the "Transfer" in the Buyback Loop (Audit → Transfer → Fill).
