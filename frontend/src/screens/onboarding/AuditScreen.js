@@ -212,9 +212,10 @@ export default function AuditScreen({ navigation, route }) {
           <ErrorBanner message={error} />
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach (hidden while typing): Done and Save & next on the form. */}
-        {mode === 'form' && !keyboardOpen ? (
-          <View style={styles.bar}>
+        {/* The sticky bar, in thumb reach: Done and Save & next on the form. While typing it's hidden but
+            keeps its place, so nothing jumps when the keyboard closes. */}
+        {mode === 'form' ? (
+          <View style={[styles.bar, keyboardOpen && styles.hidden]} pointerEvents={keyboardOpen ? 'none' : 'auto'}>
             {items.length ? (
               <Button
                 title={`Done · ${items.length}`}
@@ -234,9 +235,9 @@ export default function AuditScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* From the routine on to the DRIP Matrix (hidden while typing). */}
-        {mode === 'list' && !keyboardOpen && items.length ? (
-          <View style={styles.actionRow}>
+        {/* From the routine on to the DRIP Matrix (hidden while typing, but keeping its place). */}
+        {mode === 'list' && items.length ? (
+          <View style={[styles.actionRow, keyboardOpen && styles.hidden]} pointerEvents={keyboardOpen ? 'none' : 'auto'}>
             <Button
               title={ready ? 'See your DRIP Matrix' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
               icon={ready ? 'arrow-forward' : undefined}
@@ -260,6 +261,7 @@ const makeStyles = (colors) => ({
   stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
   listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
+  hidden: { opacity: 0 },
   // The sticky bar.
   bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },
