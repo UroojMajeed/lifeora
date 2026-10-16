@@ -1,68 +1,93 @@
-import { useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import Button from './Button';
 import { AuditFields, FIELDS } from './AuditTaskCard';
-import { suggestionsFor, valueForMoney } from '../constants/content';
+import { defaultsFor, suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, cardShadow, radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
+const RECENT = 3; // the last few tasks added, shown as chips
 
 /**
- * The audit's quick-add card: a friendly header with the task number, a big task box (typed, or a
- * suggestion from the scrolling line under it), and the same Time, Money and Energy buttons as the
- * routine's cards, all on show at once. "Save & next" adds the task (\`onAdd(task)\`), with a
- * small "added" moment, and the card is ready for the next one. \`onReveal\` scrolls new choices into
- * view.
+ * The audit's quick-add card: a friendly header with the task number, the last few tasks you added
+ * (Undo on the newest), a big task box with suggestions under it while it's empty, and the same Time,
+ * Money and Energy buttons as the routine's cards. A suggestion fills in what we can guess (its usual
+ * time and a typical $ level), so often only the energy is left. The screen's sticky bar saves it:
+ * `ref.save()`, with `onReadyChange(ready)` telling it when everything is filled in.
  */
-export default function AuditForm({ role, items = [], onAdd, onReveal }) {
+const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRemove, onReadyChange, onReveal }, ref) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [form, setForm] = useState(EMPTY);
   const [field, setField] = useState(null); // the open button: 'hours' | 'money' | 'energy'
-  const [justAdded, setJustAdded] = useState(null);
-  const [focused, setFocused] = useState(false); // typing in the task box
+  const [focused, setFocused] = useState(false);
+  const [lastAdded, setLastAdded] = useState(null); // the task Undo applies to
 
   const name = form.name.trim();
   const taken = (n) => items.some((i) => sameName(i.activity, n));
   const duplicate = Boolean(name) && taken(name);
-  const suggestions = suggestionsFor(role).filter((n) => !taken(n) && !sameName(n, form.name));
-  const missing = [!name && 'task', !form.hours && 'time', !form.money && 'money', !form.energy && 'energy'].filter(Boolean);
-  const ready = !missing.length && !duplicate;
+  const suggestions = suggestionsFor(role).filter((n) => !taken(n));
+  const ready = Boolean(name) && !duplicate && Boolean(form.hours && form.money && form.energy);
+  const recent = items.slice(-RECENT).reverse();
+
+  useEffect(() => {
+    onReadyChange?.(ready);
+  }, [ready, onReadyChange]);
 
   const reveal = () => setTimeout(() => onReveal?.(), 120);
+  const openFirstMissing = (f) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setField(FIELDS.find((k) => !f[k]) ?? null);
+    reveal();
+  };
+  // A name we know comes with its usual time and a typical $ level, so you mostly just check them.
+  const withDefaults = (f, n) => {
+    const guess = defaultsFor(n);
+    return { ...f, name: n, hours: f.hours ?? guess.hours ?? null, money: f.money ?? guess.money ?? null };
+  };
   const pickSuggestion = (n) => {
     Haptics.selectionAsync().catch(() => {});
     Keyboard.dismiss();
-    setForm((f) => ({ ...f, name: n }));
-    setJustAdded(null);
-    // Straight on to the first answer still missing.
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setField(FIELDS.find((k) => !form[k]) ?? null);
+    const next = withDefaults(form, n);
+    setForm(next);
+    setLastAdded(null);
+    openFirstMissing(next);
+  };
+  // Enter in the task box: on to the first answer still missing.
+  const submitName = () => {
+    Keyboard.dismiss();
+    if (!name || duplicate) return;
+    const next = withDefaults(form, name);
+    setForm(next);
+    openFirstMissing(next);
   };
   // An answer: the next unset button opens (or none, once all three are set).
   const change = (patch) => {
     const next = { ...form, ...patch };
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setForm(next);
-    setField(FIELDS.find((k) => !next[k]) ?? null);
-    reveal();
+    openFirstMissing(next);
   };
-  const save = () => {
-    if (!ready) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    Keyboard.dismiss();
-    onAdd({ activity: name.slice(0, 60), hours: form.hours, per: 'day', money: form.money, value: valueForMoney(form.money), energy: form.energy });
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setJustAdded(name);
-    setForm(EMPTY);
-    setField(null);
-  };
+
+  useImperativeHandle(ref, () => ({
+    save() {
+      if (!ready) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Keyboard.dismiss();
+      onAdd({ activity: name.slice(0, 60), hours: form.hours, per: 'day', money: form.money, value: valueForMoney(form.money), energy: form.energy });
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setLastAdded(name);
+      setForm(EMPTY);
+      setField(null);
+    },
+  }));
+
+  const energyIcon = (it) => (it.energy === 'energizing' ? 'flash' : 'battery-dead');
+  const energyColor = (it) => (it.energy === 'energizing' ? colors.success : colors.error);
 
   return (
     <View style={styles.card}>
@@ -77,29 +102,44 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
         </View>
       </View>
 
-      {/* The small "added" moment after each save. */}
-      {justAdded ? (
-        <Animated.View entering={FadeIn.duration(250)} exiting={FadeOut.duration(200)} style={styles.added}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-          <Text style={styles.addedText} numberOfLines={1}>
-            {justAdded} is in your routine
-          </Text>
-        </Animated.View>
+      {/* The last few added, as chips (Undo on the newest, right after saving it). */}
+      {recent.length ? (
+        <View style={styles.recent}>
+          {recent.map((it) => (
+            <Animated.View key={it.activity} entering={FadeIn.duration(250)} style={styles.recentChip}>
+              <Ionicons name={energyIcon(it)} size={12} color={energyColor(it)} />
+              <Text style={styles.recentText} numberOfLines={1}>
+                {it.activity} · {it.hours}h
+              </Text>
+              {lastAdded === it.activity ? (
+                <Pressable
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    onRemove?.(it.activity);
+                    setLastAdded(null);
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Undo adding ${it.activity}`}
+                >
+                  <Text style={styles.undo}>Undo</Text>
+                </Pressable>
+              ) : null}
+            </Animated.View>
+          ))}
+        </View>
       ) : null}
 
-      {/* The task box */}
+      {/* The task box: big, and outlined while you type. */}
       <View style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}>
         <Ionicons name="create-outline" size={22} color={duplicate ? colors.error : colors.primary} />
         <TextInput
           value={form.name}
           onChangeText={(t) => {
-            setJustAdded(null);
+            setLastAdded(null);
             setForm((f) => ({ ...f, name: t }));
           }}
-          onSubmitEditing={() => {
-            Keyboard.dismiss();
-            if (name && !form.hours) setField('hours');
-          }}
+          onSubmitEditing={submitName}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="What do you do on a work day?"
@@ -153,17 +193,11 @@ export default function AuditForm({ role, items = [], onAdd, onReveal }) {
           onChange={change}
         />
       </View>
-
-      <Button
-        title="Save & next"
-        icon="arrow-forward"
-        onPress={save}
-        disabled={!ready}
-        style={styles.save}
-      />
     </View>
   );
-}
+});
+
+export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
   card: {
@@ -179,17 +213,19 @@ const makeStyles = (colors, isDark) => ({
   headTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   count: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   countText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
-  added: {
+  recent: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: spacing.sm + 4 },
+  recentChip: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: spacing.sm + 2,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 7,
-    borderRadius: radius.md,
-    backgroundColor: colors.successSoft,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
   },
-  addedText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.success },
+  recentText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.text },
+  undo: { fontSize: 12, fontWeight: '800', color: colors.primary, marginLeft: 2 },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,5 +257,4 @@ const makeStyles = (colors, isDark) => ({
   },
   suggestionText: { fontSize: 13, fontWeight: '600', color: colors.primaryDark, flexShrink: 1 },
   fields: { marginTop: spacing.md + 2 },
-  save: { marginTop: spacing.lg - 4 },
 });

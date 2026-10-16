@@ -2,7 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { DRIP, HOUR_OPTIONS, MONEY_LEVELS, dollars, quadrantFor, usualHours, valueForMoney } from '../constants/content';
+import { DRIP, HOUR_OPTIONS, MONEY_CAPTION, MONEY_LEVELS, dollars, quadrantFor, usualHours, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -103,26 +103,32 @@ export function AuditFields({ item, field, onField, onChange }) {
         </ScrollView>
       ) : null}
       {field === 'money' ? (
-        <View style={styles.choices}>
-          {MONEY_LEVELS.map((m) => {
-            const on = item.money === m;
-            return (
-              <Pressable
-                key={m}
-                onPress={() => pick({ money: m })}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: on }}
-                accessibilityLabel={`${m} of 5, from less money to more`}
-                style={[styles.coin, on && styles.coinOn]}
-              >
-                {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinFill} /> : null}
-                <Text style={[styles.coinText, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
-                  {dollars(m)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <>
+          <View style={styles.choices}>
+            {MONEY_LEVELS.map((m) => {
+              const on = item.money === m;
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => pick({ money: m })}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={`${m} of 5: ${MONEY_CAPTION[m]}`}
+                  style={[styles.coin, on && styles.coinOn]}
+                >
+                  {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinFill} /> : null}
+                  <Text style={[styles.coinText, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
+                    {dollars(m)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {/* What the scale means, in plain words: from the least to the most. */}
+          <Text style={styles.moneyScale}>
+            $ {MONEY_CAPTION[1].toLowerCase()} · $$$$$ {MONEY_CAPTION[5].toLowerCase()}
+          </Text>
+        </>
       ) : null}
       {field === 'energy' ? (
         <View style={styles.choices}>
@@ -242,4 +248,5 @@ const makeStyles = (colors, isDark) => ({
   coinFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   coinText: { fontSize: 12, fontWeight: '700', color: colors.muted },
   coinTextOn: { color: colors.goldInk, fontWeight: '800' },
+  moneyScale: { fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 6 },
 });

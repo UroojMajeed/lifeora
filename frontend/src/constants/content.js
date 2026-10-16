@@ -49,6 +49,14 @@ export const DRIP_GRID = [
 
 // Money is rated $ to $$$$$ (1-5), like the dollar signs in the book's audit; $$$ and up makes money.
 export const MONEY_LEVELS = [1, 2, 3, 4, 5];
+// One short line for each $ level (the swipe card and the audit say the same thing).
+export const MONEY_CAPTION = {
+  1: 'Anyone could do it',
+  2: 'Low value',
+  3: 'Worth your time',
+  4: 'High value',
+  5: 'Only you, big money',
+};
 export const MONEY_SPLIT = 3;
 export const valueForMoney = (money) => (money >= MONEY_SPLIT ? 'high' : 'low');
 /** An activity's $ rating. Days audited before the $ scale get a stand-in from their high/low value. */
@@ -166,6 +174,13 @@ export const weeklyOf = (item) => round2(item.hours * WORKDAYS);
 export const timeText = (item) =>
   item.per === 'week' ? `${weeklyOf(item)}h a week` : `${hoursLabel(item.hours)} a day`;
 export const usualHours = (name) => ACTIVITIES[name]?.hours ?? null;
+/** What we can guess for a known task: its usual time a day, and a typical $ level from its value. */
+export function defaultsFor(name) {
+  const known = ACTIVITIES[name];
+  if (!known) return {};
+  return { hours: known.hours ?? null, money: known.value === 'high' ? 4 : 2 };
+}
+
 export const hoursLabel = (h) => (h < 1 ? `${h * 60} min` : `${h} ${h === 1 ? 'hour' : 'hours'}`);
 
 // Handing off a draining task: the "Transfer" in the Buyback Loop (Audit → Transfer → Fill).

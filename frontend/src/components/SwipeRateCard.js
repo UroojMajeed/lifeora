@@ -3,7 +3,7 @@ import { Animated, Dimensions, PanResponder, Pressable, Text, View } from 'react
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { MONEY_LEVELS, dollars, timeText } from '../constants/content';
+import { MONEY_CAPTION, MONEY_LEVELS, dollars, timeText } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -11,14 +11,6 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.26;
 const FLY_DURATION = 220;
 
-// One short line for the picked $ level, instead of a lot of text on the card.
-const MONEY_CAPTION = {
-  1: 'Anyone could do it',
-  2: 'Low value',
-  3: 'Worth your time',
-  4: 'High value',
-  5: 'Only you, big money',
-};
 
 /**
  * Swipe card for rating one activity: tap how much money it makes ($ to $$$$$), then swipe right if
