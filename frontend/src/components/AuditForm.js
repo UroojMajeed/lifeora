@@ -88,20 +88,28 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </View>
       </View>
 
-      {/* The task box: big, and outlined while you type. */}
+      {/* The task: a roomy writing area (about three lines), calm text, a teal glow while you type. */}
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>Task</Text>
+        <Text style={styles.counter}>{form.name.length}/60</Text>
+      </View>
       <View style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}>
-        <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} />
+        <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
         <TextInput
           value={form.name}
-          onChangeText={(t) => setForm((f) => ({ ...f, name: t }))}
+          // One line of meaning, but room to see it all: Return finishes (no new lines).
+          onChangeText={(t) => setForm((f) => ({ ...f, name: t.replace(/\n/g, ' ') }))}
           onSubmitEditing={submitName}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Task name, e.g. Invoicing"
+          placeholder="What's the task? e.g. Invoicing clients"
           placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           maxLength={60}
-          returnKeyType="next"
+          multiline
+          blurOnSubmit
+          returnKeyType="done"
+          textAlignVertical="top"
           style={[styles.input, duplicate && { color: colors.error }]}
           accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
         />
@@ -168,20 +176,35 @@ const makeStyles = (colors, isDark) => ({
   headTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   count: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
   countText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '800', color: colors.text },
+  counter: { fontSize: 12, fontWeight: '600', color: colors.muted },
   inputBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    minHeight: 52,
+    minHeight: 96,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    paddingTop: 14,
+    paddingBottom: spacing.sm,
+    borderRadius: radius.lg,
     borderWidth: 1.5,
     borderColor: colors.primarySoft,
     backgroundColor: colors.surfaceAlt,
   },
-  inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
+  // Typing: a white area with a teal edge and a soft teal glow.
+  inputBoxFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 2,
+  },
   inputBoxError: { borderColor: colors.error },
-  input: { flex: 1, fontSize: 16, fontWeight: '500', color: colors.text, paddingVertical: 12 },
+  inputIcon: { marginTop: 2 },
+  input: { flex: 1, minHeight: 66, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // One line of suggestions, edge to edge inside the card (scrolls sideways).
   suggestionsLine: { marginTop: spacing.sm + 2, marginHorizontal: -(spacing.md + 4) },
