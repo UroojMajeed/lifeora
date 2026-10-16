@@ -132,7 +132,7 @@ export default function HomeScreen({ navigation }) {
             {move?.stage === 'audit' || !firstTask ? (
               <MoveCard move={move} first onPress={doMove} loading={startingRound} />
             ) : (
-              <DelegateAsk task={firstTask} onYes={delegated} onPlan={(activity) => navigation.navigate('HandoffDetail', { activity })} />
+              <DelegateAsk task={firstTask} onYes={delegated} />
             )}
             <ProgressWaiting />
           </>

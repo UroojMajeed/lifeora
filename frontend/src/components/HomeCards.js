@@ -32,10 +32,10 @@ export function MoveCard({ move, first, onPress, loading, style }) {
 /**
  * The first move, as one flow in one card: "Delegate it" (your biggest drain and what it frees) →
  * "Did you delegate it?" (Not yet / Yes) → on Yes, a short "Done!" moment with the hours you got back,
- * then `onYes` (Home then fades into your progress). Not yet: a calm way into planning the handoff,
- * and back.
+ * then `onYes` (Home then fades into your progress). Not yet: a calm "No rush", right here, then
+ * back to the start.
  */
-export function DelegateAsk({ task, onYes, onPlan, style }) {
+export function DelegateAsk({ task, onYes, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [step, setStep] = useState('intro'); // 'intro' | 'ask' | 'notYet' | 'done'
@@ -86,12 +86,8 @@ export function DelegateAsk({ task, onYes, onPlan, style }) {
           <>
             <Text style={styles.tag}>Your first move</Text>
             <Text style={styles.moveTitle}>No rush</Text>
-            <Text style={styles.moveBody}>A plan makes it easy: who takes it, what "done" looks like, and the steps.</Text>
-            <Button title="Plan the handoff" icon="arrow-forward" onPress={() => onPlan(task.activity)} style={styles.moveButton} />
-            <Pressable onPress={() => go('ask')} hitSlop={8} accessibilityRole="button" style={styles.plan}>
-              <Ionicons name="chevron-back" size={14} color={colors.primary} />
-              <Text style={styles.planText}>Back</Text>
-            </Pressable>
+            <Text style={styles.moveBody}>Come back and tap Delegate it once {task.activity.toLowerCase()} is off your plate.</Text>
+            <Button title="Got it" variant="secondary" onPress={() => go('intro')} style={styles.moveButton} />
           </>
         ) : null}
 
