@@ -18,19 +18,15 @@ const short = (h) => (h < 1 ? `${h * 60}m` : `${h}h`);
 export const isAudited = (it) => Boolean(it.hours && it.money && it.energy);
 
 /**
- * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy), each in
- * its own colour (teal, gold, green) even before it's set. A set button shows its value; pressing one
- * opens its choices under the buttons (`field` is the one open). Once all three are set, the card
- * takes its DRIP quadrant's colour, with the quadrant's name. Picking calls `onChange(patch)`.
+ * A task's three buttons, Time, Money and Energy, each in its own colour (teal, gold, green) even
+ * before it's set; a set button shows its value. Pressing one opens its choices under the buttons
+ * (`field` is the one open). Used on the routine's cards and in the form that adds a task.
  */
-export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
+export function AuditFields({ item, field, onField, onChange }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const usual = usualHours(item.activity);
   const energy = ENERGY.find((e) => e.key === item.energy);
-  const done = isAudited(item);
-  // Finished: the card wears its quadrant's colour.
-  const q = done ? DRIP[quadrantFor({ value: valueForMoney(item.money), energy: item.energy })] : null;
   // Each button's own colour: [line, soft fill, text].
   const tone = {
     hours: [colors.primary, colors.primarySoft, colors.primaryDark],
@@ -57,17 +53,7 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
   ];
 
   return (
-    <View style={[styles.card, q && { backgroundColor: colors[q.soft], borderColor: colors[q.color] }, field && !q && styles.cardOpen]}>
-      <View style={styles.top}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.activity}
-        </Text>
-        {q ? <Text style={[styles.quadrant, { color: colors[q.color] }]}>{q.name}</Text> : null}
-        <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
-          <Ionicons name="close-circle" size={20} color={colors.muted} />
-        </Pressable>
-      </View>
-
+    <>
       <View style={styles.buttons}>
         {buttons.map((b) => {
           const open = field === b.key;
@@ -158,6 +144,36 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRemove
           })}
         </View>
       ) : null}
+    </>
+  );
+}
+
+/**
+ * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy), each in
+ * its own colour (teal, gold, green) even before it's set. A set button shows its value; pressing one
+ * opens its choices under the buttons (`field` is the one open). Once all three are set, the card
+ * takes its DRIP quadrant's colour, with the quadrant's name. Picking calls `onChange(patch)`.
+ */
+export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
+  const { colors } = useTheme();
+  const styles = useStyles(makeStyles);
+  const done = isAudited(item);
+  // Finished: the card wears its quadrant's colour.
+  const q = done ? DRIP[quadrantFor({ value: valueForMoney(item.money), energy: item.energy })] : null;
+
+  return (
+    <View style={[styles.card, q && { backgroundColor: colors[q.soft], borderColor: colors[q.color] }, field && !q && styles.cardOpen]}>
+      <View style={styles.top}>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.activity}
+        </Text>
+        {q ? <Text style={[styles.quadrant, { color: colors[q.color] }]}>{q.name}</Text> : null}
+        <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
+          <Ionicons name="close-circle" size={20} color={colors.muted} />
+        </Pressable>
+      </View>
+
+      <AuditFields item={item} field={field} onField={onField} onChange={onChange} />
     </View>
   );
 }
