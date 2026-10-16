@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
 import { Card } from '../components/Card';
 import HoursBackCard from '../components/HoursBackCard';
+import RoutineStats from '../components/RoutineStats';
 import { DelegationCard, ReinvestCard } from '../components/JourneyStepCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -16,15 +17,16 @@ import { useHandoffs } from '../context/HandoffsContext';
 import { noticeBoughtBack } from '../storage/progress';
 import { loadReminders, setReminder } from '../storage/reminders';
 import { greeting, todaysMove } from '../constants/home';
+import { dayNow, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 /**
- * Home, where the journey continues after onboarding: your progress first (hours back, with rings
- * for delegated and reinvested), then the last two steps as cards: Step 3 · Delegation, one
- * question per draining task ("Have you delegated it?"), and Step 4 · Reinvest, where every yes lands
- * with the hours it freed, ready for a new job. When something else comes first (new tasks to
- * rate, or a finished round), it shows on top with one button.
+ * Home, where the journey continues after onboarding. First your routine at a glance (one bar of
+ * your day split by quadrant, and a tile per quadrant: its share, hours, meaning and tasks). Then the
+ * journey's last two steps: Delegation (your next handoff, highlighted) and Reinvest (freed time
+ * waiting for a new job). Last, your progress (hours back, with rings). When something else comes
+ * first (new tasks to rate, or a finished round), it shows on top with one button.
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
@@ -36,6 +38,8 @@ export default function HomeScreen({ navigation }) {
   const [reminders, setReminders] = useState({}); // "Remind me later" times, kept on this phone
 
   const schedule = onboarding?.schedule || [];
+  // Your routine as it is now: handed-off tasks out, filled time in.
+  const routineNow = scheduleNow(dayNow(schedule, handoffs, fills));
 
   // Fresh numbers every time Home comes back into view (e.g. after handing something off).
   useFocusEffect(
@@ -106,10 +110,10 @@ export default function HomeScreen({ navigation }) {
           </Card>
         ) : null}
 
-        {/* The one number: hours bought back a week. */}
-        <HoursBackCard summary={summary} onPress={() => navigation.navigate('Handoffs')} />
+        {/* First, your routine at a glance: where your day goes, quadrant by quadrant. */}
+        <RoutineStats items={routineNow} onOpen={() => navigation.navigate('MyDay')} />
 
-        {/* The journey's last two steps. */}
+        {/* Then the journey's last two steps. */}
         <DelegationCard
           handoffs={handoffs}
           reminders={reminders}
@@ -126,6 +130,10 @@ export default function HomeScreen({ navigation }) {
           onFill={() => navigation.navigate('Fill')}
           style={styles.block}
         />
+
+        {/* Your progress: hours bought back, with rings for delegated and reinvested. */}
+        <Text style={[styles.sectionTitle, styles.block]}>Your progress</Text>
+        <HoursBackCard summary={summary} onPress={() => navigation.navigate('Handoffs')} />
 
         {askToSave ? (
           <Pressable onPress={() => navigation.navigate('Account', { mode: 'save' })} hitSlop={8} style={styles.save} accessibilityRole="button">
@@ -145,6 +153,7 @@ const makeStyles = (colors) => ({
   firstTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   firstBody: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
   firstButton: { marginTop: spacing.md },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2, marginBottom: spacing.sm },
   block: { marginTop: spacing.xl },
   save: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: spacing.lg },
   saveText: { fontSize: 13, fontWeight: '700', color: colors.primary },
