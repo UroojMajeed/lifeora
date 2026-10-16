@@ -2,7 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { DRIP, HOUR_OPTIONS, MONEY_CAPTION, MONEY_LEVELS, dollars, quadrantFor, usualHours, valueForMoney } from '../constants/content';
+import { HOUR_OPTIONS, MONEY_CAPTION, MONEY_LEVELS, dollars, usualHours } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -157,23 +157,18 @@ export function AuditFields({ item, field, onField, onChange }) {
 /**
  * One task in the time and energy audit: its name, then three buttons (Time, Money, Energy), each in
  * its own colour (teal, gold, green) even before it's set. A set button shows its value; pressing one
- * opens its choices under the buttons (`field` is the one open). Once all three are set, the card
- * takes its DRIP quadrant's colour, with the quadrant's name. Picking calls `onChange(patch)`.
+ * opens its choices under the buttons (`field` is the one open). Picking calls `onChange(patch)`.
  */
 export default function AuditTaskCard({ item, field, onField, onChange, onRemove }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const done = isAudited(item);
-  // Finished: the card wears its quadrant's colour.
-  const q = done ? DRIP[quadrantFor({ value: valueForMoney(item.money), energy: item.energy })] : null;
 
   return (
-    <View style={[styles.card, q && { backgroundColor: colors[q.soft], borderColor: colors[q.color] }, field && !q && styles.cardOpen]}>
+    <View style={[styles.card, field && styles.cardOpen]}>
       <View style={styles.top}>
         <Text style={styles.name} numberOfLines={1}>
           {item.activity}
         </Text>
-        {q ? <Text style={[styles.quadrant, { color: colors[q.color] }]}>{q.name}</Text> : null}
         <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
@@ -213,7 +208,6 @@ const makeStyles = (colors, isDark) => ({
   },
   buttonText: { fontSize: 13, fontWeight: '700' },
   buttonTextSet: { fontWeight: '800' },
-  quadrant: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   // The open button's choices.
   choices: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm + 2 },
   pill: {

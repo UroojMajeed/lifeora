@@ -174,9 +174,18 @@ export default function AuditScreen({ navigation, route }) {
           ) : (
             <>
               {/* The routine, shown once: each card can still be changed. */}
-              <Text style={styles.listHead}>
-                {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
-              </Text>
+              {/* On top, so it's there without scrolling: the count, and a way to add another task. */}
+              <View style={styles.listTop}>
+                <Text style={styles.listHead}>
+                  {items.length} {items.length === 1 ? 'task' : 'tasks'} · {formatHours(totalHours)} a day
+                </Text>
+                {items.length < MAX_ACTIVITIES ? (
+                  <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
+                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                    <Text style={styles.doneText}>Add another task</Text>
+                  </Pressable>
+                ) : null}
+              </View>
               <View style={styles.rows}>
                 {items.map((item) => (
                   <AuditTaskCard
@@ -189,12 +198,6 @@ export default function AuditScreen({ navigation, route }) {
                   />
                 ))}
               </View>
-              {items.length < MAX_ACTIVITIES ? (
-                <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
-                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                  <Text style={styles.doneText}>Add another task</Text>
-                </Pressable>
-              ) : null}
             </>
           )}
           <ErrorBanner message={error} />
@@ -245,15 +248,16 @@ const makeStyles = (colors) => ({
   body: { flex: 1 },
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
-  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4, marginBottom: spacing.sm },
+  listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
+  listHead: { fontSize: 13, fontWeight: '800', color: colors.muted, letterSpacing: 0.4 },
   // The sticky bar.
   bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   barButton: { minHeight: 52 },
   barMain: { flex: 1 },
   // "Done": short and outlined, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
-  doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
-  addMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.md, paddingVertical: spacing.sm },
+  doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  addMore: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: spacing.xs },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
