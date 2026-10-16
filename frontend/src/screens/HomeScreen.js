@@ -107,7 +107,8 @@ export default function HomeScreen({ navigation }) {
         <ThemeToggle />
       </View>
 
-      <Animated.View entering={FadeIn.duration(300)} style={styles.stack}>
+      {/* Keyed by the layout, so the switch to progress (after your first "Yes") fades in gently. */}
+      <Animated.View key={started ? 'progress' : 'first'} entering={FadeIn.duration(500)} style={styles.stack}>
         {started ? (
           <>
             {/* Progress and the "why" take the top. */}

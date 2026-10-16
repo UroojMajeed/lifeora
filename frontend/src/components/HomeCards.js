@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, LayoutAnimation, Pressable, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,48 +30,79 @@ export function MoveCard({ move, first, onPress, loading, style }) {
 }
 
 /**
- * The first move, kept simple: your biggest drain and one question, "Have you delegated it?". Yes marks
- * it delegated (\`onYes\`); No keeps it, with a quiet way into planning the handoff (\`onPlan\`).
+ * The first move, as one flow in one card: "Delegate it" (your biggest drain and what it frees) →
+ * "Did you delegate it?" (Not yet / Yes) → on Yes, a short "Done!" moment with the hours you got back,
+ * then `onYes` (Home then fades into your progress). Not yet: a calm way into planning the handoff,
+ * and back.
  */
 export function DelegateAsk({ task, onYes, onPlan, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const [saidNo, setSaidNo] = useState(false);
+  const [step, setStep] = useState('intro'); // 'intro' | 'ask' | 'notYet' | 'done'
   if (!task) return null;
+  const week = h(task.hours * 5);
+  const go = (next) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStep(next);
+  };
+
   return (
-    <View style={[styles.move, style]}>
-      <Text style={styles.tag}>Your first move</Text>
-      <Text style={styles.moveTitle}>{task.activity}</Text>
-      <Text style={styles.moveBody}>
-        {h(task.hours)} a day · frees {h(task.hours * 5)} a week
-      </Text>
-      <Text style={styles.ask}>Have you delegated it?</Text>
-      <View style={styles.answers}>
-        <Button
-          title="No"
-          variant="secondary"
-          onPress={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setSaidNo(true);
-          }}
-          style={styles.answer}
-        />
-        <Button
-          title="Yes"
-          icon="checkmark"
-          onPress={() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-            onYes(task.activity);
-          }}
-          style={styles.answer}
-        />
-      </View>
-      {saidNo ? (
-        <Pressable onPress={() => onPlan(task.activity)} hitSlop={8} accessibilityRole="button" style={styles.plan}>
-          <Text style={styles.planText}>Not yet? Plan the handoff</Text>
-          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-        </Pressable>
-      ) : null}
+    <View style={[styles.move, step === 'done' && styles.moveDone, style]}>
+      <Animated.View key={step} entering={FadeIn.duration(250)}>
+        {step === 'intro' ? (
+          <>
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>{task.activity}</Text>
+            <Text style={styles.moveBody}>
+              It takes {h(task.hours)} a day. Delegate it and free up {week} a week.
+            </Text>
+            <Button title="Delegate it" icon="arrow-forward" onPress={() => go('ask')} style={styles.moveButton} />
+          </>
+        ) : null}
+
+        {step === 'ask' ? (
+          <>
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>Did you delegate {task.activity.toLowerCase()}?</Text>
+            <Text style={styles.moveBody}>Handed to someone, automated, or simply dropped: it all counts.</Text>
+            <View style={styles.answers}>
+              <Button title="Not yet" variant="secondary" onPress={() => go('notYet')} style={styles.answer} />
+              <Button
+                title="Yes"
+                icon="checkmark"
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+                  go('done');
+                  // A moment to enjoy it, then on to your progress.
+                  setTimeout(() => onYes(task.activity), 1500);
+                }}
+                style={styles.answer}
+              />
+            </View>
+          </>
+        ) : null}
+
+        {step === 'notYet' ? (
+          <>
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>No rush</Text>
+            <Text style={styles.moveBody}>A plan makes it easy: who takes it, what "done" looks like, and the steps.</Text>
+            <Button title="Plan the handoff" icon="arrow-forward" onPress={() => onPlan(task.activity)} style={styles.moveButton} />
+            <Pressable onPress={() => go('ask')} hitSlop={8} accessibilityRole="button" style={styles.plan}>
+              <Ionicons name="chevron-back" size={14} color={colors.primary} />
+              <Text style={styles.planText}>Back</Text>
+            </Pressable>
+          </>
+        ) : null}
+
+        {step === 'done' ? (
+          <View style={styles.doneBox} accessibilityLiveRegion="polite">
+            <Ionicons name="checkmark-circle" size={44} color={colors.success} />
+            <Text style={styles.doneTitle}>Done!</Text>
+            <Text style={styles.doneText}>{week} a week is yours again</Text>
+          </View>
+        ) : null}
+      </Animated.View>
     </View>
   );
 }
@@ -212,8 +244,11 @@ const makeStyles = (colors, isDark) => ({
   moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2, marginTop: 6 },
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
-  ask: { fontSize: 15, fontWeight: '800', color: colors.text, marginTop: spacing.md },
-  answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm + 2 },
+  moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
+  doneBox: { alignItems: 'center', paddingVertical: spacing.md },
+  doneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
+  doneText: { fontSize: 15, fontWeight: '700', color: colors.success, marginTop: 2 },
+  answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   answer: { flex: 1, minHeight: 48 },
   plan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: spacing.sm + 2 },
   planText: { fontSize: 14, fontWeight: '700', color: colors.primary },
