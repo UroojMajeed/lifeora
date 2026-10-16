@@ -157,7 +157,14 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
       {/* Time, Money and Energy: their own section (a hairline and a label), so they never blend with
           the suggestions above. The same buttons as on the routine's cards. */}
       <View style={styles.fields}>
-        <Text style={styles.sectionLabel}>How long · What it pays · How it feels</Text>
+        {/* Each question sits right above its own button (the same three columns as the buttons). */}
+        <View style={styles.questions}>
+          {['How long', 'What it pays', 'How it feels'].map((q) => (
+            <Text key={q} style={styles.question3} numberOfLines={1} adjustsFontSizeToFit>
+              {q}
+            </Text>
+          ))}
+        </View>
         <AuditFields
           item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }}
           field={field}
@@ -213,6 +220,9 @@ const makeStyles = (colors, isDark) => ({
   inputIcon: { marginTop: 2 },
   input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
+  // Same columns and gap as the Time / Money / Energy buttons below them.
+  questions: { flexDirection: 'row', gap: spacing.sm, marginBottom: 6 },
+  question3: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.6, textTransform: 'uppercase' },
   sectionLabel: { fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm },
   suggestionsLabel: { marginTop: spacing.md },
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
