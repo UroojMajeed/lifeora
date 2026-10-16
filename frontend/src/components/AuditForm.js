@@ -90,14 +90,14 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 
       {/* The task box: big, and outlined while you type. */}
       <View style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}>
-        <Ionicons name="create-outline" size={22} color={duplicate ? colors.error : colors.primary} />
+        <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} />
         <TextInput
           value={form.name}
           onChangeText={(t) => setForm((f) => ({ ...f, name: t }))}
           onSubmitEditing={submitName}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="What do you do on a work day?"
+          placeholder="Task name, e.g. Invoicing"
           placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           maxLength={60}
@@ -171,8 +171,8 @@ const makeStyles = (colors, isDark) => ({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm + 2,
-    minHeight: 64,
+    gap: spacing.sm,
+    minHeight: 52,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1.5,
@@ -181,7 +181,7 @@ const makeStyles = (colors, isDark) => ({
   },
   inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
   inputBoxError: { borderColor: colors.error },
-  input: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.text, paddingVertical: 14 },
+  input: { flex: 1, fontSize: 16, fontWeight: '500', color: colors.text, paddingVertical: 12 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // One line of suggestions, edge to edge inside the card (scrolls sideways).
   suggestionsLine: { marginTop: spacing.sm + 2, marginHorizontal: -(spacing.md + 4) },
