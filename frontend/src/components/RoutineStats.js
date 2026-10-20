@@ -21,17 +21,13 @@ const ICON_ROOM = 34; // room at the top of each track for its icon
 const quadrantOf = (it) => it.quadrant || quadrantFor({ value: it.money ? valueForMoney(it.money) : it.value, energy: it.energy });
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
-/** A column that rises when Home opens (one after another) and dims while another one is picked. */
-function Column({ height, index, color, dim, children }) {
+/** A column that rises when Home opens (one after another). */
+function Column({ height, index, color, children }) {
   const rise = useSharedValue(0);
-  const fade = useSharedValue(1);
   useEffect(() => {
     rise.value = withDelay(index * 90, withTiming(height, { duration: 650, easing: Easing.out(Easing.cubic) }));
   }, [height, index, rise]);
-  useEffect(() => {
-    fade.value = withTiming(dim ? 0.3 : 1, { duration: 220 });
-  }, [dim, fade]);
-  const style = useAnimatedStyle(() => ({ height: rise.value, opacity: fade.value }));
+  const style = useAnimatedStyle(() => ({ height: rise.value }));
   return (
     <Animated.View style={[colStyles.col, style]}>
       <LinearGradient colors={[`${color}B3`, color]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -47,7 +43,7 @@ const colStyles = StyleSheet.create({
 /**
  * Home's first look on a first visit: your routine. Its size (hours a day, tasks), a column per
  * quadrant in its own track (icon on top, % of the day and hours inside, so even half an hour reads),
- * and the graph said in words. Tap a column: the others dim and its tasks show. `items` is the
+ * and the graph said in words. Tap a column: it lights up and its tasks show. `items` is the
  * routine as it is now.
  */
 export default function RoutineStats({ items = [], style }) {
@@ -96,11 +92,11 @@ export default function RoutineStats({ items = [], style }) {
               accessibilityLabel={`${DRIP[k].name}: ${formatHours(hours)} a day, ${share}% of your day${DRAINS.has(k) ? ', drains you' : ''}. Tap to see its tasks.`}
               style={({ pressed }) => [styles.slot, pressed && styles.pressed]}
             >
-              <View style={[styles.track, on && { borderColor: colors.chart[k] }]}>
+              <View style={[styles.track, on && { borderColor: colors.chart[k], backgroundColor: `${colors.chart[k]}22` }]}>
                 <View style={styles.iconWrap}>
                   <Ionicons name={ICONS[k]} size={16} color={colors.chart[k]} />
                 </View>
-                <Column height={heightOf(hours)} index={i} color={colors.chart[k]} dim={open !== null && !on}>
+                <Column height={heightOf(hours)} index={i} color={colors.chart[k]}>
                   <Text style={styles.share}>{share}%</Text>
                   <Text style={styles.hours}>{formatHours(hours)}</Text>
                 </Column>
@@ -145,11 +141,15 @@ export default function RoutineStats({ items = [], style }) {
       {/* The graph, said in words. */}
       {biggest ? (
         <View style={styles.insight}>
-          <View style={styles.insightDot} />
-          <Text style={styles.insightText}>
-            <Text style={styles.insightStrong}>{h(drainHours)} a day drains you.</Text> Your biggest drain is {biggest.activity.toLowerCase()} (
-            {h(biggest.hours)}). Handing it off frees {h(biggest.hours * WORKDAYS_PER_WEEK)} a week.
-          </Text>
+          <View style={styles.insightIcon}>
+            <Ionicons name="battery-dead" size={16} color="#FFFFFF" />
+          </View>
+          <View style={styles.insightBody}>
+            <Text style={styles.insightStrong}>{h(drainHours)} a day drains you</Text>
+            <Text style={styles.insightText} numberOfLines={1}>
+              Hand off {biggest.activity.toLowerCase()}: +{h(biggest.hours * WORKDAYS_PER_WEEK)} a week
+            </Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -179,7 +179,7 @@ const makeStyles = (colors, isDark) => ({
     padding: 4,
     borderRadius: 18,
     backgroundColor: colors.surfaceAlt,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   iconWrap: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center' },
@@ -199,8 +199,9 @@ const makeStyles = (colors, isDark) => ({
   chipHours: { fontWeight: '500', color: colors.muted },
   empty: { fontSize: 12, color: colors.muted, marginTop: 4 },
   // The insight: the graph in words.
-  insight: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start', marginTop: spacing.md, padding: spacing.sm + 2, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
-  insightDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginTop: 6 },
-  insightText: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.text },
-  insightStrong: { fontWeight: '800', color: colors.error },
+  insight: { flexDirection: 'row', gap: spacing.sm + 2, alignItems: 'center', marginTop: spacing.md, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.errorSoft },
+  insightIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.error },
+  insightBody: { flex: 1, minWidth: 0 },
+  insightStrong: { fontSize: 15, fontWeight: '800', color: colors.error },
+  insightText: { fontSize: 13, fontWeight: '600', color: colors.text, marginTop: 1 },
 });
