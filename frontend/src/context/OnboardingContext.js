@@ -3,6 +3,7 @@ import { api, tokenStore } from '../api/client';
 import { screenForStep } from '../constants/content';
 import { loadMotivation, removeMotivation } from '../storage/motivation';
 import { clearProgress } from '../storage/progress';
+import { clearMilestones } from '../storage/milestones';
 
 const OnboardingContext = createContext(null);
 
@@ -29,6 +30,7 @@ export function OnboardingProvider({ children }) {
         await tokenStore.clear();
         await removeMotivation(await loadMotivation());
         await clearProgress();
+        await clearMilestones();
       }
       return null;
     }
@@ -63,6 +65,7 @@ export function OnboardingProvider({ children }) {
     await tokenStore.clear();
     await removeMotivation(await loadMotivation());
     await clearProgress();
+    await clearMilestones();
     applyUser(null);
   }, [applyUser]);
 

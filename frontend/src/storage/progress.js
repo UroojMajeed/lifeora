@@ -98,6 +98,12 @@ export async function recordWeeklyBoughtBack(hoursAWeek, count = 5) {
   return { weeks, totalHours };
 }
 
+/** Every week's hours bought back added up (for Me's next milestone). */
+export async function boughtBackTotalHours() {
+  const map = await readHistory();
+  return Object.values(map).reduce((t, x) => t + (Number(x) || 0), 0);
+}
+
 /** Forget everything (used by "Start over"). */
 export function clearProgress() {
   return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY, HISTORY_KEY]).catch(() => {});

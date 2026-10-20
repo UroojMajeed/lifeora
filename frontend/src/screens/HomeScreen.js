@@ -9,6 +9,9 @@ import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
 import MoneyCard from '../components/MoneyCard';
+import MilestoneSheet from '../components/MilestoneSheet';
+import { markMilestones } from '../storage/milestones';
+import { milestoneLine, reachedMilestones } from '../constants/milestones';
 import { DelegateAsk, MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -35,6 +38,7 @@ export default function HomeScreen({ navigation }) {
   const isFocused = useIsFocused();
   const [startingRound, setStartingRound] = useState(false);
   const [money, setMoney] = useState({ weeks: [], totalHours: 0 }); // hours bought back, week by week
+  const [milestone, setMilestone] = useState(null); // a new one to celebrate
 
   const schedule = onboarding?.schedule || [];
   // Your routine as it is now: handed-off tasks out, filled time in.
@@ -56,6 +60,19 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (summary) recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6).then(setMoney);
   }, [summary, bought]);
+
+  // A milestone reached since last time: celebrate the newest one, once (only while on screen).
+  const hourWorth = (onboarding?.annualIncome || 0) / WORK_HOURS_PER_YEAR;
+  const currency = onboarding?.currency || 'USD';
+  useEffect(() => {
+    if (!isFocused || !summary) return;
+    // Finished weeks only: this week's hours count once the week has really happened.
+    const done = money.totalHours - (money.weeks.find((w) => w.now)?.hours || 0);
+    const totals = { hours: done, money: done * hourWorth, round: summary.round || 1 };
+    markMilestones(reachedMilestones(totals, currency)).then((fresh) => {
+      if (fresh.length) setMilestone(fresh[fresh.length - 1]);
+    });
+  }, [isFocused, summary, money, hourWorth, currency]);
 
   // More hours bought back since Home last showed them: a small success buzz (only while on screen).
   useEffect(() => {
@@ -128,8 +145,8 @@ export default function HomeScreen({ navigation }) {
             <MoneyCard
               weeks={money.weeks}
               totalHours={money.totalHours}
-              hourWorth={(onboarding?.annualIncome || 0) / WORK_HOURS_PER_YEAR}
-              currency={onboarding?.currency || 'USD'}
+              hourWorth={hourWorth}
+              currency={currency}
             />
             <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
@@ -163,6 +180,7 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         ) : null}
       </Animated.View>
+      <MilestoneSheet milestone={milestone} line={milestone ? milestoneLine(milestone, { hourWorth, currency }) : ''} onClose={() => setMilestone(null)} />
     </Screen>
   );
 }

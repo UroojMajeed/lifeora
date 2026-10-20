@@ -7,6 +7,11 @@ import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
 import { Card } from '../components/Card';
 import MotivationCard from '../components/MotivationCard';
+import MilestoneBadges from '../components/MilestoneBadges';
+import { loadMilestones } from '../storage/milestones';
+import { boughtBackTotalHours } from '../storage/progress';
+import { milestoneList, nextMilestone, roundMilestone } from '../constants/milestones';
+import { WORK_HOURS_PER_YEAR } from '../constants/content';
 import { loadMotivation } from '../storage/motivation';
 import { useOnboarding } from '../context/OnboardingContext';
 import { ROLES } from '../constants/content';
@@ -46,11 +51,19 @@ export default function MeScreen({ navigation }) {
   const { type } = useTheme();
   const [deleting, setDeleting] = useState(false);
   const [motivation, setMotivation] = useState(null);
+  const [miles, setMiles] = useState({ earned: [], next: null }); // milestones reached, and the next one
 
   useFocusEffect(
     useCallback(() => {
       loadMotivation().then(setMotivation);
-    }, [])
+      // Milestones reached (kept on this phone) and the next one, from the hours bought back so far.
+      Promise.all([loadMilestones(), boughtBackTotalHours()]).then(([map, hours]) => {
+        const cur = onboarding?.currency || 'USD';
+        const worth = (onboarding?.annualIncome || 0) / WORK_HOURS_PER_YEAR;
+        const all = [...milestoneList(cur), ...Object.keys(map).filter((k) => k.startsWith('round-')).map((k) => roundMilestone(Number(k.split('-')[1])))];
+        setMiles({ earned: all.filter((m) => map[m.key]), next: nextMilestone({ hours, money: hours * worth }, cur) });
+      });
+    }, [onboarding?.currency, onboarding?.annualIncome])
   );
 
   const deleteEverything = async () => {
@@ -119,6 +132,15 @@ export default function MeScreen({ navigation }) {
           onPress={() => navigation.navigate('Profile', { editing: true })}
         />
       </Card>
+
+      {miles.earned.length || miles.next ? (
+        <>
+          <Text style={[type.label, styles.section]}>Milestones</Text>
+          <Card style={styles.card}>
+            <MilestoneBadges earned={miles.earned} next={miles.next} />
+          </Card>
+        </>
+      ) : null}
 
       <Text style={[type.label, styles.section]}>Account</Text>
       <Card style={styles.card}>
