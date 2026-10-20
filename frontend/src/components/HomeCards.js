@@ -23,7 +23,7 @@ export function MoveCard({ move, first, onPress, loading, style }) {
       <CardHeader
         icon={move.action === 'nextRound' ? 'refresh' : 'flag'}
         iconColor={colors.accentText}
-        title={first ? 'Your first move' : 'Your next move'}
+        title={first ? 'Your First Move' : 'Your Next Move'}
         sub={move.minutes ? `About ${move.minutes} min` : null}
       />
       <Text style={[styles.moveTitle, styles.content]}>{move.title}</Text>
@@ -52,7 +52,7 @@ export function DelegateAsk({ task, onYes, next, style }) {
 
   return (
     <View style={[styles.move, step === 'done' && styles.moveDone, style]}>
-      {step !== 'done' ? <CardHeader icon="flag" iconColor={colors.accentText} title={next ? 'Your next move' : 'Your first move'} /> : null}
+      {step !== 'done' ? <CardHeader icon="flag" iconColor={colors.accentText} title={next ? 'Your Next Move' : 'Your First Move'} /> : null}
       <Animated.View key={step} entering={FadeIn.duration(250)}>
         {step === 'intro' ? (
           <>
@@ -131,7 +131,7 @@ export function ProductionCompare({ before, gain, style }) {
       <CardHeader
         icon="flash"
         iconColor={colors.chart.production}
-        title="Your production time"
+        title="Your Production Time"
         right={
           gain > 0 ? (
             <View style={styles.prodChip}>
@@ -305,7 +305,7 @@ const makeStyles = (colors, isDark) => ({
   // Move
   move: { ...homeCard(colors, isDark), backgroundColor: colors.tintMove },
   content: { marginTop: spacing.md }, // the gap between a card's header and what's under it
-  moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
+  moveTitle: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
@@ -331,7 +331,7 @@ const makeStyles = (colors, isDark) => ({
   prodLine: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: spacing.md },
   prodStrong: { fontWeight: '800', color: colors.chart.production },
   doneBox: { alignItems: 'center', paddingVertical: spacing.md },
-  doneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
+  doneTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
   doneText: { fontSize: 15, fontWeight: '700', color: colors.success, marginTop: 2 },
   answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   answer: { flex: 1, minHeight: 48 },

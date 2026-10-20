@@ -38,6 +38,6 @@ const makeStyles = (colors) => ({
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   icon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   main: { flex: 1, minWidth: 0 },
-  title: { fontSize: 16, fontWeight: '800', color: colors.text },
+  title: { fontSize: 18, fontWeight: '800', color: colors.text }, // the card title: the biggest text in a card
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
 });

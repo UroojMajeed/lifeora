@@ -111,7 +111,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
       <CardHeader
         icon="leaf"
         iconColor={colors.chart.production}
-        title="Reinvest your time"
+        title="Reinvest Your Time"
         sub={cheerLine(used, allUsed)}
         right={saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       />

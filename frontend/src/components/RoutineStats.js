@@ -76,7 +76,7 @@ export default function RoutineStats({ items = [], style }) {
       <CardHeader
         icon="stats-chart"
         iconColor={colors.primary}
-        title="Your routine"
+        title="Your Routine"
         sub={`${h(total)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}`}
       />
 
