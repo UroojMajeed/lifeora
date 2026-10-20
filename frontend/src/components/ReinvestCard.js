@@ -106,8 +106,8 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
   return (
     <View style={[styles.card, style]}>
       <View style={styles.head}>
-        <View style={[styles.headIcon, allUsed && { backgroundColor: colors.accentSoft }]}>
-          <Ionicons name={allUsed ? 'trophy' : 'leaf'} size={16} color={allUsed ? colors.accentText : colors.chart.production} />
+        <View style={styles.headIcon}>
+          <Ionicons name="leaf" size={16} color={colors.chart.production} />
         </View>
         <View style={styles.headMain}>
           <Text style={styles.title}>Reinvest your time</Text>
@@ -116,23 +116,27 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         {saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       </View>
 
-      {/* How much of the freed time has a new job. */}
+      {/* How much of the freed time has a new job, said inside the bar. */}
       <View style={styles.track}>
         {KINDS.map((k) => {
-          const part = fills.filter((f) => f.quadrant === k).reduce((t, f) => t + f.hours, 0);
-          return part ? <View key={k} style={{ flex: part, backgroundColor: color(k) }} /> : null;
+          const part = fills.filter((x) => x.quadrant === k).reduce((t, x) => t + x.hours, 0);
+          return part ? (
+            <View key={k} style={[styles.part, { flex: part, backgroundColor: color(k) }]}>
+              <Ionicons name={ICONS[k]} size={12} color="#FFFFFF" />
+              <Text style={styles.partText} numberOfLines={1}>
+                {h(part)}
+              </Text>
+            </View>
+          ) : null;
         })}
-        {left > 0 ? <View style={{ flex: left }} /> : null}
+        {left > 0 ? (
+          <View style={[styles.part, { flex: left }]}>
+            <Text style={styles.freeText} numberOfLines={1}>
+              {h(left)} free
+            </Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={styles.trackText}>
-        {used
-          ? KINDS.map((k) => [k, fills.filter((x) => x.quadrant === k).reduce((t, x) => t + x.hours, 0)])
-              .filter(([, n]) => n)
-              .map(([k, n]) => `${h(n)} ${k === 'production' ? 'in the business' : 'in you'}`)
-              .join(' · ')
-          : `${h(free)} a day to reinvest`}
-        {used && !allUsed ? ` · ${h(left)} free` : ''}
-      </Text>
 
       {/* A moment to enjoy it, right after each reinvest. */}
       {cheer ? (
@@ -249,8 +253,10 @@ const makeStyles = (colors, isDark) => ({
   headMain: { flex: 1, minWidth: 0 },
   title: { fontSize: 16, fontWeight: '800', color: colors.text },
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
-  track: { flexDirection: 'row', gap: 2, height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
-  trackText: { fontSize: 11, fontWeight: '600', color: colors.muted, marginTop: 5 },
+  track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
+  part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 6, minWidth: 58 }, // wide enough for its words
+  partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  freeText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.muted },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   kind: { flex: 1, padding: spacing.sm + 4, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
   kindIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
