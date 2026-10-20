@@ -7,13 +7,13 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
-import { DelegateAsk, DrainCompare, MoveCard, ProgressHero, ProgressWaiting, WeeklyChart } from '../components/HomeCards';
+import { DelegateAsk, MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
-import { noticeBoughtBack, recordWeeklyBoughtBack } from '../storage/progress';
-import { loadMotivation } from '../storage/motivation';
-import { WORKDAYS_PER_WEEK, greeting, todaysMove } from '../constants/home';
+import { noticeBoughtBack } from '../storage/progress';
+import { quadrantFor, valueForMoney } from '../constants/content';
+import { greeting, todaysMove } from '../constants/home';
 import { dayNow, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
@@ -21,9 +21,8 @@ import { spacing } from '../theme';
 /**
  * Home, in two states. First visit (nothing bought back yet): your routine as a bar graph with the
  * insight under it (what drains you, your biggest drain), then your first move, then a small waiting
- * ring for hours bought back. After the first handoff, progress takes the top: your "why" and the
- * hours bought back a week (and what they're worth), a column per week, draining hours before vs now,
- * then today's move. The full routine graph stays on the Routine tab.
+ * ring for hours bought back. After the first handoff: the same graph (your routine now), your next
+ * move, and your production time before vs now.
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
@@ -32,8 +31,6 @@ export default function HomeScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
   const [startingRound, setStartingRound] = useState(false);
-  const [why, setWhy] = useState(null); // the "Your why" photo and words, from Me
-  const [weeks, setWeeks] = useState([]); // hours bought back, week by week
 
   const schedule = onboarding?.schedule || [];
   // Your routine as it is now: handed-off tasks out, filled time in.
@@ -41,7 +38,6 @@ export default function HomeScreen({ navigation }) {
 
   const draining = summary?.drainingHours || 0; // a day, at the audit
   const bought = Math.min(summary?.boughtBackHours || 0, draining);
-  const boughtWeek = bought * WORKDAYS_PER_WEEK;
   // The switch: once something is bought back, progress leads.
   const started = bought > 0;
 
@@ -49,14 +45,8 @@ export default function HomeScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       refreshHandoffs();
-      loadMotivation().then(setWhy);
     }, [refreshHandoffs])
   );
-
-  // This week's hours bought back join the weekly history (kept on this phone).
-  useEffect(() => {
-    if (summary) recordWeeklyBoughtBack(boughtWeek).then(setWeeks);
-  }, [summary, boughtWeek]);
 
   // More hours bought back since Home last showed them: a small success buzz (only while on screen).
   useEffect(() => {
@@ -71,6 +61,12 @@ export default function HomeScreen({ navigation }) {
   const firstTask = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours)[0];
   const delegated = (activity) =>
     update(activity, { status: 'done' }).catch((err) => Alert.alert("Couldn't save that", err.message));
+
+  // Production time at the audit (the hours freed by delegating are added on top).
+  const productionBefore = schedule
+    .filter((a) => a.energy && a.hours)
+    .filter((a) => (a.quadrant || quadrantFor({ value: a.money ? valueForMoney(a.money) : a.value, energy: a.energy })) === 'production')
+    .reduce((t, a) => t + a.hours, 0);
 
   // The move's button; a finished round starts the next one first.
   const doMove = async () => {
@@ -111,18 +107,14 @@ export default function HomeScreen({ navigation }) {
       <Animated.View key={started ? 'progress' : 'first'} entering={FadeIn.duration(500)} style={styles.stack}>
         {started ? (
           <>
-            {/* Progress and the "why" take the top. */}
-            <ProgressHero
-              boughtWeek={boughtWeek}
-              drainingWeek={draining * WORKDAYS_PER_WEEK}
-              buybackRate={onboarding?.buybackRate}
-              currency={onboarding?.currency || 'USD'}
-              why={why}
-              onPress={() => navigation.navigate('Handoffs')}
-            />
-            <WeeklyChart weeks={weeks} />
-            <DrainCompare before={draining} now={Math.max(0, draining - bought)} />
-            <MoveCard move={move} onPress={doMove} loading={startingRound} />
+            {/* After a handoff: your routine now, what to do next, and your production before vs now. */}
+            <RoutineStats items={routineNow} />
+            {move?.stage === 'audit' || !firstTask ? (
+              <MoveCard move={move} onPress={doMove} loading={startingRound} />
+            ) : (
+              <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
+            )}
+            <ProductionCompare before={productionBefore} gain={bought} />
           </>
         ) : (
           <>
@@ -132,7 +124,7 @@ export default function HomeScreen({ navigation }) {
             {move?.stage === 'audit' || !firstTask ? (
               <MoveCard move={move} first onPress={doMove} loading={startingRound} />
             ) : (
-              <DelegateAsk task={firstTask} onYes={delegated} />
+              <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} />
             )}
             <ProgressWaiting />
           </>

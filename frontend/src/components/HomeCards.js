@@ -35,7 +35,7 @@ export function MoveCard({ move, first, onPress, loading, style }) {
  * then `onYes` (Home then fades into your progress). Not yet: a calm "No rush", right here, then
  * back to the start.
  */
-export function DelegateAsk({ task, onYes, style }) {
+export function DelegateAsk({ task, onYes, next, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [step, setStep] = useState('intro'); // 'intro' | 'ask' | 'notYet' | 'done'
@@ -53,7 +53,7 @@ export function DelegateAsk({ task, onYes, style }) {
           <>
             <View style={styles.tagRow}>
               <Ionicons name="flag" size={12} color={colors.accentText} />
-              <Text style={styles.tag}>Your first move</Text>
+              <Text style={styles.tag}>{next ? 'Your next move' : 'Your first move'}</Text>
             </View>
             <View style={styles.taskRow}>
               <View style={styles.taskIcon}>
@@ -118,6 +118,59 @@ export function DelegateAsk({ task, onYes, style }) {
           </View>
         ) : null}
       </Animated.View>
+    </View>
+  );
+}
+
+/**
+ * After a handoff: your production time before (at the audit) and now (plus the hours you bought
+ * back), as two bars on one scale, with the gain highlighted.
+ */
+export function ProductionCompare({ before, gain, style }) {
+  const { colors } = useTheme();
+  const styles = useStyles(makeStyles);
+  const now = before + gain;
+  const scale = Math.max(now, 0.5);
+  return (
+    <View style={[styles.prod, style]}>
+      <View style={styles.prodHead}>
+        <View style={styles.prodIcon}>
+          <Ionicons name="flash" size={16} color={colors.chart.production} />
+        </View>
+        <Text style={styles.prodTitle}>Your production time</Text>
+        {gain > 0 ? (
+          <View style={styles.prodChip}>
+            <Ionicons name="arrow-up" size={12} color={colors.chart.production} />
+            <Text style={styles.prodChipText}>{h(gain)}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View style={styles.prodRow}>
+        <Text style={styles.prodLabel}>Before</Text>
+        <View style={styles.prodTrack}>
+          <View style={[styles.prodBar, { width: `${(before / scale) * 100}%`, backgroundColor: colors.border }]} />
+        </View>
+        <Text style={styles.prodValueMuted}>{h(before)}</Text>
+      </View>
+      <View style={styles.prodRow}>
+        <Text style={[styles.prodLabel, styles.prodLabelNow]}>Now</Text>
+        <View style={styles.prodTrack}>
+          <View style={[styles.prodBar, { width: `${(before / scale) * 100}%`, backgroundColor: colors.chart.production }]} />
+          <View style={[styles.prodBar, styles.prodGain, { width: `${(gain / scale) * 100}%`, backgroundColor: colors.chart.production }]} />
+        </View>
+        <Text style={styles.prodValue}>{h(now)}</Text>
+      </View>
+
+      <Text style={styles.prodLine}>
+        {gain > 0 ? (
+          <>
+            <Text style={styles.prodStrong}>+{h(gain * 5)} a week</Text> for your best work, freed by delegating.
+          </>
+        ) : (
+          'Each task you delegate adds its hours here.'
+        )}
+      </Text>
     </View>
   );
 }
@@ -269,6 +322,23 @@ const makeStyles = (colors, isDark) => ({
   gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.md, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.accentSoft },
   gainText: { fontSize: 14, fontWeight: '800', color: colors.accentText },
   stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, marginBottom: 2 },
+  // Production: before vs now.
+  prod: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
+  prodHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm + 2 },
+  prodIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successSoft },
+  prodTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  prodChip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: colors.successSoft },
+  prodChipText: { fontSize: 12, fontWeight: '800', color: colors.chart.production },
+  prodRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  prodLabel: { width: 48, fontSize: 12, fontWeight: '600', color: colors.muted },
+  prodLabelNow: { fontWeight: '800', color: colors.text },
+  prodTrack: { flex: 1, flexDirection: 'row', gap: 2, height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: colors.surfaceAlt },
+  prodBar: { height: 14 },
+  prodGain: { opacity: 0.5 },
+  prodValue: { width: 44, textAlign: 'right', fontSize: 14, fontWeight: '800', color: colors.text },
+  prodValueMuted: { width: 44, textAlign: 'right', fontSize: 14, fontWeight: '600', color: colors.muted },
+  prodLine: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: spacing.md },
+  prodStrong: { fontWeight: '800', color: colors.chart.production },
   doneBox: { alignItems: 'center', paddingVertical: spacing.md },
   doneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
   doneText: { fontSize: 15, fontWeight: '700', color: colors.success, marginTop: 2 },
