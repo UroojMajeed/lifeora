@@ -119,11 +119,13 @@ export default function HomeScreen({ navigation }) {
           <>
             {/* After a handoff: your routine now, what to do next, and your production before vs now. */}
             <RoutineStats items={routineNow} />
-            {move?.stage === 'audit' || !firstTask ? (
+            {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
+                the next step (no separate "fill" move); when that's done too, round 2 starts here. */}
+            {move?.stage === 'audit' || move?.action === 'nextRound' ? (
               <MoveCard move={move} onPress={doMove} loading={startingRound} />
-            ) : (
+            ) : firstTask ? (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
-            )}
+            ) : null}
             <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
