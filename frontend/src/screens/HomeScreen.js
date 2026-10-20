@@ -127,7 +127,7 @@ export default function HomeScreen({ navigation }) {
         ) : (
           <>
             {/* First visit: the routine, said in a graph and in words; the first move; progress waits. */}
-            <RoutineStats items={routineNow} />
+            <RoutineStats items={routineNow} buybackRate={onboarding?.buybackRate} currency={onboarding?.currency || 'USD'} />
             {/* New tasks to rate come first; otherwise one simple question about the biggest drain. */}
             {move?.stage === 'audit' || !firstTask ? (
               <MoveCard move={move} first onPress={doMove} loading={startingRound} />
