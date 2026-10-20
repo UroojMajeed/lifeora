@@ -142,7 +142,8 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
           ) : null;
         })}
         {left > 0 ? (
-          <View style={[styles.part, { flex: left }]}>
+          <View style={[styles.part, styles.free, { flex: left }]}>
+            <Ionicons name="hourglass-outline" size={12} color={colors.accentText} />
             <Text style={styles.freeText} numberOfLines={1}>
               {h(left)} free
             </Text>
@@ -269,7 +270,8 @@ const makeStyles = (colors, isDark) => ({
   track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.calmTrack, marginTop: spacing.md },
   part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 104 }, // wide enough for its words
   partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
-  freeText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.muted },
+  free: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent, borderRadius: 15 }, // still free: warm apricot, waiting for a job
+  freeText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: colors.accentText },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   kind: { flex: 1, padding: spacing.sm + 4, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
   kindIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
