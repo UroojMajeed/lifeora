@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { LayoutAnimation, Pressable, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { DRIP, quadrantFor, valueForMoney } from '../constants/content';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
@@ -11,7 +10,8 @@ import { cardShadow, radius, spacing } from '../theme';
 // The four quadrants in the book's order of value; the two that drain you are marked under the graph.
 const ORDER = ['production', 'replacement', 'investment', 'delegation'];
 const DRAINS = new Set(['replacement', 'delegation']);
-const PLOT = 128; // the columns' area, in px
+const PLOT = 156; // the columns' area, in px
+const FITS = 30; // a column this tall carries its % inside
 const AXIS = 26; // room for the hour labels on the left
 
 const quadrantOf = (it) => it.quadrant || quadrantFor({ value: it.money ? valueForMoney(it.money) : it.value, energy: it.energy });
@@ -28,45 +28,13 @@ function scaleFor(max) {
 }
 
 /** A column that rises from the baseline when Home opens (one after another), and eases to new heights. */
-function Column({ height, index, color, style }) {
+function Column({ height, index, color, style, children }) {
   const h = useSharedValue(0);
   useEffect(() => {
     h.value = withDelay(index * 90, withTiming(height, { duration: 600, easing: Easing.out(Easing.cubic) }));
   }, [height, index, h]);
   const rise = useAnimatedStyle(() => ({ height: h.value }));
-  return <Animated.View style={[{ backgroundColor: color }, style, rise]} />;
-}
-
-const RING = 38;
-const STROKE = 3;
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
-/** A quadrant's share of the day as a ring that fills on open, with the % in the middle. */
-function ShareRing({ share, index, color, track }) {
-  const r = (RING - STROKE) / 2;
-  const len = 2 * Math.PI * r;
-  const p = useSharedValue(0);
-  useEffect(() => {
-    p.value = withDelay(index * 90, withTiming(share / 100, { duration: 700, easing: Easing.out(Easing.cubic) }));
-  }, [share, index, p]);
-  const props = useAnimatedProps(() => ({ strokeDashoffset: len * (1 - p.value) }));
-  return (
-    <Svg width={RING} height={RING}>
-      <Circle cx={RING / 2} cy={RING / 2} r={r} stroke={track} strokeWidth={STROKE} fill="none" />
-      <AnimatedCircle
-        cx={RING / 2}
-        cy={RING / 2}
-        r={r}
-        stroke={color}
-        strokeWidth={STROKE}
-        fill="none"
-        strokeLinecap="round"
-        strokeDasharray={`${len} ${len}`}
-        animatedProps={props}
-        transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-      />
-    </Svg>
-  );
+  return <Animated.View style={[{ backgroundColor: color, overflow: 'hidden' }, style, rise]}>{children}</Animated.View>;
 }
 
 /**
@@ -105,23 +73,6 @@ export default function RoutineStats({ items = [], style }) {
       </Text>
 
       {/* The graph: an hours axis with light grid lines, a column per quadrant with its hours on top. */}
-      {/* Each quadrant's share of the day, as rings above the graph. */}
-      <View style={styles.rings}>
-        {ORDER.map((k, i) => {
-          const share = total ? Math.round((hoursOf(k) / total) * 100) : 0;
-          return (
-            <View key={k} style={styles.ringSlot} accessible accessibilityLabel={`${DRIP[k].name}: ${share}% of your day`}>
-              <View>
-                <ShareRing share={share} index={i} color={colors.chart[k]} track={colors.border} />
-                <View style={styles.ringCenter} pointerEvents="none">
-                  <Text style={styles.ringPct}>{share}%</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </View>
-
       <View style={styles.chart}>
         {ticks.map((v) => (
           <View key={v} pointerEvents="none" style={[styles.gridRow, { top: yOf(v) - 7 }]}>
@@ -133,6 +84,8 @@ export default function RoutineStats({ items = [], style }) {
           {ORDER.map((k) => {
             const hours = hoursOf(k);
             const on = open === k;
+            const height = Math.max(hours ? 4 : 0, (hours / top) * PLOT);
+            const share = total ? Math.round((hours / total) * 100) : 0;
             return (
               <Pressable
                 key={k}
@@ -142,8 +95,13 @@ export default function RoutineStats({ items = [], style }) {
                 accessibilityLabel={`${DRIP[k].name}: ${formatHours(hours)} a day${DRAINS.has(k) ? ', drains you' : ''}. Tap to see its tasks.`}
                 style={styles.slot}
               >
-                <Text style={styles.colValue}>{hours ? formatHours(hours) : ''}</Text>
-                <Column index={ORDER.indexOf(k)} height={Math.max(hours ? 4 : 0, (hours / top) * PLOT)} color={colors.chart[k]} style={[styles.col, on && styles.colOn]} />
+                <Text style={styles.colValue}>
+                  {hours ? formatHours(hours) : ''}
+                  {hours && height < FITS ? <Text style={styles.colShareOut}>  {share}%</Text> : null}
+                </Text>
+                <Column index={ORDER.indexOf(k)} height={height} color={colors.chart[k]} style={[styles.col, on && styles.colOn]}>
+                  {height >= FITS ? <Text style={styles.colShare}>{share}%</Text> : null}
+                </Column>
               </Pressable>
             );
           })}
@@ -204,10 +162,6 @@ const makeStyles = (colors, isDark) => ({
   label: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
   total: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6, marginTop: 4 },
   totalSub: { fontSize: 13, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
-  rings: { flexDirection: 'row', gap: 12, marginLeft: AXIS, paddingHorizontal: 6, marginTop: spacing.md },
-  ringSlot: { flex: 1, alignItems: 'center', minWidth: 0 },
-  ringCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  ringPct: { fontSize: 10, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
   // The plot: grid rows behind, columns in front.
   chart: { height: PLOT, marginTop: spacing.lg },
   gridRow: { position: 'absolute', left: 0, right: 0, height: 14, flexDirection: 'row', alignItems: 'center' },
@@ -215,12 +169,14 @@ const makeStyles = (colors, isDark) => ({
   // Light grid lines (solid: Android doesn't draw a one-sided dashed border reliably).
   gridLine: { flex: 1, height: 1, backgroundColor: colors.border, opacity: 0.7 },
   baseline: { height: 1.5, backgroundColor: colors.muted, opacity: 0.5 },
-  columns: { position: 'absolute', left: AXIS, right: 0, top: 0, bottom: 0, flexDirection: 'row', gap: 12, paddingHorizontal: 6 },
+  columns: { position: 'absolute', left: AXIS, right: 0, top: 0, bottom: 0, flexDirection: 'row', gap: 10, paddingHorizontal: 4 },
   slot: { flex: 1, alignItems: 'stretch', justifyContent: 'flex-end' },
-  col: { borderTopLeftRadius: 6, borderTopRightRadius: 6 },
+  col: { borderTopLeftRadius: 10, borderTopRightRadius: 10, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, alignItems: 'center' },
+  colShare: { fontSize: 13, fontWeight: '800', color: '#FFFFFF', marginTop: 8, letterSpacing: -0.2 },
+  colShareOut: { fontSize: 11, fontWeight: '700', color: colors.muted },
   colOn: { borderWidth: 2, borderColor: colors.text, borderBottomWidth: 0 },
   colValue: { textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.text, marginBottom: 3 },
-  xLabels: { flexDirection: 'row', gap: 12, marginLeft: AXIS, paddingHorizontal: 6, marginTop: 6 },
+  xLabels: { flexDirection: 'row', gap: 10, marginLeft: AXIS, paddingHorizontal: 4, marginTop: 6 },
   xLabel: { flex: 1, alignItems: 'center', minWidth: 0 },
   xName: { fontSize: 10, fontWeight: '700', color: colors.text },
   xNameOn: { fontWeight: '800', textDecorationLine: 'underline' },
