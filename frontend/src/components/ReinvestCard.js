@@ -9,7 +9,8 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
 const KINDS = ['production', 'investment'];
-const ICONS = { production: 'flash', investment: 'trending-up' };
+const ICONS = { production: 'briefcase', investment: 'heart' };
+const SHORT = { production: 'business', investment: 'you' }; // the word inside the bar
 const h = (n) => `${Math.round(n * 100) / 100} h`;
 
 // An icon for an idea, by what it's about (a sparkle when nothing matches).
@@ -124,7 +125,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
             <View key={k} style={[styles.part, { flex: part, backgroundColor: color(k) }]}>
               <Ionicons name={ICONS[k]} size={12} color="#FFFFFF" />
               <Text style={styles.partText} numberOfLines={1}>
-                {h(part)}
+                {h(part)} {SHORT[k]}
               </Text>
             </View>
           ) : null;
@@ -152,16 +153,6 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         </Animated.View>
       ) : null}
 
-      {/* All of it reinvested: a small win to celebrate. */}
-      {allUsed && !cheer ? (
-        <Animated.View entering={FadeIn.duration(400)} style={styles.win}>
-          <Text style={styles.winEmoji}>🌟</Text>
-          <View style={styles.winMain}>
-            <Text style={styles.winTitle}>You did it!</Text>
-            <Text style={styles.winText}>Your time now works for the life you want.</Text>
-          </View>
-        </Animated.View>
-      ) : null}
 
       {!allUsed ? (
         <>
@@ -181,7 +172,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
                     <Ionicons name={ICONS[k]} size={18} color={color(k)} />
                   </View>
                   <Text style={styles.kindTitle}>{FILL_KINDS[k].title}</Text>
-                  <Text style={styles.kindSub}>{k === 'production' ? 'Work you love that pays' : 'Health, family, learning'}</Text>
+                  <Text style={styles.kindSub}>{k === 'production' ? 'More of the work you love that makes money' : 'Time for your health, family and growth'}</Text>
                 </Pressable>
               );
             })}
@@ -254,7 +245,7 @@ const makeStyles = (colors, isDark) => ({
   title: { fontSize: 16, fontWeight: '800', color: colors.text },
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
   track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
-  part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 6, minWidth: 58 }, // wide enough for its words
+  part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 92 }, // wide enough for its words
   partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   freeText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.muted },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
@@ -269,15 +260,10 @@ const makeStyles = (colors, isDark) => ({
   chipTextOn: { color: '#FFFFFF', fontWeight: '800' },
   button: { marginTop: spacing.md },
   ideaChip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  // The cheer after each reinvest, and the win when it's all reinvested.
+  // The cheer after each reinvest.
   cheer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm + 4, padding: spacing.sm + 2, borderRadius: radius.md },
   cheerIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   cheerText: { flex: 1, fontSize: 13, color: colors.text },
   cheerStrong: { fontWeight: '800' },
   cheerEmoji: { fontSize: 20 },
-  win: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, marginTop: spacing.sm + 4, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.accentSoft },
-  winEmoji: { fontSize: 28 },
-  winMain: { flex: 1 },
-  winTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
-  winText: { fontSize: 13, color: colors.muted, marginTop: 1 },
 });
