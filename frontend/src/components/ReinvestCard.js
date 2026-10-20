@@ -6,7 +6,8 @@ import * as Haptics from 'expo-haptics';
 import Button from './Button';
 import { FILL_KINDS, fillIdeas } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { cardShadow, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import CardHeader, { homeCard } from './CardHeader';
 
 const KINDS = ['production', 'investment'];
 const ICONS = { production: 'briefcase', investment: 'heart' };
@@ -107,16 +108,13 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
 
   return (
     <View style={[styles.card, style]}>
-      <View style={styles.head}>
-        <View style={styles.headIcon}>
-          <Ionicons name="leaf" size={16} color={colors.chart.production} />
-        </View>
-        <View style={styles.headMain}>
-          <Text style={styles.title}>Reinvest your time</Text>
-          <Text style={styles.sub}>{cheerLine(used, allUsed)}</Text>
-        </View>
-        {saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
-      </View>
+      <CardHeader
+        icon="leaf"
+        iconColor={colors.chart.production}
+        title="Reinvest your time"
+        sub={cheerLine(used, allUsed)}
+        right={saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+      />
 
       {/* How much of the freed time has a new job, said inside the bar. */}
       <View style={styles.track}>
@@ -263,17 +261,8 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.tintReinvest,
-    borderWidth: 1,
-    borderColor: isDark ? colors.border : 'transparent',
-    ...cardShadow(colors, isDark),
-  },
+  card: { ...homeCard(colors, isDark), backgroundColor: colors.tintReinvest },
   pressed: { opacity: 0.8 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
-  headIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   headMain: { flex: 1, minWidth: 0 },
   title: { fontSize: 16, fontWeight: '800', color: colors.text },
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },

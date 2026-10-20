@@ -33,7 +33,7 @@ export const lightColors = {
   calm: ['#E6EFFA', '#F6F9FD'], // the routine card: a soft sky wash into near-white
   tintMove: '#FFF1E3', // Home's move card: soft peach
   tintReinvest: '#E6F5EE', // Reinvest: soft mint (the leaf)
-  tintProduction: '#EEEDFB', // Production before vs now: soft lavender
+  tintProduction: '#FFF7DA', // Production before vs now: soft sunny yellow
   tintWaiting: '#F3F4F6', // the waiting ring: soft grey
   calmTrack: 'rgba(255,255,255,0.85)',
   cream: ['#FFFBF3', '#FBEFD9'], // the rating card at rest: ivory into light gold
@@ -97,7 +97,7 @@ export const darkColors = {
   calm: ['#132233', '#112423'],
   tintMove: '#2A2219',
   tintReinvest: '#13302A',
-  tintProduction: '#1D1F33',
+  tintProduction: '#2A2615',
   tintWaiting: '#18222A',
   calmTrack: 'rgba(255,255,255,0.06)',
   cream: ['#211C14', '#2B2216'],

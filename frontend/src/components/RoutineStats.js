@@ -8,7 +8,8 @@ import { DRIP, quadrantFor, valueForMoney } from '../constants/content';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { cardShadow, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
+import CardHeader, { homeCard } from './CardHeader';
 
 // The four quadrants in the book's order of value; the two that drain you are marked under the graph.
 const ORDER = ['production', 'replacement', 'investment', 'delegation'];
@@ -72,10 +73,12 @@ export default function RoutineStats({ items = [], style }) {
 
   return (
     <LinearGradient colors={colors.calm} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, style]}>
-      <Text style={styles.label}>Your routine</Text>
-      <Text style={styles.total}>
-        {h(total)} <Text style={styles.totalSub}>a day · {rated.length} {rated.length === 1 ? 'task' : 'tasks'}</Text>
-      </Text>
+      <CardHeader
+        icon="stats-chart"
+        iconColor={colors.primary}
+        title="Your routine"
+        sub={`${h(total)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}`}
+      />
 
       {/* The graph: a track per quadrant, its column rising inside it. */}
       <View style={styles.columns}>
@@ -157,18 +160,9 @@ export default function RoutineStats({ items = [], style }) {
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: isDark ? colors.border : 'transparent',
-    ...cardShadow(colors, isDark),
-  },
-  label: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
-  total: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6, marginTop: 4 },
-  totalSub: { fontSize: 13, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
+  card: homeCard(colors, isDark),
   // The graph: four tracks, each with its column at the bottom.
-  columns: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
+  columns: { flexDirection: 'row', gap: 10, marginTop: spacing.md },
   slot: { flex: 1, alignItems: 'center', minWidth: 0 },
   pressed: { transform: [{ scale: 0.97 }] },
   track: {

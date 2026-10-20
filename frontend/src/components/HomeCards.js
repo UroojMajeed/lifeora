@@ -9,20 +9,24 @@ import Button from './Button';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, cardShadow, radius, spacing } from '../theme';
+import CardHeader, { homeCard } from './CardHeader';
 
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
 /** The one thing to do now (from todaysMove()): a tag with how long it takes, the move, and one button. */
 export function MoveCard({ move, first, onPress, loading, style }) {
+  const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   if (!move) return null;
   return (
     <View style={[styles.move, style]}>
-      <Text style={styles.tag}>
-        {first ? 'Your first move' : "Today's move"}
-        {move.minutes ? ` · ${move.minutes} min` : ''}
-      </Text>
-      <Text style={styles.moveTitle}>{move.title}</Text>
+      <CardHeader
+        icon={move.action === 'nextRound' ? 'refresh' : 'flag'}
+        iconColor={colors.accentText}
+        title={first ? 'Your first move' : 'Your next move'}
+        sub={move.minutes ? `About ${move.minutes} min` : null}
+      />
+      <Text style={[styles.moveTitle, styles.content]}>{move.title}</Text>
       <Text style={styles.moveBody}>{move.body}</Text>
       <Button title={first && move.stage === 'transfer' ? 'Start my first handoff' : move.cta} icon="arrow-forward" onPress={onPress} loading={loading} style={styles.moveButton} />
     </View>
@@ -48,13 +52,10 @@ export function DelegateAsk({ task, onYes, next, style }) {
 
   return (
     <View style={[styles.move, step === 'done' && styles.moveDone, style]}>
+      {step !== 'done' ? <CardHeader icon="flag" iconColor={colors.accentText} title={next ? 'Your next move' : 'Your first move'} /> : null}
       <Animated.View key={step} entering={FadeIn.duration(250)}>
         {step === 'intro' ? (
           <>
-            <View style={styles.tagRow}>
-              <Ionicons name="flag" size={12} color={colors.accentText} />
-              <Text style={styles.tag}>{next ? 'Your next move' : 'Your first move'}</Text>
-            </View>
             <View style={styles.taskRow}>
               <View style={styles.taskIcon}>
                 <Ionicons name="people" size={20} color={colors.chart.delegation} />
@@ -77,10 +78,7 @@ export function DelegateAsk({ task, onYes, next, style }) {
 
         {step === 'ask' ? (
           <>
-            <View style={styles.stepIcon}>
-              <Ionicons name="help" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.moveTitle}>Did you delegate {task.activity.toLowerCase()}?</Text>
+            <Text style={[styles.moveTitle, styles.content]}>Did you delegate {task.activity.toLowerCase()}?</Text>
             <Text style={styles.moveBody}>Handed to someone, automated, or simply dropped: it all counts.</Text>
             <View style={styles.answers}>
               <Button title="Not yet" variant="secondary" onPress={() => go('notYet')} style={styles.answer} />
@@ -101,10 +99,7 @@ export function DelegateAsk({ task, onYes, next, style }) {
 
         {step === 'notYet' ? (
           <>
-            <View style={styles.stepIcon}>
-              <Ionicons name="leaf" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.moveTitle}>No rush</Text>
+            <Text style={[styles.moveTitle, styles.content]}>No rush</Text>
             <Text style={styles.moveBody}>Come back and tap Delegate it once {task.activity.toLowerCase()} is off your plate.</Text>
             <Button title="Got it" variant="secondary" onPress={() => go('intro')} style={styles.moveButton} />
           </>
@@ -133,20 +128,21 @@ export function ProductionCompare({ before, gain, style }) {
   const scale = Math.max(now, 0.5);
   return (
     <View style={[styles.prod, style]}>
-      <View style={styles.prodHead}>
-        <View style={styles.prodIcon}>
-          <Ionicons name="flash" size={16} color={colors.chart.production} />
-        </View>
-        <Text style={styles.prodTitle}>Your production time</Text>
-        {gain > 0 ? (
-          <View style={styles.prodChip}>
-            <Ionicons name="arrow-up" size={12} color={colors.chart.production} />
-            <Text style={styles.prodChipText}>{h(gain)}</Text>
-          </View>
-        ) : null}
-      </View>
+      <CardHeader
+        icon="flash"
+        iconColor={colors.chart.production}
+        title="Your production time"
+        right={
+          gain > 0 ? (
+            <View style={styles.prodChip}>
+              <Ionicons name="arrow-up" size={12} color={colors.chart.production} />
+              <Text style={styles.prodChipText}>{h(gain)}</Text>
+            </View>
+          ) : null
+        }
+      />
 
-      <View style={styles.prodRow}>
+      <View style={[styles.prodRow, styles.content]}>
         <Text style={styles.prodLabel}>Before</Text>
         <View style={styles.prodTrack}>
           <View style={[styles.prodBar, { width: `${(before / scale) * 100}%`, backgroundColor: colors.border }]} />
@@ -307,27 +303,22 @@ export function DrainCompare({ before, now, style }) {
 
 const makeStyles = (colors, isDark) => ({
   // Move
-  move: { padding: spacing.md, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.tintMove },
-  tag: { fontSize: 11, fontWeight: '700', color: colors.accentText, letterSpacing: 0.8, textTransform: 'uppercase' },
-  moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2, marginTop: 6 },
+  move: { ...homeCard(colors, isDark), backgroundColor: colors.tintMove },
+  content: { marginTop: spacing.md }, // the gap between a card's header and what's under it
+  moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
-  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.sm + 4 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.md },
   taskIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.errorSoft },
   taskMain: { flex: 1, minWidth: 0 },
   taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
   taskDrains: { color: colors.error },
   gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.md, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surface },
   gainText: { fontSize: 14, fontWeight: '800', color: colors.accentText },
-  stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, marginBottom: 2 },
   // Production: before vs now.
-  prod: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.tintProduction, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
-  prodHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm + 2 },
-  prodIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successSoft },
-  prodTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
-  prodChip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: colors.successSoft },
+  prod: { ...homeCard(colors, isDark), backgroundColor: colors.tintProduction },
+  prodChip: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: colors.surface },
   prodChipText: { fontSize: 12, fontWeight: '800', color: colors.chart.production },
   prodRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   prodLabel: { width: 48, fontSize: 12, fontWeight: '600', color: colors.muted },
@@ -351,8 +342,8 @@ const makeStyles = (colors, isDark) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm + 2,
-    padding: spacing.sm + 4,
-    borderRadius: radius.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.border,
