@@ -75,7 +75,10 @@ async function readHistory() {
   }
 }
 
-/** Notes this week's hours bought back (a week keeps its highest). Returns the last `count` weeks, oldest first. */
+/**
+ * Notes this week's hours bought back (a week keeps its highest). Returns the last `count` weeks,
+ * oldest first, and `totalHours`: every week so far added up.
+ */
 export async function recordWeeklyBoughtBack(hoursAWeek, count = 5) {
   const map = await readHistory();
   const now = weekKey();
@@ -91,7 +94,8 @@ export async function recordWeeklyBoughtBack(hoursAWeek, count = 5) {
     weeks.unshift({ key: k, hours: kept[k] || 0, now: i === 0 });
     cursor.setDate(cursor.getDate() - 7);
   }
-  return weeks;
+  const totalHours = Object.values(kept).reduce((t, x) => t + (Number(x) || 0), 0);
+  return { weeks, totalHours };
 }
 
 /** Forget everything (used by "Start over"). */

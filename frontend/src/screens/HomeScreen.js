@@ -8,13 +8,14 @@ import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
+import MoneyCard from '../components/MoneyCard';
 import { DelegateAsk, MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
-import { noticeBoughtBack } from '../storage/progress';
-import { quadrantFor, valueForMoney } from '../constants/content';
-import { greeting, todaysMove } from '../constants/home';
+import { noticeBoughtBack, recordWeeklyBoughtBack } from '../storage/progress';
+import { WORK_HOURS_PER_YEAR, quadrantFor, valueForMoney } from '../constants/content';
+import { WORKDAYS_PER_WEEK, greeting, todaysMove } from '../constants/home';
 import { dayNow, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
@@ -33,6 +34,7 @@ export default function HomeScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
   const [startingRound, setStartingRound] = useState(false);
+  const [money, setMoney] = useState({ weeks: [], totalHours: 0 }); // hours bought back, week by week
 
   const schedule = onboarding?.schedule || [];
   // Your routine as it is now: handed-off tasks out, filled time in.
@@ -49,6 +51,11 @@ export default function HomeScreen({ navigation }) {
       refreshHandoffs();
     }, [refreshHandoffs])
   );
+
+  // This week's hours bought back join the weekly history (kept on this phone), for the money card.
+  useEffect(() => {
+    if (summary) recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6).then(setMoney);
+  }, [summary, bought]);
 
   // More hours bought back since Home last showed them: a small success buzz (only while on screen).
   useEffect(() => {
@@ -117,7 +124,13 @@ export default function HomeScreen({ navigation }) {
       <Animated.View key={started ? 'progress' : 'first'} entering={FadeIn.duration(500)} style={styles.stack}>
         {started ? (
           <>
-            {/* After a handoff: your routine now, what to do next, and your production before vs now. */}
+            {/* After a handoff: your time back as money, your routine now, what to do next, Reinvest, and production. */}
+            <MoneyCard
+              weeks={money.weeks}
+              totalHours={money.totalHours}
+              hourWorth={(onboarding?.annualIncome || 0) / WORK_HOURS_PER_YEAR}
+              currency={onboarding?.currency || 'USD'}
+            />
             <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
                 the next step (no separate "fill" move); when that's done too, round 2 starts here. */}
