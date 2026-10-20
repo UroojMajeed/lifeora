@@ -51,18 +51,35 @@ export function DelegateAsk({ task, onYes, style }) {
       <Animated.View key={step} entering={FadeIn.duration(250)}>
         {step === 'intro' ? (
           <>
-            <Text style={styles.tag}>Your first move</Text>
-            <Text style={styles.moveTitle}>{task.activity}</Text>
-            <Text style={styles.moveBody}>
-              It takes {h(task.hours)} a day. Delegate it and free up {week} a week.
-            </Text>
+            <View style={styles.tagRow}>
+              <Ionicons name="flag" size={12} color={colors.accentText} />
+              <Text style={styles.tag}>Your first move</Text>
+            </View>
+            <View style={styles.taskRow}>
+              <View style={styles.taskIcon}>
+                <Ionicons name="people" size={20} color={colors.chart.delegation} />
+              </View>
+              <View style={styles.taskMain}>
+                <Text style={styles.moveTitle}>{task.activity}</Text>
+                <Text style={styles.taskSub}>
+                  {h(task.hours)} a day · <Text style={styles.taskDrains}>drains you</Text>
+                </Text>
+              </View>
+            </View>
+            {/* The highlight: what handing it off gives back. */}
+            <View style={styles.gain}>
+              <Ionicons name="sparkles" size={15} color={colors.accentText} />
+              <Text style={styles.gainText}>Free up {week} a week</Text>
+            </View>
             <Button title="Delegate it" icon="arrow-forward" onPress={() => go('ask')} style={styles.moveButton} />
           </>
         ) : null}
 
         {step === 'ask' ? (
           <>
-            <Text style={styles.tag}>Your first move</Text>
+            <View style={styles.stepIcon}>
+              <Ionicons name="help" size={20} color={colors.primary} />
+            </View>
             <Text style={styles.moveTitle}>Did you delegate {task.activity.toLowerCase()}?</Text>
             <Text style={styles.moveBody}>Handed to someone, automated, or simply dropped: it all counts.</Text>
             <View style={styles.answers}>
@@ -84,7 +101,9 @@ export function DelegateAsk({ task, onYes, style }) {
 
         {step === 'notYet' ? (
           <>
-            <Text style={styles.tag}>Your first move</Text>
+            <View style={styles.stepIcon}>
+              <Ionicons name="leaf" size={18} color={colors.primary} />
+            </View>
             <Text style={styles.moveTitle}>No rush</Text>
             <Text style={styles.moveBody}>Come back and tap Delegate it once {task.activity.toLowerCase()} is off your plate.</Text>
             <Button title="Got it" variant="secondary" onPress={() => go('intro')} style={styles.moveButton} />
@@ -241,6 +260,15 @@ const makeStyles = (colors, isDark) => ({
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
+  tagRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.sm + 4 },
+  taskIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.errorSoft },
+  taskMain: { flex: 1, minWidth: 0 },
+  taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
+  taskDrains: { color: colors.error },
+  gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.md, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.accentSoft },
+  gainText: { fontSize: 14, fontWeight: '800', color: colors.accentText },
+  stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, marginBottom: 2 },
   doneBox: { alignItems: 'center', paddingVertical: spacing.md },
   doneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
   doneText: { fontSize: 15, fontWeight: '700', color: colors.success, marginTop: 2 },

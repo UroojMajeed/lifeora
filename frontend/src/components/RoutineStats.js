@@ -71,7 +71,7 @@ export default function RoutineStats({ items = [], style }) {
   };
 
   return (
-    <LinearGradient colors={colors.cream} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, style]}>
+    <LinearGradient colors={colors.calm} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, style]}>
       <Text style={styles.label}>Your routine</Text>
       <Text style={styles.total}>
         {h(total)} <Text style={styles.totalSub}>a day · {rated.length} {rated.length === 1 ? 'task' : 'tasks'}</Text>
