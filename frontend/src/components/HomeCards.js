@@ -29,27 +29,11 @@ export function MoveCard({ move, first, onPress, loading, style }) {
   );
 }
 
-/** A pill-shaped answer on the dark first-move card: solid (white) or ghost. */
-function HeroButton({ title, icon, onPress, ghost, style }) {
-  const { colors } = useTheme();
-  const styles = useStyles(makeStyles);
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.heroBtn, ghost && styles.heroBtnGhost, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }, style]}
-    >
-      <Text style={[styles.heroBtnText, ghost && styles.heroBtnTextGhost]}>{title}</Text>
-      {icon ? <Ionicons name={icon} size={17} color={ghost ? colors.heroText : colors.heroFrom} /> : null}
-    </Pressable>
-  );
-}
-
 /**
- * The first move, as one flow in one dark card with a warm glow: your biggest drain (an icon, the
- * task, how long it takes, and highlighted: the hours a week it frees) and "Delegate it" → "Did you
- * delegate it?" (Not yet / Yes) → on Yes, a short "Done!" moment, then `onYes` (Home then fades into
- * your progress). Not yet: a calm "No rush", right here, then back to the start.
+ * The first move, as one flow in one card: "Delegate it" (your biggest drain and what it frees) →
+ * "Did you delegate it?" (Not yet / Yes) → on Yes, a short "Done!" moment with the hours you got back,
+ * then `onYes` (Home then fades into your progress). Not yet: a calm "No rush", right here, then
+ * back to the start.
  */
 export function DelegateAsk({ task, onYes, style }) {
   const { colors } = useTheme();
@@ -58,67 +42,32 @@ export function DelegateAsk({ task, onYes, style }) {
   if (!task) return null;
   const week = h(task.hours * 5);
   const go = (next) => {
-    Haptics.selectionAsync().catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setStep(next);
   };
 
   return (
-    <LinearGradient colors={[colors.heroFrom, colors.heroTo]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.first, style]}>
-      {/* Two soft glows: the apricot of the sun, the mint of growth. */}
-      <View pointerEvents="none" style={[styles.glow, styles.glowApricot]} />
-      <View pointerEvents="none" style={[styles.glow, styles.glowMint]} />
-
+    <View style={[styles.move, step === 'done' && styles.moveDone, style]}>
       <Animated.View key={step} entering={FadeIn.duration(250)}>
-        {step !== 'done' ? (
-          <View style={styles.firstTag}>
-            <Ionicons name="rocket" size={12} color={colors.heroFrom} />
-            <Text style={styles.firstTagText}>Your first move</Text>
-          </View>
-        ) : null}
-
         {step === 'intro' ? (
           <>
-            <View style={styles.taskRow}>
-              <View style={styles.taskIcon}>
-                <Ionicons name="people" size={22} color={colors.heroText} />
-              </View>
-              <View style={styles.taskMain}>
-                <Text style={styles.firstLabel}>Delegate</Text>
-                <Text style={styles.firstTitle}>{task.activity}</Text>
-              </View>
-            </View>
-            <View style={styles.facts}>
-              <View style={styles.fact}>
-                <Ionicons name="time-outline" size={14} color={colors.heroMuted} />
-                <Text style={styles.factText}>{h(task.hours)} a day</Text>
-              </View>
-              <View style={styles.fact}>
-                <Ionicons name="battery-dead-outline" size={14} color={colors.heroMuted} />
-                <Text style={styles.factText}>Drains you</Text>
-              </View>
-            </View>
-            {/* The highlight: what it gives back. */}
-            <View style={styles.gain}>
-              <Ionicons name="sparkles" size={18} color={brand.apricot} />
-              <Text style={styles.gainText}>
-                Free up <Text style={styles.gainStrong}>{week} a week</Text>
-              </Text>
-            </View>
-            <HeroButton title="Delegate it" icon="arrow-forward" onPress={() => go('ask')} style={styles.firstBtn} />
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>{task.activity}</Text>
+            <Text style={styles.moveBody}>
+              It takes {h(task.hours)} a day. Delegate it and free up {week} a week.
+            </Text>
+            <Button title="Delegate it" icon="arrow-forward" onPress={() => go('ask')} style={styles.moveButton} />
           </>
         ) : null}
 
         {step === 'ask' ? (
           <>
-            <View style={styles.askIcon}>
-              <Ionicons name="help" size={24} color={colors.heroFrom} />
-            </View>
-            <Text style={styles.firstTitle}>Did you delegate {task.activity.toLowerCase()}?</Text>
-            <Text style={styles.firstBody}>Handed to someone, automated, or simply dropped: it all counts.</Text>
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>Did you delegate {task.activity.toLowerCase()}?</Text>
+            <Text style={styles.moveBody}>Handed to someone, automated, or simply dropped: it all counts.</Text>
             <View style={styles.answers}>
-              <HeroButton title="Not yet" ghost onPress={() => go('notYet')} style={styles.answer} />
-              <HeroButton
+              <Button title="Not yet" variant="secondary" onPress={() => go('notYet')} style={styles.answer} />
+              <Button
                 title="Yes"
                 icon="checkmark"
                 onPress={() => {
@@ -135,26 +84,22 @@ export function DelegateAsk({ task, onYes, style }) {
 
         {step === 'notYet' ? (
           <>
-            <View style={styles.askIcon}>
-              <Ionicons name="leaf" size={22} color={colors.heroFrom} />
-            </View>
-            <Text style={styles.firstTitle}>No rush</Text>
-            <Text style={styles.firstBody}>Come back and tap Delegate it once {task.activity.toLowerCase()} is off your plate.</Text>
-            <HeroButton title="Got it" ghost onPress={() => go('intro')} style={styles.firstBtn} />
+            <Text style={styles.tag}>Your first move</Text>
+            <Text style={styles.moveTitle}>No rush</Text>
+            <Text style={styles.moveBody}>Come back and tap Delegate it once {task.activity.toLowerCase()} is off your plate.</Text>
+            <Button title="Got it" variant="secondary" onPress={() => go('intro')} style={styles.moveButton} />
           </>
         ) : null}
 
         {step === 'done' ? (
           <View style={styles.doneBox} accessibilityLiveRegion="polite">
-            <View style={styles.doneIcon}>
-              <Ionicons name="checkmark" size={34} color={colors.heroFrom} />
-            </View>
+            <Ionicons name="checkmark-circle" size={44} color={colors.success} />
             <Text style={styles.doneTitle}>Done!</Text>
             <Text style={styles.doneText}>{week} a week is yours again</Text>
           </View>
         ) : null}
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -296,32 +241,9 @@ const makeStyles = (colors, isDark) => ({
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
-  // The first move: a dark card with a warm glow.
-  first: { padding: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
-  firstTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: brand.apricot },
-  firstTagText: { fontSize: 11, fontWeight: '800', color: colors.heroFrom, letterSpacing: 0.6, textTransform: 'uppercase' },
-  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.md },
-  taskIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.heroChip, borderWidth: 1, borderColor: colors.heroDivider },
-  taskMain: { flex: 1, minWidth: 0 },
-  firstLabel: { fontSize: 13, fontWeight: '600', color: colors.heroMuted },
-  firstTitle: { fontSize: 20, lineHeight: 26, fontWeight: '800', color: colors.heroText, letterSpacing: -0.3, marginTop: 2 },
-  firstBody: { fontSize: 14, lineHeight: 20, color: colors.heroMuted, marginTop: 6 },
-  facts: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  fact: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: colors.heroChip },
-  factText: { fontSize: 12, fontWeight: '700', color: colors.heroMuted },
-  gain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: 'rgba(245,185,113,0.16)', borderWidth: 1, borderColor: 'rgba(245,185,113,0.45)' },
-  gainText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.heroText },
-  gainStrong: { fontWeight: '800', color: brand.apricot },
-  firstBtn: { marginTop: spacing.md },
-  heroBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 50, borderRadius: 25, backgroundColor: '#FFFFFF' },
-  heroBtnGhost: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)' },
-  heroBtnText: { fontSize: 16, fontWeight: '800', color: colors.heroFrom },
-  heroBtnTextGhost: { color: colors.heroText },
-  askIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.apricot, marginTop: spacing.md, marginBottom: spacing.sm },
   doneBox: { alignItems: 'center', paddingVertical: spacing.md },
-  doneIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: brand.mint },
-  doneTitle: { fontSize: 24, fontWeight: '800', color: colors.heroText, marginTop: spacing.sm },
-  doneText: { fontSize: 15, fontWeight: '700', color: brand.mint, marginTop: 2 },
+  doneTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
+  doneText: { fontSize: 15, fontWeight: '700', color: colors.success, marginTop: 2 },
   answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   answer: { flex: 1, minHeight: 48 },
   plan: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2, marginTop: spacing.sm + 2 },
