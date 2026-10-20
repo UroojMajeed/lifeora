@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
+import ReinvestCard from '../components/ReinvestCard';
 import { DelegateAsk, MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -22,11 +23,12 @@ import { spacing } from '../theme';
  * Home, in two states. First visit (nothing bought back yet): your routine as a bar graph with the
  * insight under it (what drains you, your biggest drain), then your first move, then a small waiting
  * ring for hours bought back. After the first handoff: the same graph (your routine now), your next
- * move, and your production time before vs now.
+ * move, Reinvest (give the freed hours a new job), and your production time before vs now (plus
+ * what you reinvested in it).
  */
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, summary, refresh: refreshHandoffs, update } = useHandoffs();
+  const { handoffs, fills, summary, refresh: refreshHandoffs, update, updateFills } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
@@ -67,6 +69,14 @@ export default function HomeScreen({ navigation }) {
     .filter((a) => a.energy && a.hours)
     .filter((a) => (a.quadrant || quadrantFor({ value: a.money ? valueForMoney(a.money) : a.value, energy: a.energy })) === 'production')
     .reduce((t, a) => t + a.hours, 0);
+
+  // Production now: what it was, plus the freed hours you reinvested in it.
+  const reinvestedInProduction = fills.filter((x) => x.quadrant === 'production').reduce((t, x) => t + x.hours, 0);
+  const saveFills = (next) =>
+    updateFills(next).catch((err) => {
+      Alert.alert("Couldn't save that", err.message);
+      throw err;
+    });
 
   // The move's button; a finished round starts the next one first.
   const doMove = async () => {
@@ -114,7 +124,8 @@ export default function HomeScreen({ navigation }) {
             ) : (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
             )}
-            <ProductionCompare before={productionBefore} gain={bought} />
+            <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} />
+            <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
         ) : (
           <>

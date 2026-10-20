@@ -123,8 +123,8 @@ export function DelegateAsk({ task, onYes, next, style }) {
 }
 
 /**
- * After a handoff: your production time before (at the audit) and now (plus the hours you bought
- * back), as two bars on one scale, with the gain highlighted.
+ * After a handoff: your production time before (at the audit) and now (plus the freed hours you
+ * reinvested in it), as two bars on one scale, with the gain highlighted.
  */
 export function ProductionCompare({ before, gain, style }) {
   const { colors } = useTheme();
@@ -165,10 +165,10 @@ export function ProductionCompare({ before, gain, style }) {
       <Text style={styles.prodLine}>
         {gain > 0 ? (
           <>
-            <Text style={styles.prodStrong}>+{h(gain * 5)} a week</Text> for your best work, freed by delegating.
+            <Text style={styles.prodStrong}>+{h(gain * 5)} a week</Text> of your best work, reinvested from what you delegated.
           </>
         ) : (
-          'Each task you delegate adds its hours here.'
+          'Reinvest freed hours in growing the business to grow this.'
         )}
       </Text>
     </View>
