@@ -71,7 +71,7 @@ export default function RoutineStats({ items = [], style }) {
   };
 
   return (
-    <View style={[styles.card, style]}>
+    <LinearGradient colors={colors.calm} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, style]}>
       <Text style={styles.label}>Your routine</Text>
       <Text style={styles.total}>
         {h(total)} <Text style={styles.totalSub}>a day · {rated.length} {rated.length === 1 ? 'task' : 'tasks'}</Text>
@@ -146,13 +146,13 @@ export default function RoutineStats({ items = [], style }) {
           </View>
           <View style={styles.insightBody}>
             <Text style={styles.insightStrong}>{h(drainHours)} a day drains you</Text>
-            <Text style={styles.insightText} numberOfLines={1}>
+            <Text style={styles.insightText}>
               Hand off {biggest.activity.toLowerCase()}: +{h(biggest.hours * WORKDAYS_PER_WEEK)} a week
             </Text>
           </View>
         </View>
       ) : null}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -160,7 +160,6 @@ const makeStyles = (colors, isDark) => ({
   card: {
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: isDark ? colors.border : 'transparent',
     ...cardShadow(colors, isDark),
@@ -178,7 +177,7 @@ const makeStyles = (colors, isDark) => ({
     justifyContent: 'flex-end',
     padding: 4,
     borderRadius: 18,
-    backgroundColor: colors.surfaceAlt,
+    backgroundColor: colors.calmTrack,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -191,7 +190,7 @@ const makeStyles = (colors, isDark) => ({
   hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: spacing.sm + 2 },
   hint: { fontSize: 11, color: colors.muted },
   // The picked quadrant's tasks.
-  tasks: { marginTop: spacing.md, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.surfaceAlt, borderLeftWidth: 4 },
+  tasks: { marginTop: spacing.md, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.calmTrack, borderLeftWidth: 4 },
   tasksName: { fontSize: 13, fontWeight: '800', color: colors.text },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.sm },
   chip: { maxWidth: '100%', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: colors.surface },
