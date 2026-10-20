@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, LayoutAnimation, Pressable, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Button from './Button';
@@ -11,6 +11,28 @@ import { cardShadow, radius, spacing } from '../theme';
 const KINDS = ['production', 'investment'];
 const ICONS = { production: 'flash', investment: 'trending-up' };
 const h = (n) => `${Math.round(n * 100) / 100} h`;
+
+// An icon for an idea, by what it's about (a sparkle when nothing matches).
+const IDEA_ICONS = [
+  [/exercise|gym|health|walk|run|yoga|sport/i, 'barbell'],
+  [/family|kids|home/i, 'home'],
+  [/learn|read|course|study/i, 'book'],
+  [/rest|recover|sleep|nap/i, 'bed'],
+  [/think|plan|strateg|vision/i, 'bulb'],
+  [/mentor|teach|coach|program|workshop|speak/i, 'school'],
+  [/content|creat|writ|brand|design|creative/i, 'color-palette'],
+  [/client|customer|sales|partner|deal/i, 'people'],
+  [/product|idea|offer|build/i, 'rocket'],
+  [/rate|price|money|revenue/i, 'cash'],
+];
+const iconFor = (name) => (IDEA_ICONS.find(([re]) => re.test(name)) || [null, 'sparkles'])[1];
+
+/** A kind word for where you are: nothing yet, some, or all of it reinvested. */
+function cheerLine(used, allUsed) {
+  if (allUsed) return 'Every freed hour has a new job';
+  if (used) return 'Great start. Keep going!';
+  return 'Your freed time is waiting for a new job';
+}
 
 /** Hours you can give one fill: half-hour steps up to what's left, and "all of it". */
 function hourChoices(left) {
@@ -30,6 +52,12 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
   const [idea, setIdea] = useState(null);
   const [hours, setHours] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [cheer, setCheer] = useState(null); // { activity, hours, kind } just reinvested
+  useEffect(() => {
+    if (!cheer) return undefined;
+    const t = setTimeout(() => setCheer(null), 2600);
+    return () => clearTimeout(t);
+  }, [cheer]);
 
   const used = fills.reduce((t, f) => t + f.hours, 0);
   const left = Math.max(0, Math.round((free - used) * 100) / 100);
@@ -67,6 +95,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
     if (!ok) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     animate();
+    setCheer({ activity: idea, hours, kind });
     setKind(null);
     setIdea(null);
     setHours(null);
@@ -77,14 +106,12 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
   return (
     <View style={[styles.card, style]}>
       <View style={styles.head}>
-        <View style={[styles.headIcon, allUsed && { backgroundColor: colors.successSoft }]}>
-          <Ionicons name={allUsed ? 'checkmark' : 'leaf'} size={16} color={colors.chart.production} />
+        <View style={[styles.headIcon, allUsed && { backgroundColor: colors.accentSoft }]}>
+          <Ionicons name={allUsed ? 'trophy' : 'leaf'} size={16} color={allUsed ? colors.accentText : colors.chart.production} />
         </View>
         <View style={styles.headMain}>
           <Text style={styles.title}>Reinvest your time</Text>
-          <Text style={styles.sub}>
-            {allUsed ? `All ${h(free)} a day reinvested` : used ? `${h(left)} a day still free` : `${h(free)} a day is free again`}
-          </Text>
+          <Text style={styles.sub}>{cheerLine(used, allUsed)}</Text>
         </View>
         {saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       </View>
@@ -103,8 +130,34 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
               .filter(([, n]) => n)
               .map(([k, n]) => `${h(n)} ${k === 'production' ? 'in the business' : 'in you'}`)
               .join(' · ')
-          : `${h(free)} to reinvest`}
+          : `${h(free)} a day to reinvest`}
+        {used && !allUsed ? ` · ${h(left)} free` : ''}
       </Text>
+
+      {/* A moment to enjoy it, right after each reinvest. */}
+      {cheer ? (
+        <Animated.View entering={ZoomIn.duration(300)} exiting={FadeOut.duration(300)} style={[styles.cheer, { backgroundColor: `${color(cheer.kind)}14` }]}>
+          <View style={[styles.cheerIcon, { backgroundColor: color(cheer.kind) }]}>
+            <Ionicons name={iconFor(cheer.activity)} size={16} color="#FFFFFF" />
+          </View>
+          <Text style={styles.cheerText}>
+            <Text style={styles.cheerStrong}>Nice! </Text>
+            {h(cheer.hours)} a day for {cheer.activity.toLowerCase()}
+          </Text>
+          <Text style={styles.cheerEmoji}>🎉</Text>
+        </Animated.View>
+      ) : null}
+
+      {/* All of it reinvested: a small win to celebrate. */}
+      {allUsed && !cheer ? (
+        <Animated.View entering={FadeIn.duration(400)} style={styles.win}>
+          <Text style={styles.winEmoji}>🌟</Text>
+          <View style={styles.winMain}>
+            <Text style={styles.winTitle}>You did it!</Text>
+            <Text style={styles.winText}>Your time now works for the life you want.</Text>
+          </View>
+        </Animated.View>
+      ) : null}
 
       {!allUsed ? (
         <>
@@ -142,8 +195,9 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
                       onPress={() => pickIdea(name)}
                       accessibilityRole="button"
                       accessibilityState={{ selected: on }}
-                      style={[styles.chip, on && { backgroundColor: color(kind), borderColor: color(kind) }]}
+                      style={[styles.chip, styles.ideaChip, on && { backgroundColor: color(kind), borderColor: color(kind) }]}
                     >
+                      <Ionicons name={iconFor(name)} size={14} color={on ? '#FFFFFF' : color(kind)} />
                       <Text style={[styles.chipText, on && styles.chipTextOn]}>{name}</Text>
                     </Pressable>
                   );
@@ -208,4 +262,16 @@ const makeStyles = (colors, isDark) => ({
   chipText: { fontSize: 13, fontWeight: '600', color: colors.text },
   chipTextOn: { color: '#FFFFFF', fontWeight: '800' },
   button: { marginTop: spacing.md },
+  ideaChip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The cheer after each reinvest, and the win when it's all reinvested.
+  cheer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm + 4, padding: spacing.sm + 2, borderRadius: radius.md },
+  cheerIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  cheerText: { flex: 1, fontSize: 13, color: colors.text },
+  cheerStrong: { fontWeight: '800' },
+  cheerEmoji: { fontSize: 20 },
+  win: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, marginTop: spacing.sm + 4, padding: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  winEmoji: { fontSize: 28 },
+  winMain: { flex: 1 },
+  winTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  winText: { fontSize: 13, color: colors.muted, marginTop: 1 },
 });
