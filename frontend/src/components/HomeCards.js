@@ -58,7 +58,7 @@ export function DelegateAsk({ task, onYes, next, style }) {
           <>
             <View style={styles.taskRow}>
               <View style={styles.taskIcon}>
-                <Ionicons name="people" size={20} color={colors.chart.delegation} />
+                <Ionicons name="people" size={15} color={colors.chart.delegation} />
               </View>
               <View style={styles.taskMain}>
                 <Text style={styles.moveTitle}>{task.activity}</Text>
@@ -310,7 +310,7 @@ const makeStyles = (colors, isDark) => ({
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.md },
-  taskIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.errorSoft },
+  taskIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.errorSoft },
   taskMain: { flex: 1, minWidth: 0 },
   taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
   taskDrains: { color: colors.error },
