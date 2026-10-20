@@ -139,6 +139,26 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         ) : null}
       </View>
 
+      {/* Where your time went: a calm list, one row per reinvestment. */}
+      {fills.length ? (
+        <View style={styles.list}>
+          {fills.map((x, i) => (
+            <View key={x.activity} style={[styles.row, i > 0 && styles.rowLine]}>
+              <View style={[styles.rowIcon, { backgroundColor: `${color(x.quadrant)}1F` }]}>
+                <Ionicons name={iconFor(x.activity)} size={14} color={color(x.quadrant)} />
+              </View>
+              <View style={styles.rowMain}>
+                <Text style={styles.rowName} numberOfLines={1}>
+                  {x.activity}
+                </Text>
+                <Text style={styles.rowKind}>{x.quadrant === 'production' ? 'Grow the business' : 'Invest in yourself'}</Text>
+              </View>
+              <Text style={styles.rowHours}>{h(x.hours)} a day</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {/* A moment to enjoy it, right after each reinvest. */}
       {cheer ? (
         <Animated.View entering={ZoomIn.duration(300)} exiting={FadeOut.duration(300)} style={[styles.cheer, { backgroundColor: `${color(cheer.kind)}14` }]}>
@@ -260,6 +280,15 @@ const makeStyles = (colors, isDark) => ({
   chipTextOn: { color: '#FFFFFF', fontWeight: '800' },
   button: { marginTop: spacing.md },
   ideaChip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Where your time went.
+  list: { marginTop: spacing.sm + 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, paddingVertical: spacing.sm },
+  rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
+  rowIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  rowMain: { flex: 1, minWidth: 0 },
+  rowName: { fontSize: 14, fontWeight: '700', color: colors.text },
+  rowKind: { fontSize: 12, color: colors.muted, marginTop: 1 },
+  rowHours: { fontSize: 13, fontWeight: '800', color: colors.text },
   // The cheer after each reinvest.
   cheer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm + 4, padding: spacing.sm + 2, borderRadius: radius.md },
   cheerIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
