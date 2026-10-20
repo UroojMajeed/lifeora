@@ -37,8 +37,8 @@ function Column({ height, index, color, style }) {
   return <Animated.View style={[{ backgroundColor: color }, style, rise]} />;
 }
 
-const RING = 56;
-const STROKE = 6;
+const RING = 38;
+const STROKE = 3;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** A quadrant's share of the day as a ring that fills on open, with the % in the middle. */
@@ -112,14 +112,11 @@ export default function RoutineStats({ items = [], style }) {
           return (
             <View key={k} style={styles.ringSlot} accessible accessibilityLabel={`${DRIP[k].name}: ${share}% of your day`}>
               <View>
-                <ShareRing share={share} index={i} color={colors.chart[k]} track={colors.surfaceAlt} />
+                <ShareRing share={share} index={i} color={colors.chart[k]} track={colors.border} />
                 <View style={styles.ringCenter} pointerEvents="none">
                   <Text style={styles.ringPct}>{share}%</Text>
                 </View>
               </View>
-              <Text style={styles.ringName} numberOfLines={1} adjustsFontSizeToFit>
-                {DRIP[k].name}
-              </Text>
             </View>
           );
         })}
@@ -207,11 +204,10 @@ const makeStyles = (colors, isDark) => ({
   label: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
   total: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6, marginTop: 4 },
   totalSub: { fontSize: 13, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
-  rings: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
+  rings: { flexDirection: 'row', gap: 12, marginLeft: AXIS, paddingHorizontal: 6, marginTop: spacing.md },
   ringSlot: { flex: 1, alignItems: 'center', minWidth: 0 },
   ringCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  ringPct: { fontSize: 13, fontWeight: '800', color: colors.text },
-  ringName: { fontSize: 10, fontWeight: '700', color: colors.muted, marginTop: 4 },
+  ringPct: { fontSize: 10, fontWeight: '700', color: colors.text, letterSpacing: -0.2 },
   // The plot: grid rows behind, columns in front.
   chart: { height: PLOT, marginTop: spacing.lg },
   gridRow: { position: 'absolute', left: 0, right: 0, height: 14, flexDirection: 'row', alignItems: 'center' },
