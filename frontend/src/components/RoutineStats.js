@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { LayoutAnimation, Pressable, Text, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import { LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import Animated, { Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { DRIP, quadrantFor, valueForMoney } from '../constants/content';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
@@ -34,6 +35,38 @@ function Column({ height, index, color, style }) {
   }, [height, index, h]);
   const rise = useAnimatedStyle(() => ({ height: h.value }));
   return <Animated.View style={[{ backgroundColor: color }, style, rise]} />;
+}
+
+const RING = 56;
+const STROKE = 6;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/** A quadrant's share of the day as a ring that fills on open, with the % in the middle. */
+function ShareRing({ share, index, color, track }) {
+  const r = (RING - STROKE) / 2;
+  const len = 2 * Math.PI * r;
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withDelay(index * 90, withTiming(share / 100, { duration: 700, easing: Easing.out(Easing.cubic) }));
+  }, [share, index, p]);
+  const props = useAnimatedProps(() => ({ strokeDashoffset: len * (1 - p.value) }));
+  return (
+    <Svg width={RING} height={RING}>
+      <Circle cx={RING / 2} cy={RING / 2} r={r} stroke={track} strokeWidth={STROKE} fill="none" />
+      <AnimatedCircle
+        cx={RING / 2}
+        cy={RING / 2}
+        r={r}
+        stroke={color}
+        strokeWidth={STROKE}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={`${len} ${len}`}
+        animatedProps={props}
+        transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+      />
+    </Svg>
+  );
 }
 
 /**
@@ -72,6 +105,26 @@ export default function RoutineStats({ items = [], style }) {
       </Text>
 
       {/* The graph: an hours axis with light grid lines, a column per quadrant with its hours on top. */}
+      {/* Each quadrant's share of the day, as rings above the graph. */}
+      <View style={styles.rings}>
+        {ORDER.map((k, i) => {
+          const share = total ? Math.round((hoursOf(k) / total) * 100) : 0;
+          return (
+            <View key={k} style={styles.ringSlot} accessible accessibilityLabel={`${DRIP[k].name}: ${share}% of your day`}>
+              <View>
+                <ShareRing share={share} index={i} color={colors.chart[k]} track={colors.surfaceAlt} />
+                <View style={styles.ringCenter} pointerEvents="none">
+                  <Text style={styles.ringPct}>{share}%</Text>
+                </View>
+              </View>
+              <Text style={styles.ringName} numberOfLines={1} adjustsFontSizeToFit>
+                {DRIP[k].name}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
       <View style={styles.chart}>
         {ticks.map((v) => (
           <View key={v} pointerEvents="none" style={[styles.gridRow, { top: yOf(v) - 7 }]}>
@@ -105,7 +158,6 @@ export default function RoutineStats({ items = [], style }) {
             <Text style={[styles.xName, open === k && styles.xNameOn]} numberOfLines={1} adjustsFontSizeToFit>
               {DRIP[k].name}
             </Text>
-            <Text style={styles.xShare}>{total ? Math.round((hoursOf(k) / total) * 100) : 0}%</Text>
             {DRAINS.has(k) ? (
               <Text style={styles.xDrains}>drains</Text>
             ) : (
@@ -155,6 +207,11 @@ const makeStyles = (colors, isDark) => ({
   label: { fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase' },
   total: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.6, marginTop: 4 },
   totalSub: { fontSize: 13, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
+  rings: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md },
+  ringSlot: { flex: 1, alignItems: 'center', minWidth: 0 },
+  ringCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  ringPct: { fontSize: 13, fontWeight: '800', color: colors.text },
+  ringName: { fontSize: 10, fontWeight: '700', color: colors.muted, marginTop: 4 },
   // The plot: grid rows behind, columns in front.
   chart: { height: PLOT, marginTop: spacing.lg },
   gridRow: { position: 'absolute', left: 0, right: 0, height: 14, flexDirection: 'row', alignItems: 'center' },
@@ -171,7 +228,6 @@ const makeStyles = (colors, isDark) => ({
   xLabel: { flex: 1, alignItems: 'center', minWidth: 0 },
   xName: { fontSize: 10, fontWeight: '700', color: colors.text },
   xNameOn: { fontWeight: '800', textDecorationLine: 'underline' },
-  xShare: { fontSize: 15, fontWeight: '800', color: colors.text, marginTop: 2, letterSpacing: -0.3 },
   xCount: { fontSize: 10, fontWeight: '500', color: colors.muted, marginTop: 1 },
   xDrains: { fontSize: 10, fontWeight: '700', color: colors.error, marginTop: 1 },
   hint: { fontSize: 10, color: colors.muted, textAlign: 'center', marginTop: 6 },
