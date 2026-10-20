@@ -47,7 +47,7 @@ const colStyles = StyleSheet.create({
  * and the graph said in words. Tap a column: it lights up and its tasks show. `items` is the
  * routine as it is now.
  */
-export default function RoutineStats({ items = [], style }) {
+export default function RoutineStats({ items = [], free = 0, tip = true, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(null);
@@ -57,6 +57,8 @@ export default function RoutineStats({ items = [], style }) {
   rated.forEach((it) => by[quadrantOf(it)]?.push(it));
   const hoursOf = (k) => by[k].reduce((t, it) => t + it.hours, 0);
   const total = ORDER.reduce((t, k) => t + hoursOf(k), 0);
+  const freeHours = free >= 0.25 ? free : 0; // handed off, not reinvested yet
+  const day = total + freeHours;
   const max = Math.max(...ORDER.map(hoursOf), 0.5);
   const room = PLOT - ICON_ROOM - 8;
   const heightOf = (hours) => (hours ? MIN + (hours / max) * (room - MIN) : 0);
@@ -77,7 +79,7 @@ export default function RoutineStats({ items = [], style }) {
         icon="stats-chart"
         iconColor={colors.primary}
         title="Your Routine"
-        sub={`${h(total)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}`}
+        sub={`${h(day)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}`}
       />
 
       {/* The graph: a track per quadrant, its column rising inside it. */}
@@ -85,7 +87,7 @@ export default function RoutineStats({ items = [], style }) {
         {ORDER.map((k, i) => {
           const hours = hoursOf(k);
           const on = open === k;
-          const share = total ? Math.round((hours / total) * 100) : 0;
+          const share = day ? Math.round((hours / day) * 100) : 0;
           return (
             <Pressable
               key={k}
@@ -99,10 +101,14 @@ export default function RoutineStats({ items = [], style }) {
                 <View style={styles.iconWrap}>
                   <Ionicons name={ICONS[k]} size={16} color={colors.chart[k]} />
                 </View>
-                <Column height={heightOf(hours)} index={i} color={colors.chart[k]}>
-                  <Text style={styles.share}>{share}%</Text>
-                  <Text style={styles.hours}>{formatHours(hours)}</Text>
-                </Column>
+                {hours ? (
+                  <Column height={heightOf(hours)} index={i} color={colors.chart[k]}>
+                    <Text style={styles.share}>{share}%</Text>
+                    <Text style={styles.hours}>{formatHours(hours)}</Text>
+                  </Column>
+                ) : (
+                  <Text style={styles.zero}>0 h</Text>
+                )}
               </View>
               <Text style={[styles.xName, on && { color: colors.chart[k] }]} numberOfLines={1} adjustsFontSizeToFit>
                 {DRIP[k].name}
@@ -112,6 +118,18 @@ export default function RoutineStats({ items = [], style }) {
           );
         })}
       </View>
+
+      {freeHours ? (
+        <View style={styles.free}>
+          <Ionicons name="hourglass-outline" size={14} color={colors.accentText} />
+          <Text style={styles.freeText}>
+            <Text style={styles.freeStrong}>
+              {h(freeHours)} freed · {Math.round((freeHours / day) * 100)}%
+            </Text>{' '}
+            of your day, waiting to be reinvested
+          </Text>
+        </View>
+      ) : null}
 
       {open ? (
         <Animated.View key={open} entering={FadeIn.duration(250)} style={[styles.tasks, { borderLeftColor: colors.chart[open] }]}>
@@ -142,7 +160,7 @@ export default function RoutineStats({ items = [], style }) {
       )}
 
       {/* The graph, said in words. */}
-      {biggest ? (
+      {tip && biggest ? (
         <View style={styles.insight}>
           <View style={styles.insightIcon}>
             <Ionicons name="battery-dead" size={16} color="#FFFFFF" />
@@ -178,7 +196,11 @@ const makeStyles = (colors, isDark) => ({
   iconWrap: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center' },
   share: { fontSize: 16, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
   hours: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.88)', marginTop: 1 },
-  xName: { fontSize: 11, fontWeight: '800', color: colors.text, marginTop: 8 },
+  xName: { fontSize: 10, fontWeight: '800', color: colors.text, marginTop: 8, letterSpacing: -0.2 },
+  zero: { alignSelf: 'center', marginBottom: spacing.sm, fontSize: 12, fontWeight: '700', color: colors.muted },
+  free: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md, paddingHorizontal: spacing.sm + 4, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent },
+  freeText: { flex: 1, fontSize: 13, color: colors.text },
+  freeStrong: { fontWeight: '800', color: colors.accentText },
   xDrains: { fontSize: 10, fontWeight: '700', color: colors.error, marginTop: 1 },
   xEnergy: { fontSize: 10, fontWeight: '600', color: colors.muted, marginTop: 1 },
   hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: spacing.sm + 2 },

@@ -104,6 +104,8 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
     setHours(null);
   };
 
+  const parts = KINDS.filter((k) => fills.some((x) => x.quadrant === k)).length + (left > 0 ? 1 : 0);
+  const crowded = parts >= 3; // three parts: icon + hours, no word
   const ideas = kind ? fillIdeas(kind, { role, schedule, fills }).slice(0, 6) : [];
 
   return (
@@ -131,18 +133,18 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
               accessibilityRole="button"
               accessibilityState={{ expanded: shown === k }}
               accessibilityLabel={`${h(part)} a day ${k === 'production' ? 'in the business' : 'in you'}. Tap to see where.`}
-              style={({ pressed }) => [styles.part, { flex: part, backgroundColor: color(k) }, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.part, crowded && styles.partTight, { flex: part, backgroundColor: color(k) }, pressed && styles.pressed]}
             >
               <Ionicons name={ICONS[k]} size={12} color="#FFFFFF" />
               <Text style={styles.partText} numberOfLines={1}>
-                {h(part)} {SHORT[k]}
+                {crowded ? h(part) : `${h(part)} ${SHORT[k]}`}
               </Text>
               <Ionicons name={shown === k ? 'chevron-up' : 'chevron-down'} size={12} color="#FFFFFF" />
             </Pressable>
           ) : null;
         })}
         {left > 0 ? (
-          <View style={[styles.part, styles.free, { flex: left }]}>
+          <View style={[styles.part, crowded && styles.partTight, styles.free, { flex: left }]}>
             <Ionicons name="hourglass-outline" size={12} color={colors.accentText} />
             <Text style={styles.freeText} numberOfLines={1}>
               {h(left)} free
@@ -269,6 +271,7 @@ const makeStyles = (colors, isDark) => ({
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
   track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.calmTrack, marginTop: spacing.md },
   part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 104 }, // wide enough for its words
+  partTight: { minWidth: 72, paddingHorizontal: 6 },
   partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   free: { backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent, borderRadius: 15 }, // still free: warm apricot, waiting for a job
   freeText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: colors.accentText },

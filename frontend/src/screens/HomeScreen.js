@@ -118,7 +118,7 @@ export default function HomeScreen({ navigation }) {
         {started ? (
           <>
             {/* After a handoff: your routine now, what to do next, and your production before vs now. */}
-            <RoutineStats items={routineNow} />
+            <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
                 the next step (no separate "fill" move); when that's done too, round 2 starts here. */}
             {move?.stage === 'audit' || move?.action === 'nextRound' ? (
