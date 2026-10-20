@@ -53,6 +53,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
   const [idea, setIdea] = useState(null);
   const [hours, setHours] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [shown, setShown] = useState(null); // the bar part whose list is open: 'production' | 'investment'
   const [cheer, setCheer] = useState(null); // { activity, hours, kind } just reinvested
   useEffect(() => {
     if (!cheer) return undefined;
@@ -122,12 +123,24 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         {KINDS.map((k) => {
           const part = fills.filter((x) => x.quadrant === k).reduce((t, x) => t + x.hours, 0);
           return part ? (
-            <View key={k} style={[styles.part, { flex: part, backgroundColor: color(k) }]}>
+            <Pressable
+              key={k}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                animate();
+                setShown((cur) => (cur === k ? null : k));
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: shown === k }}
+              accessibilityLabel={`${h(part)} a day ${k === 'production' ? 'in the business' : 'in you'}. Tap to see where.`}
+              style={({ pressed }) => [styles.part, { flex: part, backgroundColor: color(k) }, pressed && styles.pressed]}
+            >
               <Ionicons name={ICONS[k]} size={12} color="#FFFFFF" />
               <Text style={styles.partText} numberOfLines={1}>
                 {h(part)} {SHORT[k]}
               </Text>
-            </View>
+              <Ionicons name={shown === k ? 'chevron-up' : 'chevron-down'} size={12} color="#FFFFFF" />
+            </Pressable>
           ) : null;
         })}
         {left > 0 ? (
@@ -139,10 +152,10 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         ) : null}
       </View>
 
-      {/* Where your time went: a calm list, one row per reinvestment. */}
-      {fills.length ? (
-        <View style={styles.list}>
-          {fills.map((x, i) => (
+      {/* Where your time went: tap a part of the bar to see its list. */}
+      {shown && fills.some((x) => x.quadrant === shown) ? (
+        <Animated.View key={shown} entering={FadeIn.duration(250)} style={styles.list}>
+          {fills.filter((x) => x.quadrant === shown).map((x, i) => (
             <View key={x.activity} style={[styles.row, i > 0 && styles.rowLine]}>
               <View style={[styles.rowIcon, { backgroundColor: `${color(x.quadrant)}1F` }]}>
                 <Ionicons name={iconFor(x.activity)} size={14} color={color(x.quadrant)} />
@@ -156,7 +169,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
               <Text style={styles.rowHours}>{h(x.hours)} a day</Text>
             </View>
           ))}
-        </View>
+        </Animated.View>
       ) : null}
 
       {/* A moment to enjoy it, right after each reinvest. */}
@@ -265,7 +278,7 @@ const makeStyles = (colors, isDark) => ({
   title: { fontSize: 16, fontWeight: '800', color: colors.text },
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
   track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
-  part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 92 }, // wide enough for its words
+  part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 104 }, // wide enough for its words
   partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   freeText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.muted },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
