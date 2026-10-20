@@ -306,7 +306,8 @@ const makeStyles = (colors, isDark) => ({
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
   moveButton: { marginTop: spacing.md, minHeight: 48 },
   moveDone: { borderColor: colors.success, backgroundColor: colors.successSoft },
-  taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 4, marginTop: spacing.md },
+  // The task to hand off, lifted out: a white panel with a Delegation-coloured edge.
+  taskRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, paddingVertical: spacing.sm + 4, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderLeftWidth: 4, borderLeftColor: colors.chart.delegation },
   taskMain: { flex: 1, minWidth: 0 },
   taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
   taskDrains: { color: colors.error },
