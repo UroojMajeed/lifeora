@@ -8,7 +8,7 @@ import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
-import MoneyCard from '../components/MoneyCard';
+import TimeBackCard from '../components/TimeBackCard';
 import MilestoneSheet from '../components/MilestoneSheet';
 import { markMilestones } from '../storage/milestones';
 import { milestoneLine, reachedMilestones } from '../constants/milestones';
@@ -17,7 +17,7 @@ import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { noticeBoughtBack, recordWeeklyBoughtBack } from '../storage/progress';
-import { WORK_HOURS_PER_YEAR, quadrantFor, valueForMoney } from '../constants/content';
+import { quadrantFor, valueForMoney } from '../constants/content';
 import { WORKDAYS_PER_WEEK, greeting, todaysMove } from '../constants/home';
 import { dayNow, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -37,7 +37,7 @@ export default function HomeScreen({ navigation }) {
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
   const [startingRound, setStartingRound] = useState(false);
-  const [money, setMoney] = useState({ weeks: [], totalHours: 0 }); // hours bought back, week by week
+  const [timeBack, setTimeBack] = useState({ weeks: [], totalHours: 0 }); // hours bought back, week by week
   const [milestone, setMilestone] = useState(null); // a new one to celebrate
 
   const schedule = onboarding?.schedule || [];
@@ -56,25 +56,22 @@ export default function HomeScreen({ navigation }) {
     }, [refreshHandoffs])
   );
 
-  // This week's hours bought back join the weekly history (kept on this phone), for the money card.
+  // This week's hours bought back join the weekly history (kept on this phone), for the time-back card.
   useEffect(() => {
-    if (summary) recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6).then(setMoney);
+    if (summary) recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6).then(setTimeBack);
   }, [summary, bought]);
 
   // A milestone reached since last time: celebrate the newest one, once (only while on screen).
-  const hourWorth = (onboarding?.annualIncome || 0) / WORK_HOURS_PER_YEAR;
-  const currency = onboarding?.currency || 'USD';
   useEffect(() => {
     if (!isFocused || !summary) return;
     // Finished weeks only: this week's hours count once the week has really happened.
     // TEMP for testing: count this week too, so the sheet shows right away. Set back to false after.
     const COUNT_THIS_WEEK = true;
-    const done = money.totalHours - (COUNT_THIS_WEEK ? 0 : money.weeks.find((w) => w.now)?.hours || 0);
-    const totals = { hours: done, money: done * hourWorth, round: summary.round || 1 };
-    markMilestones(reachedMilestones(totals, currency)).then((fresh) => {
+    const done = timeBack.totalHours - (COUNT_THIS_WEEK ? 0 : timeBack.weeks.find((w) => w.now)?.hours || 0);
+    markMilestones(reachedMilestones({ hours: done, round: summary.round || 1 })).then((fresh) => {
       if (fresh.length) setMilestone(fresh[fresh.length - 1]);
     });
-  }, [isFocused, summary, money, hourWorth, currency]);
+  }, [isFocused, summary, timeBack]);
 
   // More hours bought back since Home last showed them: a small success buzz (only while on screen).
   useEffect(() => {
@@ -143,13 +140,8 @@ export default function HomeScreen({ navigation }) {
       <Animated.View key={started ? 'progress' : 'first'} entering={FadeIn.duration(500)} style={styles.stack}>
         {started ? (
           <>
-            {/* After a handoff: your time back as money, your routine now, what to do next, Reinvest, and production. */}
-            <MoneyCard
-              weeks={money.weeks}
-              totalHours={money.totalHours}
-              hourWorth={hourWorth}
-              currency={currency}
-            />
+            {/* After a handoff: your hours back, your routine now, what to do next, Reinvest, and production. */}
+            <TimeBackCard weeks={timeBack.weeks} totalHours={timeBack.totalHours} />
             <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
                 the next step (no separate "fill" move); when that's done too, round 2 starts here. */}
@@ -182,7 +174,7 @@ export default function HomeScreen({ navigation }) {
           </Pressable>
         ) : null}
       </Animated.View>
-      <MilestoneSheet milestone={milestone} line={milestone ? milestoneLine(milestone, { hourWorth, currency }) : ''} onClose={() => setMilestone(null)} />
+      <MilestoneSheet milestone={milestone} line={milestone ? milestoneLine(milestone) : ''} onClose={() => setMilestone(null)} />
     </Screen>
   );
 }

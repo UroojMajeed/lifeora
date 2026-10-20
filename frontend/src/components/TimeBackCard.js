@@ -1,7 +1,6 @@
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import CardHeader, { homeCard } from './CardHeader';
-import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
@@ -9,34 +8,32 @@ const COL = 64; // the tallest week's column, in px
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
 /**
- * Your time back, as money: the hours you've bought back so far (week by week, kept on this phone)
- * times what your hour is worth (yearly income ÷ 2,000). The amount is the card's title; under it a
- * column per week (this week highlighted) and what this week adds.
+ * Your time back: the hours you've bought back so far (week by week, kept on this phone). The total
+ * is the card's title; under it a column per week (this week highlighted) and what this week adds.
  * `weeks` is [{ key, hours, now }] oldest first; `totalHours` is all weeks so far.
  */
-export default function MoneyCard({ weeks = [], totalHours = 0, hourWorth = 0, currency = 'USD', style }) {
+export default function TimeBackCard({ weeks = [], totalHours = 0, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  if (!hourWorth) return null;
-  const money = (n) => formatMoney(n, currency, { decimals: 0 });
   // Only the weeks since you started (no row of empty weeks for someone new).
   const first = weeks.findIndex((w) => w.hours > 0);
   const shown = first < 0 ? [] : weeks.slice(first);
   const max = Math.max(...shown.map((w) => w.hours), 0.5);
   const thisWeek = weeks.find((w) => w.now)?.hours || 0;
+  const days = totalHours / 8; // a workday is 8 hours
 
   return (
     <Animated.View entering={FadeIn.duration(500)} style={[styles.card, style]}>
       <CardHeader
-        icon="wallet"
+        icon="time"
         iconColor={colors.accentText}
-        title={`${money(totalHours * hourWorth)} bought back`}
-        sub={`${h(totalHours)} of your time · ${money(hourWorth)} an hour`}
+        title={`${h(totalHours)} bought back`}
+        sub={days >= 1 ? `About ${Math.round(days * 10) / 10} workdays of your time` : 'Your time, back for the work you love'}
       />
 
       {/* A column per week once there are two to compare; this week stands out. */}
       {shown.length > 1 ? (
-        <View style={styles.weeks} accessible accessibilityLabel={`Bought back per week: ${shown.map((w) => money(w.hours * hourWorth)).join(', ')}`}>
+        <View style={styles.weeks} accessible accessibilityLabel={`Bought back per week: ${shown.map((w) => h(w.hours)).join(', ')}`}>
           {shown.map((w, i) => (
             <View key={w.key} style={styles.week}>
               <View style={styles.colArea}>
@@ -51,7 +48,7 @@ export default function MoneyCard({ weeks = [], totalHours = 0, hourWorth = 0, c
       <Text style={styles.note}>
         {thisWeek ? (
           <>
-            <Text style={styles.noteStrong}>+{money(thisWeek * hourWorth)} this week.</Text> Keep your handoffs going.
+            <Text style={styles.noteStrong}>+{h(thisWeek)} this week.</Text> Keep your handoffs going.
           </>
         ) : (
           'Each task you hand off adds to this every week.'
