@@ -30,7 +30,6 @@ export const lightColors = {
   gold: ['#F7CB7E', '#E2A23C'], // picked $: a coin gradient
   goldInk: '#4A2E06', // $ on the gold coin
   goldLine: '#EBD3A8', // ring around an unpicked $
-  calm: ['#EAF6F1', '#F6FBF9'], // the routine card: a soft mint wash into near-white
   calmTrack: 'rgba(255,255,255,0.8)',
   cream: ['#FFFBF3', '#FBEFD9'], // the rating card at rest: ivory into light gold
   blushDrain: '#F6D3CE', // the card leaning left (drains)
@@ -90,7 +89,6 @@ export const darkColors = {
   gold: ['#F5B971', '#D6923A'],
   goldInk: '#2A1A04',
   goldLine: 'rgba(245,185,113,0.4)',
-  calm: ['#15302C', '#112423'],
   calmTrack: 'rgba(255,255,255,0.06)',
   cream: ['#211C14', '#2B2216'],
   blushDrain: '#4A2522',
