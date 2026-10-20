@@ -21,8 +21,7 @@ function hourChoices(left) {
 
 /**
  * Reinvest (the book's Fill): the hours you bought back get a new job. How much is free and how much
- * is used, two ways to spend it (grow the business / invest in yourself), ideas for each, the hours,
- * and what you've already reinvested (tap × to take one back). `free` is hours a day bought back.
+ * is used, two ways to spend it (grow the business / invest in yourself), ideas for each, and the hours. `free` is hours a day bought back.
  */
 export default function ReinvestCard({ free, fills = [], role, schedule = [], onSave, style }) {
   const { colors } = useTheme();
@@ -72,10 +71,6 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
     setIdea(null);
     setHours(null);
   };
-  const remove = (activity) => {
-    animate();
-    save(fills.filter((f) => f.activity !== activity)).catch(() => {});
-  };
 
   const ideas = kind ? fillIdeas(kind, { role, schedule, fills }).slice(0, 6) : [];
 
@@ -103,25 +98,13 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         {left > 0 ? <View style={{ flex: left }} /> : null}
       </View>
       <Text style={styles.trackText}>
-        {h(used)} of {h(free)} reinvested
+        {used
+          ? KINDS.map((k) => [k, fills.filter((x) => x.quadrant === k).reduce((t, x) => t + x.hours, 0)])
+              .filter(([, n]) => n)
+              .map(([k, n]) => `${h(n)} ${k === 'production' ? 'in the business' : 'in you'}`)
+              .join(' · ')
+          : `${h(free)} to reinvest`}
       </Text>
-
-      {/* What you've reinvested in. */}
-      {fills.length ? (
-        <View style={styles.fills}>
-          {fills.map((f) => (
-            <View key={f.activity} style={styles.fill}>
-              <Ionicons name={ICONS[f.quadrant]} size={13} color={color(f.quadrant)} />
-              <Text style={styles.fillText} numberOfLines={1}>
-                {f.activity} <Text style={styles.fillHours}>{h(f.hours)}</Text>
-              </Text>
-              <Pressable onPress={() => remove(f.activity)} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Take back ${f.activity}`}>
-                <Ionicons name="close" size={14} color={colors.muted} />
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      ) : null}
 
       {!allUsed ? (
         <>
@@ -214,10 +197,6 @@ const makeStyles = (colors, isDark) => ({
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
   track: { flexDirection: 'row', gap: 2, height: 10, borderRadius: 5, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
   trackText: { fontSize: 11, fontWeight: '600', color: colors.muted, marginTop: 5 },
-  fills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.sm + 2 },
-  fill: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%', paddingLeft: 10, paddingRight: 8, paddingVertical: 5, borderRadius: 14, backgroundColor: colors.surfaceAlt },
-  fillText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.text },
-  fillHours: { fontWeight: '500', color: colors.muted },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   kind: { flex: 1, padding: spacing.sm + 4, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface },
   kindIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
