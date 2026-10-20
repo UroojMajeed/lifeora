@@ -307,7 +307,7 @@ export function DrainCompare({ before, now, style }) {
 
 const makeStyles = (colors, isDark) => ({
   // Move
-  move: { padding: spacing.md, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },
+  move: { padding: spacing.md, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.tintMove },
   tag: { fontSize: 11, fontWeight: '700', color: colors.accentText, letterSpacing: 0.8, textTransform: 'uppercase' },
   moveTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800', color: colors.text, letterSpacing: -0.2, marginTop: 6 },
   moveBody: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
@@ -319,11 +319,11 @@ const makeStyles = (colors, isDark) => ({
   taskMain: { flex: 1, minWidth: 0 },
   taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
   taskDrains: { color: colors.error },
-  gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.md, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.accentSoft },
+  gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.md, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surface },
   gainText: { fontSize: 14, fontWeight: '800', color: colors.accentText },
   stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft, marginBottom: 2 },
   // Production: before vs now.
-  prod: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
+  prod: { padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.tintProduction, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
   prodHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm + 2 },
   prodIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successSoft },
   prodTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
@@ -332,7 +332,7 @@ const makeStyles = (colors, isDark) => ({
   prodRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   prodLabel: { width: 48, fontSize: 12, fontWeight: '600', color: colors.muted },
   prodLabelNow: { fontWeight: '800', color: colors.text },
-  prodTrack: { flex: 1, flexDirection: 'row', gap: 2, height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: colors.surfaceAlt },
+  prodTrack: { flex: 1, flexDirection: 'row', gap: 2, height: 14, borderRadius: 7, overflow: 'hidden', backgroundColor: colors.calmTrack },
   prodBar: { height: 14 },
   prodGain: { opacity: 0.5 },
   prodValue: { width: 44, textAlign: 'right', fontSize: 14, fontWeight: '800', color: colors.text },
@@ -356,7 +356,7 @@ const makeStyles = (colors, isDark) => ({
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.tintWaiting,
   },
   emptyRing: { width: 42, height: 42, borderRadius: 21, borderWidth: 4, borderColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   emptyRingText: { fontSize: 10, fontWeight: '800', color: colors.muted },

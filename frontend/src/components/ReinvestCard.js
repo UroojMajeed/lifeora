@@ -266,7 +266,7 @@ const makeStyles = (colors, isDark) => ({
   card: {
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.tintReinvest,
     borderWidth: 1,
     borderColor: isDark ? colors.border : 'transparent',
     ...cardShadow(colors, isDark),
@@ -277,7 +277,7 @@ const makeStyles = (colors, isDark) => ({
   headMain: { flex: 1, minWidth: 0 },
   title: { fontSize: 16, fontWeight: '800', color: colors.text },
   sub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 1 },
-  track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.surfaceAlt, marginTop: spacing.md },
+  track: { flexDirection: 'row', gap: 2, height: 30, borderRadius: 15, overflow: 'hidden', backgroundColor: colors.calmTrack, marginTop: spacing.md },
   part: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, minWidth: 104 }, // wide enough for its words
   partText: { flexShrink: 1, fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
   freeText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: colors.muted },
