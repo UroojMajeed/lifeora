@@ -67,7 +67,9 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (!isFocused || !summary) return;
     // Finished weeks only: this week's hours count once the week has really happened.
-    const done = money.totalHours - (money.weeks.find((w) => w.now)?.hours || 0);
+    // TEMP for testing: count this week too, so the sheet shows right away. Set back to false after.
+    const COUNT_THIS_WEEK = true;
+    const done = money.totalHours - (COUNT_THIS_WEEK ? 0 : money.weeks.find((w) => w.now)?.hours || 0);
     const totals = { hours: done, money: done * hourWorth, round: summary.round || 1 };
     markMilestones(reachedMilestones(totals, currency)).then((fresh) => {
       if (fresh.length) setMilestone(fresh[fresh.length - 1]);
