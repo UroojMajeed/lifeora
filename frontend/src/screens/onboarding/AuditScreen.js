@@ -245,7 +245,8 @@ export default function AuditScreen({ navigation, route }) {
           <View style={styles.bar}>
             <Button
               title={`Done · ${items.length}`}
-              icon="checkmark"
+              icon="checkmark-circle"
+              iconColor={colors.success}
               variant="secondary"
               onPress={() => show('list')}
               style={[styles.barButton, styles.done]}

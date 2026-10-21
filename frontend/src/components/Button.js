@@ -11,8 +11,8 @@ const variants = (colors) => ({
   light: { bg: colors.white, fg: '#1B1530', border: colors.white },
 });
 
-/** Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"). */
-export default function Button({ title, onPress, variant = 'primary', icon, loading = false, disabled = false, style }) {
+/** Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"); `iconColor` overrides its colour. */
+export default function Button({ title, onPress, variant = 'primary', icon, iconColor, loading = false, disabled = false, style }) {
   const { colors } = useTheme();
   const all = variants(colors);
   const v = all[variant] || all.primary;
@@ -38,7 +38,7 @@ export default function Button({ title, onPress, variant = 'primary', icon, load
       ) : (
         <View style={styles.row}>
           <Text style={[styles.text, { color: v.fg }]}>{title}</Text>
-          {icon ? <Ionicons name={icon} size={18} color={v.fg} /> : null}
+          {icon ? <Ionicons name={icon} size={iconColor ? 20 : 18} color={iconColor || v.fg} /> : null}
         </View>
       )}
     </Pressable>
