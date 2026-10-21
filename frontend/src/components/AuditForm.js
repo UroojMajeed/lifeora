@@ -191,11 +191,11 @@ const makeStyles = (colors, isDark) => ({
     paddingBottom: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.primarySoft,
-    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    backgroundColor: colors.surface, // white and outlined, so it reads as empty until you type
   },
-  // Typing: a white area with a teal edge.
-  inputBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surface },
+  // Typing: a teal edge.
+  inputBoxFocused: { borderColor: colors.primary },
   inputBoxError: { borderColor: colors.error },
   inputIcon: { marginTop: 2 },
   input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
