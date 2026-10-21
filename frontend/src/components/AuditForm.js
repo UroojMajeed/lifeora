@@ -9,8 +9,6 @@ import { cardShadow, radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
-// The task box's example: a different one for each new task.
-const EXAMPLES = ['Invoicing', 'Answering emails', 'Client calls', 'Booking meetings', 'Social media posts', 'Bookkeeping', 'Writing proposals', 'Team check-ins', 'Customer support', 'Ordering supplies'];
 
 /**
  * The audit's quick-add card, showing only what's needed: at first just the task box and quick picks
@@ -86,11 +84,11 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         accessible={false}
         style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
       >
-        <Ionicons name="briefcase-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
-        {/* One short example: pale and smaller than real text, so it never looks filled. */}
+        <Ionicons name="pencil-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
+        {/* A short, pale hint: smaller than real text, so it never looks filled. */}
         {!form.name ? (
           <Text pointerEvents="none" style={styles.hint}>
-            e.g. {EXAMPLES[items.length % EXAMPLES.length]}
+            Type a task
           </Text>
         ) : null}
         <TextInput
