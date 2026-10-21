@@ -51,6 +51,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
           return part ? (
             <Pressable
               key={k}
+              disabled={allUsed}
               onPress={() => {
                 Haptics.selectionAsync().catch(() => {});
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -65,7 +66,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
               <Text style={styles.partText} numberOfLines={1}>
                 {crowded ? h(part) : `${h(part)} ${SHORT[k]}`}
               </Text>
-              <Ionicons name={shown === k ? 'chevron-up' : 'chevron-down'} size={12} color="#FFFFFF" />
+              {!allUsed ? <Ionicons name={shown === k ? 'chevron-up' : 'chevron-down'} size={12} color="#FFFFFF" /> : null}
             </Pressable>
           ) : null;
         })}
@@ -80,7 +81,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
       </View>
 
       {/* Where your time went: tap a part of the bar to see its list. */}
-      {shown && fills.some((x) => x.quadrant === shown) ? (
+      {!allUsed && shown && fills.some((x) => x.quadrant === shown) ? (
         <Animated.View key={shown} entering={FadeIn.duration(250)} style={styles.list}>
           {fills
             .filter((x) => x.quadrant === shown)
