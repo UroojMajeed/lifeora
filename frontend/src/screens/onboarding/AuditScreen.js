@@ -176,7 +176,7 @@ export default function AuditScreen({ navigation, route }) {
                 ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
                 : mode === 'list'
                 ? 'Everything you do on a normal work day.'
-                : 'Add the tasks of a normal work day, one at a time.'
+                : 'Add your work tasks, one at a time.'
             }
           />
           {mode === 'form' ? (

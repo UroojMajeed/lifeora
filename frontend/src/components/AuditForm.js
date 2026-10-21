@@ -1,21 +1,20 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { AuditFields, FIELDS } from './AuditTaskCard';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, cardShadow, radius, spacing } from '../theme';
+import { cardShadow, radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
 
 /**
- * The audit's quick-add card: a friendly header with the task number, a big task box with suggestions
- * under it while it's empty, and the same Time, Money and Energy buttons as the routine's cards. The
- * screen's buttons save it: `ref.save()`, with `onReadyChange(ready)` telling it when everything is
- * filled in.
+ * The audit's quick-add card, showing only what's needed: at first just the task box and quick picks
+ * under it; once the task has a name, the Time, Money and Energy buttons (the same as the routine's
+ * cards). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
+ * with `onReadyChange(ready)` telling it when everything is filled in.
  */
 const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onReadyChange, onReveal }, ref) {
   const { colors, isDark } = useTheme();
@@ -78,24 +77,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 
   return (
     <View style={styles.card}>
-      {/* A friendly header: what this is, and which task you're on. */}
-      <View style={styles.head}>
-        <LinearGradient colors={[brand.apricot, colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headIcon}>
-          <Ionicons name="sparkles" size={16} color={colors.onColor} />
-        </LinearGradient>
-        <View style={styles.headText}>
-          <Text style={styles.headTitle}>Add a task</Text>
-        </View>
-        <View style={styles.count}>
-          <Text style={styles.countText}>Task {items.length + 1}</Text>
-        </View>
-      </View>
-
       {/* The task: a roomy writing area (about three lines), calm text, a teal edge while you type. */}
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>Task</Text>
-        <Text style={styles.counter}>{form.name.length}/60</Text>
-      </View>
       {/* The whole area opens the keyboard on the first tap (not just the line with the text). */}
       <Pressable
         onPress={() => inputRef.current?.focus()}
@@ -111,7 +93,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           onSubmitEditing={submitName}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="What's the task? e.g. Invoicing clients"
+          placeholder="What's one task in your day?"
           placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           maxLength={60}
@@ -122,13 +104,16 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           style={[styles.input, duplicate && { color: colors.error }]}
           accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
         />
+        {/* Which task this is, quietly (from the second one). */}
+        {items.length ? <Text style={styles.number}>Task {items.length + 1}</Text> : null}
       </Pressable>
       {duplicate ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
+      {/* The limit, only when it's close. */}
+      {form.name.length >= 45 ? <Text style={styles.counter}>{form.name.length}/60</Text> : null}
 
       {/* Suggestions: right under the task box while it's empty (one line, scroll sideways for more). */}
       {suggestions.length && !form.name ? (
         <>
-          <Text style={[styles.sectionLabel, styles.suggestionsLabel]}>Suggestions</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -156,6 +141,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 
       {/* Time, Money and Energy: their own section (a hairline and a label), so they never blend with
           the suggestions above. The same buttons as on the routine's cards. */}
+      {name ? (
       <View style={styles.fields}>
         {/* Each question sits right above its own button (the same three columns as the buttons). */}
         <View style={styles.questions}>
@@ -177,6 +163,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           onChange={change}
         />
       </View>
+      ) : null}
     </View>
   );
 });
@@ -192,15 +179,8 @@ const makeStyles = (colors, isDark) => ({
     borderColor: isDark ? colors.border : colors.primarySoft,
     ...cardShadow(colors, isDark),
   },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, marginBottom: spacing.md },
-  headIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  headText: { flex: 1 },
-  headTitle: { fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
-  count: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
-  countText: { fontSize: 12, fontWeight: '800', color: colors.primaryDark },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 },
-  label: { fontSize: 13, fontWeight: '800', color: colors.text },
-  counter: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
+  number: { position: 'absolute', right: spacing.md, bottom: spacing.sm, fontSize: 11, fontWeight: '700', color: colors.muted },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -223,11 +203,9 @@ const makeStyles = (colors, isDark) => ({
   // Same columns and gap as the Time / Money / Energy buttons below them.
   questions: { flexDirection: 'row', gap: spacing.sm, marginBottom: 6 },
   question3: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.6, textTransform: 'uppercase' },
-  sectionLabel: { fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: spacing.sm },
-  suggestionsLabel: { marginTop: spacing.md },
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -(spacing.md + 4) },
+  suggestionsLine: { marginHorizontal: -(spacing.md + 4), marginTop: spacing.md },
   suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
   suggestion: {
     maxWidth: 200,
