@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -56,6 +56,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   const styles = useStyles(makeStyles);
   const [kind, setKind] = useState(presetKind || null);
   const [idea, setIdea] = useState(null);
+  const [typed, setTyped] = useState(''); // your own idea, typed in
   const [hours, setHours] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -64,6 +65,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
     if (!visible) return;
     setKind(presetKind || null);
     setIdea(null);
+    setTyped('');
     setHours(null);
   }, [visible, presetKind]);
 
@@ -71,6 +73,10 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   const ideas = kind ? fillIdeas(kind, { role, schedule, fills }).slice(0, 6) : [];
   const color = (k) => colors.chart[k];
   const tick = () => Haptics.selectionAsync().catch(() => {});
+  const choose = (name) => {
+    setIdea(name);
+    if (name && !hours) setHours(choices.length === 1 ? choices[0] : null);
+  };
 
   const reinvest = async () => {
     if (!kind || !idea || !hours) return;
@@ -90,6 +96,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.avoid} pointerEvents="box-none">
       <Animated.View entering={SlideInDown.duration(300)} style={styles.sheet} accessibilityViewIsModal>
         <View style={styles.grab} />
         <Text style={styles.title}>Give {h(left)} a day a new job</Text>
@@ -105,6 +112,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
                   tick();
                   setKind(k);
                   setIdea(null);
+                  setTyped('');
                   setHours(null);
                 }}
                 accessibilityRole="button"
@@ -121,16 +129,17 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
         {kind ? (
           <Animated.View key={kind} entering={FadeIn.duration(200)} style={styles.block}>
             <Text style={styles.label}>Spend it on</Text>
-            <View style={styles.chips}>
+            {/* Ideas on one line (scroll for more), or type your own below. */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.chipsLine}>
               {ideas.map(({ name }) => {
-                const on = idea === name;
+                const on = idea === name && !typed;
                 return (
                   <Pressable
                     key={name}
                     onPress={() => {
                       tick();
-                      setIdea(name);
-                      setHours(choices.length === 1 ? choices[0] : null);
+                      setTyped('');
+                      choose(name);
                     }}
                     accessibilityRole="button"
                     accessibilityState={{ selected: on }}
@@ -141,7 +150,20 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
+            <TextInput
+              value={typed}
+              onChangeText={(t) => {
+                setTyped(t);
+                choose(t.trim() || null);
+              }}
+              placeholder="Or type your own…"
+              placeholderTextColor={colors.muted}
+              maxLength={60}
+              returnKeyType="done"
+              accessibilityLabel="Your own idea"
+              style={[styles.input, typed.trim() && { borderColor: color(kind) }]}
+            />
           </Animated.View>
         ) : null}
 
@@ -170,19 +192,17 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
           </Animated.View>
         ) : null}
 
-        <Button title="Reinvest" icon="checkmark" onPress={reinvest} disabled={!hours} loading={saving} style={styles.button} />
+        <Button title="Reinvest" icon="checkmark" onPress={reinvest} disabled={!hours || !idea} loading={saving} style={styles.button} />
       </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const makeStyles = (colors) => ({
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,23,22,0.45)' },
+  avoid: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
@@ -199,6 +219,8 @@ const makeStyles = (colors) => ({
   block: { marginTop: spacing.md },
   label: { fontSize: 12, fontWeight: '700', color: colors.muted, marginBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chipsLine: { flexDirection: 'row', gap: 6, paddingRight: spacing.lg },
+  input: { marginTop: spacing.sm + 2, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surfaceAlt, fontSize: 15, color: colors.text },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.text },
   button: { marginTop: spacing.lg },
