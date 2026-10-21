@@ -46,9 +46,13 @@ function buildHandoffs(user) {
   const o = user.onboarding || {};
   const fills = (user.fills || []).map((f) => (f.toObject ? f.toObject() : f));
 
+  // Weekly check-ins, oldest first (the last half year is plenty for the app).
+  const checkIns = (user.checkIns || []).map((x) => (x.toObject ? x.toObject() : x)).slice(-26);
+
   return {
     handoffs: items,
     fills,
+    checkIns,
     summary: {
       drainingHours,
       boughtBackHours,

@@ -91,6 +91,25 @@ const roundSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// One weekly check-in: did each handoff stick, were the reinvested hours used, how the week felt.
+const checkInSchema = new mongoose.Schema(
+  {
+    week: { type: String, required: true }, // the Monday of the week, YYYY-MM-DD
+    at: { type: Date, default: Date.now },
+    handoffs: {
+      type: [{ activity: { type: String, maxlength: 60 }, answer: { type: String, enum: ['kept', 'slipped'] }, _id: false }],
+      default: [],
+    },
+    fills: {
+      type: [{ activity: { type: String, maxlength: 60 }, answer: { type: String, enum: ['yes', 'partly', 'no'] }, _id: false }],
+      default: [],
+    },
+    feeling: { type: Number, min: 1, max: 4, default: null },
+    confirmedHours: { type: Number, default: 0 }, // hours a week, from the handoffs that stuck
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     // Guests start using the app right away; name, email and password come later if they sign up.
@@ -107,6 +126,7 @@ const userSchema = new mongoose.Schema(
     handoffs: { type: [handoffSchema], default: [] },
     fills: { type: [fillSchema], default: [] },
     rounds: { type: [roundSchema], default: [] },
+    checkIns: { type: [checkInSchema], default: [] },
   },
   { timestamps: true }
 );

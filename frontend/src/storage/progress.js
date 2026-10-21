@@ -77,24 +77,26 @@ async function readHistory() {
 
 /**
  * Notes this week's hours bought back (a week keeps its highest). Returns the last `count` weeks,
- * oldest first, and `totalHours`: every week so far added up.
+ * oldest first, and `totalHours`: every week so far added up. `confirmed` ({ [weekKey]: hours },
+ * from weekly check-ins) replaces the estimate for those weeks.
  */
-export async function recordWeeklyBoughtBack(hoursAWeek, count = 5) {
+export async function recordWeeklyBoughtBack(hoursAWeek, count = 5, confirmed = {}) {
   const map = await readHistory();
   const now = weekKey();
   map[now] = Math.max(map[now] || 0, hoursAWeek);
   const keys = Object.keys(map).sort().slice(-MAX_WEEKS);
   const kept = Object.fromEntries(keys.map((k) => [k, map[k]]));
   await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(kept)).catch(() => {});
+  const hoursFor = { ...kept, ...confirmed };
   // The last `count` weeks up to this one, with empty weeks as 0.
   const weeks = [];
   const cursor = new Date();
   for (let i = 0; i < count; i += 1) {
     const k = weekKey(cursor);
-    weeks.unshift({ key: k, hours: kept[k] || 0, now: i === 0 });
+    weeks.unshift({ key: k, hours: hoursFor[k] || 0, now: i === 0, confirmed: k in confirmed });
     cursor.setDate(cursor.getDate() - 7);
   }
-  const totalHours = Object.values(kept).reduce((t, x) => t + (Number(x) || 0), 0);
+  const totalHours = Object.values(hoursFor).reduce((t, x) => t + (Number(x) || 0), 0);
   return { weeks, totalHours };
 }
 

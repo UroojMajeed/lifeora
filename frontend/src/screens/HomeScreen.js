@@ -9,6 +9,9 @@ import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
 import TimeBackCard from '../components/TimeBackCard';
+import CardHeader, { homeCard } from '../components/CardHeader';
+import Button from '../components/Button';
+import { checkInStatus } from '../constants/checkin';
 import MilestoneSheet from '../components/MilestoneSheet';
 import { markMilestones } from '../storage/milestones';
 import { milestoneLine, reachedMilestones } from '../constants/milestones';
@@ -35,7 +38,7 @@ const SHOW_MILESTONE_SHEET = false;
 
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, summary, refresh: refreshHandoffs, update, updateFills } = useHandoffs();
+  const { handoffs, fills, checkIns = [], summary, refresh: refreshHandoffs, update, updateFills } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
@@ -61,8 +64,16 @@ export default function HomeScreen({ navigation }) {
 
   // This week's hours bought back join the weekly history (kept on this phone), for the time-back card.
   useEffect(() => {
-    if (summary) recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6).then(setTimeBack);
-  }, [summary, bought]);
+    if (!summary) return;
+    const confirmed = Object.fromEntries(checkIns.map((x) => [x.week, x.confirmedHours || 0]));
+    recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6, confirmed).then(setTimeBack);
+  }, [summary, bought, checkIns]);
+
+  // The weekly check-in: a card on Home when it's ready (Friday to Sunday).
+  const checkIn = checkInStatus({ checkIns, handoffs, fills });
+  // Last check-in's reinvested hours not (fully) used: a gentle word on the Reinvest card.
+  const lastCheckIn = checkIns[checkIns.length - 1];
+  const reinvestNudge = lastCheckIn?.fills?.some((x) => x.answer !== 'yes') ? 'Protect your reinvested hours this week' : null;
 
   // A milestone reached since last time: celebrate the newest one, once (only while on screen).
   useEffect(() => {
@@ -143,6 +154,12 @@ export default function HomeScreen({ navigation }) {
         {started ? (
           <>
             {/* After a handoff: your hours back, your routine now, what to do next, Reinvest, and production. */}
+            {checkIn.state === 'due' ? (
+              <View style={styles.checkIn}>
+                <CardHeader icon="pulse" iconColor={colors.primary} title="Your Weekly Check-in" sub="Ready · about 2 minutes" />
+                <Button title="Start check-in" icon="arrow-forward" onPress={() => navigation.navigate('CheckIn')} style={styles.checkInButton} />
+              </View>
+            ) : null}
             <TimeBackCard weeks={timeBack.weeks} totalHours={timeBack.totalHours} />
             <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
@@ -152,7 +169,7 @@ export default function HomeScreen({ navigation }) {
             ) : firstTask ? (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
             ) : null}
-            <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} />
+            <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
         ) : (
@@ -181,7 +198,9 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors) => ({
+const makeStyles = (colors, isDark) => ({
+  checkIn: { ...homeCard(colors, isDark), backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
+  checkInButton: { marginTop: spacing.md },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.sm, marginBottom: spacing.md },
   hello: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   stack: { gap: spacing.md },

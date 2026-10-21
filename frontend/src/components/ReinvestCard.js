@@ -47,7 +47,7 @@ function hourChoices(left) {
  * Reinvest (the book's Fill): the hours you bought back get a new job. How much is free and how much
  * is used, two ways to spend it (grow the business / invest in yourself), ideas for each, and the hours. `free` is hours a day bought back.
  */
-export default function ReinvestCard({ free, fills = [], role, schedule = [], onSave, style }) {
+export default function ReinvestCard({ free, fills = [], role, schedule = [], onSave, nudge, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [kind, setKind] = useState(null);
@@ -114,7 +114,7 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
         icon="leaf"
         iconColor={colors.chart.production}
         title="Reinvest Your Time"
-        sub={cheerLine(used, allUsed)}
+        sub={nudge || cheerLine(used, allUsed)}
         right={saving ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       />
 

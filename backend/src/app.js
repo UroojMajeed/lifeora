@@ -8,6 +8,7 @@ const onboardingRoutes = require('./routes/onboardingRoutes');
 const handoffsRoutes = require('./routes/handoffsRoutes');
 const fillsRoutes = require('./routes/fillsRoutes');
 const roundsRoutes = require('./routes/roundsRoutes');
+const checkInsRoutes = require('./routes/checkInsRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/handoffs', handoffsRoutes);
 app.use('/api/fills', fillsRoutes);
 app.use('/api/rounds', roundsRoutes);
+app.use('/api/checkins', checkInsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

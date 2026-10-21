@@ -8,6 +8,7 @@ import CheckInsScreen from '../screens/CheckInsScreen';
 import MyDayScreen from '../screens/MyDayScreen';
 import MeScreen from '../screens/MeScreen';
 import { useHandoffs } from '../context/HandoffsContext';
+import { checkInStatus } from '../constants/checkin';
 import { useTheme } from '../theme/ThemeContext';
 import { brand } from '../theme';
 import { fontFamilyFor } from '../theme/fonts';
@@ -25,11 +26,12 @@ const TABS = [
 
 const SCREENS = { Home: HomeScreen, Handoffs: HandoffsScreen, CheckIns: CheckInsScreen, MyDay: MyDayScreen, Me: MeScreen };
 
-/** The app after onboarding: five tabs. Check-ins is a preview for now (room to grow). */
+/** The app after onboarding: five tabs. Check-ins shows a badge when this week's check-in is ready. */
 export default function MainTabs() {
   const { colors, isDark } = useTheme();
-  const { handoffs } = useHandoffs();
+  const { handoffs, fills, checkIns } = useHandoffs();
   const remaining = handoffs.filter((h) => h.status !== 'done').length;
+  const checkInDue = checkInStatus({ checkIns, handoffs, fills }).state === 'due';
 
   return (
     <Tab.Navigator
@@ -80,10 +82,10 @@ export default function MainTabs() {
           options={
             name === 'Handoffs' && remaining
               ? { tabBarBadge: remaining }
-              : name === 'CheckIns'
+              : name === 'CheckIns' && checkInDue
                 ? {
-                    tabBarBadge: 'Soon',
-                    tabBarBadgeStyle: { backgroundColor: brand.apricot, color: brand.ink, fontFamily: fontFamilyFor('700'), fontSize: 9 },
+                    tabBarBadge: '1',
+                    tabBarBadgeStyle: { backgroundColor: brand.apricot, color: brand.ink, fontFamily: fontFamilyFor('700'), fontSize: 10 },
                   }
                 : undefined
           }

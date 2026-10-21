@@ -4,7 +4,7 @@ import { recordMove } from '../storage/progress';
 
 const HandoffsContext = createContext(null);
 
-const EMPTY = { handoffs: [], fills: [], summary: null };
+const EMPTY = { handoffs: [], fills: [], checkIns: [], summary: null };
 
 /** Shared handoffs, fills and totals for Home, Handoffs, each handoff's detail screen and Fill. */
 export function HandoffsProvider({ children }) {
@@ -63,9 +63,17 @@ export function HandoffsProvider({ children }) {
     }
   }, []);
 
+  /** Saves this week's check-in (handoffs that slipped back become yours again). */
+  const saveCheckIn = useCallback(async (checkIn) => {
+    const res = await api.saveCheckIn(checkIn);
+    setData(res);
+    recordMove();
+    return res;
+  }, []);
+
   const value = useMemo(
-    () => ({ ...data, loading, error, refresh, update, updateFills }),
-    [data, loading, error, refresh, update, updateFills]
+    () => ({ ...data, loading, error, refresh, update, updateFills, saveCheckIn }),
+    [data, loading, error, refresh, update, updateFills, saveCheckIn]
   );
   return <HandoffsContext.Provider value={value}>{children}</HandoffsContext.Provider>;
 }

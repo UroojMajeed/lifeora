@@ -47,6 +47,7 @@ export const api = {
   getHandoffs: () => request('/handoffs'),
   updateFills: (fills) => request('/fills', { method: 'PUT', body: { fills } }),
   startNextRound: () => request('/rounds/next', { method: 'POST' }),
+  saveCheckIn: (checkIn) => request('/checkins', { method: 'POST', body: checkIn }),
   updateHandoff: (activity, patch) =>
     request(`/handoffs/${encodeURIComponent(activity)}`, { method: 'PUT', body: patch }),
 };
