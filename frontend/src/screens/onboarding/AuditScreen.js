@@ -11,7 +11,7 @@ import AuditStats from '../../components/AuditStats';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
-import { spacing } from '../../theme';
+import { radius, spacing } from '../../theme';
 
 const MAX_ACTIVITIES = 30;
 
@@ -211,8 +211,13 @@ export default function AuditScreen({ navigation, route }) {
               <AuditStats items={items} style={styles.stats} />
               <View style={styles.listTop}>
                 {items.length < MAX_ACTIVITIES ? (
-                  <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
-                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Pressable
+                    onPress={() => show('form')}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    style={({ pressed }) => [styles.addMore, pressed && { opacity: 0.75, transform: [{ scale: 0.97 }] }]}
+                  >
+                    <Ionicons name="add" size={18} color={colors.primary} />
                     <Text style={styles.doneText}>Add another task</Text>
                   </Pressable>
                 ) : null}
@@ -285,7 +290,8 @@ const makeStyles = (colors) => ({
   // "Done": short and outlined, on the right, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
   doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },
-  addMore: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: spacing.xs },
+  // A small outlined pill: clearly a button, quieter than See your DRIP Matrix.
+  addMore: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },
   rows: { gap: spacing.sm + 2 },
   actionRow: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   actionButton: { minHeight: 48, paddingHorizontal: spacing.lg + 4, maxWidth: '100%' },
