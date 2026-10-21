@@ -85,6 +85,12 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
       >
         <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
+        {/* One short example, on the first task only: pale and smaller than real text, so it never looks filled. */}
+        {!form.name && !items.length ? (
+          <Text pointerEvents="none" style={styles.hint}>
+            e.g. Invoicing
+          </Text>
+        ) : null}
         <TextInput
           ref={inputRef}
           value={form.name}
@@ -196,6 +202,7 @@ const makeStyles = (colors, isDark) => ({
   inputBoxFocused: { borderColor: colors.primary },
   inputBoxError: { borderColor: colors.error },
   inputIcon: { marginTop: 2 },
+  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, top: 16, fontSize: 14, color: colors.muted, opacity: 0.6 },
   input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
