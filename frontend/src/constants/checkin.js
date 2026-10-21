@@ -10,8 +10,6 @@ export const FEELINGS = [
 export const feelingOf = (value) => FEELINGS.find((f) => f.value === value) || null;
 
 const OPENS_ON = 5; // Friday (getDay: Sunday 0 … Saturday 6)
-// TEMP for testing: the check-in is open every day. Set back to false after.
-const OPEN_EVERY_DAY = true;
 const pad = (n) => String(n).padStart(2, '0');
 
 /** Monday of the date's week, as YYYY-MM-DD in local time. */
@@ -48,7 +46,7 @@ export function checkInStatus({ checkIns = [], handoffs = [], fills = [] }, now 
   if (done) return { state: 'done', week, entry: done };
   if (!q.handoffs.length && !q.fills.length && !checkIns.length) return { state: 'none', week };
   const day = now.getDay();
-  if (OPEN_EVERY_DAY || day >= OPENS_ON || day === 0) return { state: 'due', week };
+  if (day >= OPENS_ON || day === 0) return { state: 'due', week };
   return { state: 'soon', week, daysToGo: OPENS_ON - day };
 }
 
