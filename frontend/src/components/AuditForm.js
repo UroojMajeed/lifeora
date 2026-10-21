@@ -93,8 +93,6 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           onSubmitEditing={submitName}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="What's one task in your day?"
-          placeholderTextColor={colors.muted}
           keyboardAppearance={isDark ? 'dark' : 'light'}
           maxLength={60}
           multiline
