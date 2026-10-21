@@ -12,7 +12,6 @@ import { radius, spacing } from '../theme';
 // Shared by the Reinvest cards: the two ways to spend freed time, their icons, and the picking sheet.
 export const KINDS = ['production', 'investment'];
 export const KIND_ICONS = { production: 'briefcase', investment: 'heart' };
-export const KIND_SHORT = { production: 'Business', investment: 'You' };
 export const h = (n) => `${Math.round(n * 100) / 100} h`;
 
 // An icon for an idea, by what it's about (a sparkle when nothing matches).
