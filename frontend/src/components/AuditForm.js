@@ -195,7 +195,7 @@ const makeStyles = (colors, isDark) => ({
     paddingBottom: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.muted, // a clear outline, so it reads as a field to write in
+    borderColor: colors.borderStrong, // a clear outline, so it reads as a field to write in
     backgroundColor: colors.surface, // white, so it reads as empty until you type
   },
   // Typing: a teal edge.

@@ -19,6 +19,7 @@ export const lightColors = {
   text: brand.ink,
   muted: '#4F6662',
   border: '#DCEAE5',
+  borderStrong: '#B8CBC6', // a field's outline: a step darker than border
 
   primary: brand.teal, // buttons, selections, progress
   primaryDark: brand.evergreen, // brand text, links and icons on light
@@ -85,6 +86,7 @@ export const darkColors = {
   text: '#E8F7F3',
   muted: '#9BB6B0',
   border: '#21403D',
+  borderStrong: '#35605B',
 
   primary: '#3FB3A6',
   primaryDark: brand.mint,
