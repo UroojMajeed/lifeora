@@ -50,9 +50,8 @@ export function useCheer() {
 /**
  * The picking sheet: business or you (preset when opened from a bucket), an idea, the hours, then
  * Reinvest. Give it a new `key` for each opening, so it starts fresh with its content already in
- * place (the Modal slides it up whole).
- *
- * Reinvest. `left` is the free hours a day; `onSave(nextFills)` saves; `onDone(fill)` after it saved.
+ * place (the Modal slides it up whole). `left` is the free hours a day; `onSave(nextFills)` saves;
+ * `onDone(fill)` after it saved.
  */
 export default function ReinvestSheet({ visible, presetKind, left, fills = [], role, schedule = [], onSave, onDone, onClose }) {
   const { colors } = useTheme();
