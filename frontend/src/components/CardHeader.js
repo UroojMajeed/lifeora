@@ -14,13 +14,14 @@ export const homeCard = (colors, isDark) => ({
 
 /**
  * The one header for Home's cards: an icon tile, a title and an optional line under it, and an
- * optional thing on the right (a chip, a spinner). Same sizes on every card.
+ * optional thing on the right (a chip, a spinner). Same sizes on every card. `iconBg` fills the
+ * icon tile (white by default).
  */
-export default function CardHeader({ icon, iconColor, title, sub, right }) {
+export default function CardHeader({ icon, iconColor, iconBg, title, sub, right }) {
   const styles = useStyles(makeStyles);
   return (
     <View style={styles.head}>
-      <View style={styles.icon}>
+      <View style={[styles.icon, iconBg && { backgroundColor: iconBg }]}>
         <Ionicons name={icon} size={17} color={iconColor} />
       </View>
       <View style={styles.main}>

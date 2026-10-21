@@ -1,8 +1,9 @@
 import { Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import CardHeader, { homeCard } from './CardHeader';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { spacing } from '../theme';
+import { brand, spacing } from '../theme';
 
 const COL = 64; // the tallest week's column, in px
 const h = (n) => `${Math.round(n * 10) / 10} h`;
@@ -24,9 +25,13 @@ export default function TimeBackCard({ weeks = [], totalHours = 0, style }) {
 
   return (
     <Animated.View entering={FadeIn.duration(500)} style={[styles.card, style]}>
+      <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.wash} />
+      {/* A soft glow behind the sun. */}
+      <View pointerEvents="none" style={styles.glow} />
       <CardHeader
-        icon="time"
-        iconColor={colors.accentText}
+        icon="sunny"
+        iconColor="#FFFFFF"
+        iconBg={brand.apricot}
         title={`${h(totalHours)} bought back`}
         sub={days >= 1 ? `About ${Math.round(days * 10) / 10} workdays of your time` : 'Your time, back for the work you love'}
       />
@@ -59,11 +64,14 @@ export default function TimeBackCard({ weeks = [], totalHours = 0, style }) {
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: { ...homeCard(colors, isDark), backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.accent }, // white with an apricot edge: apart from the peach move card
+  // A warm gold card: Home's progress number, set apart from the other cards.
+  card: { ...homeCard(colors, isDark), overflow: 'hidden', borderWidth: 1, borderColor: isDark ? 'rgba(245,185,113,0.35)' : 'rgba(245,185,113,0.6)' },
+  wash: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  glow: { position: 'absolute', width: 140, height: 140, left: -40, top: -50, borderRadius: 70, backgroundColor: '#FFFFFF', opacity: isDark ? 0.05 : 0.35 },
   weeks: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   week: { flex: 1, alignItems: 'center', gap: 4 },
   colArea: { height: COL, alignSelf: 'stretch', justifyContent: 'flex-end' },
-  col: { borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, backgroundColor: colors.accent, opacity: 0.55 },
+  col: { borderTopLeftRadius: 8, borderTopRightRadius: 8, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, backgroundColor: colors.accentText, opacity: 0.45 },
   colNow: { opacity: 1 },
   colEmpty: { height: 4, borderRadius: 2, backgroundColor: colors.calmTrack },
   weekLabel: { fontSize: 10, fontWeight: '700', color: colors.muted },
