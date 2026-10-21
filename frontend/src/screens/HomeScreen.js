@@ -68,9 +68,7 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (!isFocused || !summary) return;
     // Finished weeks only: this week's hours count once the week has really happened.
-    // TEMP for testing: count this week too, so the sheet shows right away. Set back to false after.
-    const COUNT_THIS_WEEK = true;
-    const done = timeBack.totalHours - (COUNT_THIS_WEEK ? 0 : timeBack.weeks.find((w) => w.now)?.hours || 0);
+    const done = timeBack.totalHours - (timeBack.weeks.find((w) => w.now)?.hours || 0);
     markMilestones(reachedMilestones({ hours: done, round: summary.round || 1 })).then((fresh) => {
       // Hidden for now: milestones are still saved (badges on Me), but the sheet does not slide up.
       if (SHOW_MILESTONE_SHEET && fresh.length) setMilestone(fresh[fresh.length - 1]);
