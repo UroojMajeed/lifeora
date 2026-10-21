@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
-import ReinvestCalm from '../components/ReinvestCalm';
+import ReinvestCard from '../components/ReinvestCard';
 import TimeBackCard from '../components/TimeBackCard';
 import CardHeader, { homeCard } from '../components/CardHeader';
 import Button from '../components/Button';
@@ -169,7 +169,7 @@ export default function HomeScreen({ navigation }) {
             ) : firstTask ? (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
             ) : null}
-            <ReinvestCalm free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
+            <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
         ) : (
