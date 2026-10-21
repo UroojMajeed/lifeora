@@ -22,7 +22,8 @@ function cheerLine(used, allUsed) {
 /**
  * Reinvest (the book's Fill): a bar of your freed time (business, you, and what's still free; tap a
  * part to see what's in it), and the two ways to spend it as boxes. Tapping a box slides up the
- * picking sheet for it. `free` is hours a day bought back.
+ * picking sheet for it. Once every freed hour is reinvested, a tile per new job takes the boxes' place.
+ * `free` is hours a day bought back.
  */
 export default function ReinvestCard({ free, fills = [], role, schedule = [], onSave, nudge, style }) {
   const { colors } = useTheme();
@@ -133,7 +134,25 @@ export default function ReinvestCard({ free, fills = [], role, schedule = [], on
             </Pressable>
           ))}
         </View>
-      ) : null}
+      ) : (
+        /* All of it reinvested: a tile for each new job, in place of the boxes. */
+        <View style={styles.tiles}>
+          {fills.map((x) => (
+            <View key={x.activity} style={[styles.tile, { borderColor: `${color(x.quadrant)}55` }]}>
+              <View style={[styles.kindIcon, { backgroundColor: `${color(x.quadrant)}1F` }]}>
+                <Ionicons name={iconFor(x.activity)} size={17} color={color(x.quadrant)} />
+              </View>
+              <Text style={styles.tileName} numberOfLines={2}>
+                {x.activity}
+              </Text>
+              <View style={styles.tileFoot}>
+                <Ionicons name={KIND_ICONS[x.quadrant]} size={12} color={color(x.quadrant)} />
+                <Text style={[styles.tileHours, { color: color(x.quadrant) }]}>{h(x.hours)} a day</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       <ReinvestSheet
         visible={sheet.open}
@@ -180,4 +199,10 @@ const makeStyles = (colors, isDark) => ({
   kindIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   kindTitle: { fontSize: 14, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
   kindSub: { fontSize: 12, color: colors.muted, marginTop: 2 },
+  // Once it's all reinvested: a tile per new job, two to a row.
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  tile: { width: '48%', flexGrow: 1, padding: spacing.sm + 4, borderRadius: radius.md, borderWidth: 1.5, backgroundColor: colors.surface },
+  tileName: { fontSize: 14, fontWeight: '800', color: colors.text, marginTop: spacing.sm },
+  tileFoot: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  tileHours: { fontSize: 12, fontWeight: '800' },
 });
