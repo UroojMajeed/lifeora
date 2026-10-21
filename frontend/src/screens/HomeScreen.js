@@ -30,6 +30,9 @@ import { spacing } from '../theme';
  * move, Reinvest (give the freed hours a new job), and your production time before vs now (plus
  * what you reinvested in it).
  */
+// The milestone celebration sheet on Home. Off for now (the user asked to hide it).
+const SHOW_MILESTONE_SHEET = false;
+
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
   const { handoffs, fills, summary, refresh: refreshHandoffs, update, updateFills } = useHandoffs();
@@ -69,7 +72,8 @@ export default function HomeScreen({ navigation }) {
     const COUNT_THIS_WEEK = true;
     const done = timeBack.totalHours - (COUNT_THIS_WEEK ? 0 : timeBack.weeks.find((w) => w.now)?.hours || 0);
     markMilestones(reachedMilestones({ hours: done, round: summary.round || 1 })).then((fresh) => {
-      if (fresh.length) setMilestone(fresh[fresh.length - 1]);
+      // Hidden for now: milestones are still saved (badges on Me), but the sheet does not slide up.
+      if (SHOW_MILESTONE_SHEET && fresh.length) setMilestone(fresh[fresh.length - 1]);
     });
   }, [isFocused, summary, timeBack]);
 
