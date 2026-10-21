@@ -31,7 +31,7 @@ export const lightColors = {
   goldInk: '#4A2E06', // $ on the gold coin
   goldLine: '#EBD3A8', // ring around an unpicked $
   calm: ['#E6EFFA', '#F6F9FD'], // the routine card: a soft sky wash into near-white
-  gold: ['#FFDFAA', '#FFF4DE'], // the hours-bought-back card: a warm gold wash
+  goldCard: ['#FFDFAA', '#FFF4DE'], // the hours-bought-back card: a warm gold wash
   tintMove: '#FFF1E3', // Home's move card: soft peach
   tintReinvest: '#E6F5EE', // Reinvest: soft mint (the leaf)
   tintProduction: '#FFF7DA', // Production before vs now: soft sunny yellow
@@ -96,7 +96,7 @@ export const darkColors = {
   goldInk: '#2A1A04',
   goldLine: 'rgba(245,185,113,0.4)',
   calm: ['#132233', '#112423'],
-  gold: ['#4A3416', '#2A2013'],
+  goldCard: ['#4A3416', '#2A2013'],
   tintMove: '#2A2219',
   tintReinvest: '#13302A',
   tintProduction: '#2A2615',

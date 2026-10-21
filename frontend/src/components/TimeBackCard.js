@@ -25,7 +25,7 @@ export default function TimeBackCard({ weeks = [], totalHours = 0, style }) {
 
   return (
     <Animated.View entering={FadeIn.duration(500)} style={[styles.card, style]}>
-      <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.wash} />
+      <LinearGradient colors={colors.goldCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.wash} />
       {/* A soft glow behind the sun. */}
       <View pointerEvents="none" style={styles.glow} />
       <CardHeader
