@@ -210,7 +210,6 @@ export default function AuditScreen({ navigation, route }) {
               {/* On top, so it's there without scrolling: your totals, and a way to add another task. */}
               <AuditStats items={items} style={styles.stats} />
               <View style={styles.listTop}>
-                <Text style={styles.listHead}>Tap a name or a button to change it</Text>
                 {items.length < MAX_ACTIVITIES ? (
                   <Pressable onPress={() => show('form')} hitSlop={8} accessibilityRole="button" style={styles.addMore}>
                     <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
@@ -278,8 +277,7 @@ const makeStyles = (colors) => ({
   list: { flex: 1 },
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   stats: { marginBottom: spacing.md },
-  listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
-  listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
+  listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: spacing.sm },
   // The sticky bar.
   saveNext: { marginTop: spacing.md, minHeight: 52 },
   bar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
