@@ -85,8 +85,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
       >
         <Ionicons name="create-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
-        {/* One short example, on the first task only: pale and smaller than real text, so it never looks filled. */}
-        {!form.name && !items.length ? (
+        {/* One short example: pale and smaller than real text, so it never looks filled. */}
+        {!form.name ? (
           <Text pointerEvents="none" style={styles.hint}>
             e.g. Invoicing
           </Text>
@@ -195,8 +195,8 @@ const makeStyles = (colors, isDark) => ({
     paddingBottom: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface, // white and outlined, so it reads as empty until you type
+    borderColor: colors.muted, // a clear outline, so it reads as a field to write in
+    backgroundColor: colors.surface, // white, so it reads as empty until you type
   },
   // Typing: a teal edge.
   inputBoxFocused: { borderColor: colors.primary },
