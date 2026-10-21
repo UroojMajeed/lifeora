@@ -86,6 +86,7 @@ export default function ReinvestBuckets({ free, fills = [], role, schedule = [],
       ) : null}
 
       <ReinvestSheet
+        key={openKind || "closed"}
         visible={openKind !== null}
         presetKind={openKind}
         left={left}

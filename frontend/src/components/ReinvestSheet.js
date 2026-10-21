@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Button from './Button';
@@ -49,6 +49,9 @@ export function useCheer() {
 
 /**
  * The picking sheet: business or you (preset when opened from a bucket), an idea, the hours, then
+ * Reinvest. Give it a new `key` for each opening, so it starts fresh with its content already in
+ * place (the Modal slides it up whole).
+ *
  * Reinvest. `left` is the free hours a day; `onSave(nextFills)` saves; `onDone(fill)` after it saved.
  */
 export default function ReinvestSheet({ visible, presetKind, left, fills = [], role, schedule = [], onSave, onDone, onClose }) {
@@ -60,14 +63,6 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   const [hours, setHours] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Each opening starts fresh (with the bucket's kind, if any).
-  useEffect(() => {
-    if (!visible) return;
-    setKind(presetKind || null);
-    setIdea(null);
-    setTyped('');
-    setHours(null);
-  }, [visible, presetKind]);
 
   const choices = hourChoices(left);
   const ideas = kind ? fillIdeas(kind, { role, schedule, fills }).slice(0, 6) : [];
@@ -94,10 +89,10 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.avoid} pointerEvents="box-none">
-      <Animated.View entering={SlideInDown.duration(300)} style={styles.sheet} accessibilityViewIsModal>
+      <View style={styles.sheet} accessibilityViewIsModal>
         <View style={styles.grab} />
         <Text style={styles.title}>Give {h(left)} a day a new job</Text>
 
@@ -193,7 +188,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
         ) : null}
 
         <Button title="Reinvest" icon="checkmark" onPress={reinvest} disabled={!hours || !idea} loading={saving} style={styles.button} />
-      </Animated.View>
+      </View>
       </KeyboardAvoidingView>
     </Modal>
   );
