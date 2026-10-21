@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Button from './Button';
+import BottomSheet from './BottomSheet';
 import { FILL_KINDS, fillIdeas } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -48,12 +49,19 @@ export function useCheer() {
 }
 
 /**
- * The picking sheet: business or you (preset when opened from a bucket), an idea, the hours, then
- * Reinvest. Give it a new `key` for each opening, so it starts fresh with its content already in
- * place (the Modal slides it up whole). `left` is the free hours a day; `onSave(nextFills)` saves;
- * `onDone(fill)` after it saved.
+ * The picking sheet: business or you (preset when opened from a bucket), an idea (or your own), the
+ * hours, then Reinvest. `openId` changes on each opening, so the picker starts fresh. `left` is the
+ * free hours a day; `onSave(nextFills)` saves; `onDone(fill)` after it saved.
  */
-export default function ReinvestSheet({ visible, presetKind, left, fills = [], role, schedule = [], onSave, onDone, onClose }) {
+export default function ReinvestSheet({ visible, openId, onClose, ...rest }) {
+  return (
+    <BottomSheet visible={visible} onClose={onClose}>
+      <ReinvestPicker key={openId} onClose={onClose} {...rest} />
+    </BottomSheet>
+  );
+}
+
+function ReinvestPicker({ presetKind, left, fills = [], role, schedule = [], onSave, onDone, onClose }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [kind, setKind] = useState(presetKind || null);
@@ -88,11 +96,7 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.avoid} pointerEvents="box-none">
-      <View style={styles.sheet} accessibilityViewIsModal>
-        <View style={styles.grab} />
+    <View>
         <Text style={styles.title}>Give {h(left)} a day a new job</Text>
 
         {/* Business or you */}
@@ -187,24 +191,11 @@ export default function ReinvestSheet({ visible, presetKind, left, fills = [], r
         ) : null}
 
         <Button title="Reinvest" icon="checkmark" onPress={reinvest} disabled={!hours || !idea} loading={saving} style={styles.button} />
-      </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </View>
   );
 }
 
 const makeStyles = (colors) => ({
-  backdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(10,23,22,0.45)' },
-  avoid: { flex: 1, justifyContent: 'flex-end' },
-  sheet: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: colors.surface,
-  },
-  grab: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.md },
   title: { fontSize: 20, fontWeight: '800', color: colors.text },
   kinds: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   kind: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.sm + 4, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border },

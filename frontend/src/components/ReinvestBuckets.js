@@ -17,7 +17,7 @@ const METER = 72; // a bucket's meter height, in px
 export default function ReinvestBuckets({ free, fills = [], role, schedule = [], onSave, nudge, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const [openKind, setOpenKind] = useState(null);
+  const [sheet, setSheet] = useState({ open: false, kind: null, id: 0 }); // the picking sheet
   const [cheer, setCheer] = useCheer();
 
   const used = fills.reduce((t, f) => t + f.hours, 0);
@@ -62,7 +62,7 @@ export default function ReinvestBuckets({ free, fills = [], role, schedule = [],
               </Text>
               {!allUsed ? (
                 <Pressable
-                  onPress={() => setOpenKind(k)}
+                  onPress={() => setSheet((s) => ({ open: true, kind: k, id: s.id + 1 }))}
                   accessibilityRole="button"
                   accessibilityLabel={`Add to ${KIND_SHORT[k]}`}
                   style={({ pressed }) => [styles.add, { borderColor: colors.chart[k] }, pressed && { opacity: 0.8 }]}
@@ -86,16 +86,16 @@ export default function ReinvestBuckets({ free, fills = [], role, schedule = [],
       ) : null}
 
       <ReinvestSheet
-        key={openKind || "closed"}
-        visible={openKind !== null}
-        presetKind={openKind}
+        visible={sheet.open}
+        openId={sheet.id}
+        presetKind={sheet.kind}
         left={left}
         fills={fills}
         role={role}
         schedule={schedule}
         onSave={onSave}
         onDone={setCheer}
-        onClose={() => setOpenKind(null)}
+        onClose={() => setSheet((s) => ({ ...s, open: false }))}
       />
     </View>
   );
