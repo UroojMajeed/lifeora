@@ -27,7 +27,15 @@ export default function ReinvestCalm({ free, fills = [], role, schedule = [], on
         icon="leaf"
         iconColor={colors.chart.production}
         title="Reinvest Your Time"
-        sub={nudge || (allUsed ? 'Every freed hour has a new job' : `${h(left)} a day is free again`)}
+        sub={nudge || (allUsed ? 'Every freed hour has a new job' : 'Give your freed hours a new job')}
+        right={
+          !allUsed ? (
+            <View style={styles.free}>
+              <Ionicons name="hourglass-outline" size={12} color={colors.accentText} />
+              <Text style={styles.freeText}>{h(left)} free</Text>
+            </View>
+          ) : null
+        }
       />
 
       {fills.length ? (
@@ -82,6 +90,8 @@ export default function ReinvestCalm({ free, fills = [], role, schedule = [], on
 
 const makeStyles = (colors, isDark) => ({
   card: { ...homeCard(colors, isDark), backgroundColor: colors.tintReinvest },
+  free: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: colors.accentSoft, borderWidth: 1, borderColor: colors.accent },
+  freeText: { fontSize: 12, fontWeight: '800', color: colors.accentText },
   list: { marginTop: spacing.md, paddingHorizontal: spacing.sm + 4, borderRadius: radius.md, backgroundColor: colors.calmTrack },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm + 2 },
   rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
