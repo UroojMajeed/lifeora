@@ -193,6 +193,16 @@ export default function AuditScreen({ navigation, route }) {
                   onReveal={() => listRef.current?.scrollToEnd({ animated: true })}
                 />
               ) : null}
+              {/* Save & next, right under the task it saves. */}
+              {items.length < MAX_ACTIVITIES ? (
+                <Button
+                  title="Save & next"
+                  icon="arrow-forward"
+                  onPress={() => formRef.current?.save()}
+                  disabled={!formReady}
+                  style={styles.saveNext}
+                />
+              ) : null}
             </>
           ) : (
             <>
@@ -230,25 +240,15 @@ export default function AuditScreen({ navigation, route }) {
           {keyboardHeight ? <View style={{ height: keyboardHeight }} /> : null}
         </ScrollView>
 
-        {/* The sticky bar, in thumb reach: Done and Save & next on the form. It stays put (the keyboard
-            covers it while you type), so nothing moves. */}
-        {mode === 'form' ? (
+        {/* Done, on the lower right once there's a task (it stays put; the keyboard covers it while you type). */}
+        {mode === 'form' && items.length ? (
           <View style={styles.bar}>
-            {items.length ? (
-              <Button
-                title={`Done · ${items.length}`}
-                icon="checkmark"
-                variant="secondary"
-                onPress={() => show('list')}
-                style={[styles.barButton, styles.done]}
-              />
-            ) : null}
             <Button
-              title="Save & next"
-              icon="arrow-forward"
-              onPress={() => formRef.current?.save()}
-              disabled={!formReady}
-              style={[styles.barButton, styles.barMain]}
+              title={`Done · ${items.length}`}
+              icon="checkmark"
+              variant="secondary"
+              onPress={() => show('list')}
+              style={[styles.barButton, styles.done]}
             />
           </View>
         ) : null}
@@ -280,10 +280,10 @@ const makeStyles = (colors) => ({
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm },
   listHead: { flex: 1, fontSize: 13, fontWeight: '600', color: colors.muted },
   // The sticky bar.
-  bar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  barButton: { minHeight: 52 },
-  barMain: { flex: 1 },
-  // "Done": short and outlined, so it never competes with "Save & next".
+  saveNext: { marginTop: spacing.md, minHeight: 52 },
+  bar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  barButton: { minHeight: 48 },
+  // "Done": short and outlined, on the right, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
   doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },
   addMore: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: spacing.xs },
