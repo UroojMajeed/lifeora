@@ -7,7 +7,6 @@ import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
 import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
-import ReinvestCalm from '../components/ReinvestCalm';
 import ReinvestBuckets from '../components/ReinvestBuckets';
 import TimeBackCard from '../components/TimeBackCard';
 import CardHeader, { homeCard } from '../components/CardHeader';
@@ -170,10 +169,6 @@ export default function HomeScreen({ navigation }) {
             ) : firstTask ? (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
             ) : null}
-            {/* TEMP for testing: both Reinvest designs, A (calm list) and B (two buckets); one gets deleted. */}
-            <Text style={styles.testLabel}>Option A · calm list</Text>
-            <ReinvestCalm free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
-            <Text style={styles.testLabel}>Option B · two buckets</Text>
             <ReinvestBuckets free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
@@ -206,7 +201,6 @@ export default function HomeScreen({ navigation }) {
 const makeStyles = (colors, isDark) => ({
   checkIn: { ...homeCard(colors, isDark), backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
   checkInButton: { marginTop: spacing.md },
-  testLabel: { fontSize: 12, fontWeight: '800', color: colors.accentText, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: -spacing.sm },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: spacing.sm, marginBottom: spacing.md },
   hello: { flex: 1, fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
   stack: { gap: spacing.md },
