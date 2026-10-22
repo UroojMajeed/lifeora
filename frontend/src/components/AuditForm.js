@@ -2,18 +2,19 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { AuditFields, FIELDS } from './AuditTaskCard';
+import { FIELDS } from './AuditTaskCard';
+import AuditChoices from './AuditChoices';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { cardShadow, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
 
 /**
- * The audit's quick-add card, showing only what's needed: at first just the task box and quick picks
- * under it; once the task has a name, the Time, Money and Energy buttons (the same as the routine's
- * cards). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
+ * The audit's add-a-task form, filling the page and showing only what's needed: at first just the task
+ * box and quick picks under it; once the task has a name, its three questions all open at once (how
+ * long, what it pays, how it feels: one tap each). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
  * with `onReadyChange(ready)` telling it when everything is filled in.
  */
 const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onReadyChange, onReveal }, ref) {
@@ -53,12 +54,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
     if (!name || duplicate) return;
     openFirstMissing(form);
   };
-  // An answer: the next unset button opens (or none, once all three are set).
-  const change = (patch) => {
-    const next = { ...form, ...patch };
-    setForm(next);
-    openFirstMissing(next);
-  };
+  // An answer: just set it (all three questions are open, so the page stays still).
+  const change = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   useImperativeHandle(ref, () => ({
     save() {
@@ -143,31 +140,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </>
       ) : null}
 
-      {/* Time, Money and Energy: their own section (a hairline and a label), so they never blend with
-          the suggestions above. The same buttons as on the routine's cards. */}
-      {name ? (
-      <View style={styles.fields}>
-        {/* Each question sits right above its own button (the same three columns as the buttons). */}
-        <View style={styles.questions}>
-          {['How long', 'What it pays', 'How it feels'].map((q) => (
-            <Text key={q} style={styles.question3} numberOfLines={1} adjustsFontSizeToFit>
-              {q}
-            </Text>
-          ))}
-        </View>
-        <AuditFields
-          item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }}
-          field={field}
-          onField={(k) => {
-            Keyboard.dismiss();
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setField(k);
-            reveal();
-          }}
-          onChange={change}
-        />
-      </View>
-      ) : null}
+      {/* The three questions, all open at once: one tap each. */}
+      {name ? <AuditChoices item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} /> : null}
     </View>
   );
 });
@@ -175,14 +149,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
-  card: {
-    padding: spacing.md + 4,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: isDark ? colors.border : colors.primarySoft,
-    ...cardShadow(colors, isDark),
-  },
+  card: {},
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
   number: { position: 'absolute', right: spacing.md, bottom: spacing.sm, fontSize: 11, fontWeight: '700', color: colors.muted },
   inputBox: {
@@ -206,12 +173,10 @@ const makeStyles = (colors, isDark) => ({
   input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
-  questions: { flexDirection: 'row', gap: spacing.sm, marginBottom: 6 },
-  question3: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '800', color: colors.muted, letterSpacing: 0.6, textTransform: 'uppercase' },
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -(spacing.md + 4), marginTop: spacing.md },
-  suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
+  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.md },
+  suggestions: { gap: 6, paddingHorizontal: spacing.lg },
   suggestion: {
     maxWidth: 200,
     flexDirection: 'row',
@@ -223,5 +188,4 @@ const makeStyles = (colors, isDark) => ({
     backgroundColor: colors.surfaceAlt,
   },
   suggestionText: { fontSize: 13, fontWeight: '600', color: colors.text, flexShrink: 1 },
-  fields: { marginTop: spacing.md + 4, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
 });
