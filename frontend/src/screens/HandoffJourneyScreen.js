@@ -120,7 +120,16 @@ export default function HandoffJourneyScreen({ navigation, route }) {
       ) : null}
 
       <BottomSheet visible={sheet.open} onClose={() => setSheet((s) => ({ ...s, open: false }))}>
-        <StepSheet key={sheet.id} stepKey={sheet.key} task={task} onDone={() => setSheet((s) => ({ ...s, open: false }))} />
+        <StepSheet
+          key={sheet.id}
+          stepKey={sheet.key}
+          task={task}
+          onDone={(patch) => {
+            setSheet((s) => ({ ...s, open: false }));
+            // Handed over (or dropped): straight back to Home, where the next task is waiting.
+            if (patch.status === 'done') setTimeout(() => navigation.navigate('Main', { screen: 'Home' }), 260);
+          }}
+        />
       </BottomSheet>
     </Screen>
   );
@@ -148,7 +157,7 @@ function StepSheet({ stepKey, task, onDone }) {
     try {
       await update(task.activity, patch);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      onDone();
+      onDone(patch);
     } catch (err) {
       Alert.alert("Couldn't save that", err.message);
     } finally {
