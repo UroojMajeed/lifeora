@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import StepSlider from './StepSlider';
 import { HOUR_OPTIONS, MONEY_CAPTION, MONEY_LEVELS, dollars, usualHours } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -14,7 +14,7 @@ const ENERGY = [
 
 /**
  * The add-a-task form's three questions, all open at once: how long it takes a day (a row of time
- * pills you scroll sideways), what it pays (a 5-step $ slider, its meaning in words), and how it feels (two
+ * pills you scroll sideways), what it pays (five $ chips that fill like a rating, the meaning in words), and how it feels (two
  * buttons). The rows stretch to the
  * screen's width. `item` is the task so far; `onChange(patch)` sets an answer.
  */
@@ -51,20 +51,33 @@ export default function AuditChoices({ item, onChange }) {
         })}
       </ScrollView>
 
-      {/* What it pays: a 5-step slider, its meaning in words. */}
-      <View style={styles.qRow}>
-        <Text style={styles.qInline}>What does it pay?</Text>
-        <Text style={[styles.value, styles.money, !item.money && styles.valueIdle]}>{item.money ? dollars(item.money) : 'Drag to set'}</Text>
+      {/* What it pays: five chips that fill up like a rating, the chosen one solid gold, its meaning in words. */}
+      <Text style={styles.q}>What does it pay?</Text>
+      <View style={styles.coins} accessibilityRole="radiogroup">
+        {MONEY_LEVELS.map((m) => {
+          const on = item.money === m;
+          const under = Boolean(item.money) && m < item.money; // the scale filled up to your pick
+          return (
+            <Pressable
+              key={m}
+              onPress={() => pick({ money: m })}
+              accessibilityRole="radio"
+              hitSlop={4}
+              accessibilityState={{ checked: on }}
+              accessibilityLabel={`${dollars(m)}: ${MONEY_CAPTION[m]}`}
+              style={({ pressed }) => [styles.coin, under && styles.coinUnder, on && styles.coinOn, pressed && styles.pressed]}
+            >
+              {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fill} /> : null}
+              <Text style={[styles.coinText, (on || under) && styles.coinTextFilled, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
+                {dollars(m)}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
-      <StepSlider steps={MONEY_LEVELS} value={item.money} start={1} color={colors.gold[1]} label={(v) => `${dollars(v)}, ${MONEY_CAPTION[v]}`} onChange={(v) => onChange({ money: v })} />
-      <View style={styles.ends}>
-        {MONEY_LEVELS.map((m) => (
-          <Text key={m} style={[styles.end, item.money === m && styles.endOn]}>
-            {dollars(m)}
-          </Text>
-        ))}
-      </View>
-      <Text style={styles.scale}>{item.money ? MONEY_CAPTION[item.money] : '$ anyone could do it · $$$$$ only you, big money'}</Text>
+      <Text style={[styles.scale, item.money && styles.scaleOn]}>
+        {item.money ? MONEY_CAPTION[item.money] : '$ anyone could do it · $$$$$ only you, big money'}
+      </Text>
 
       {/* How it feels */}
       <Text style={styles.q}>How does it feel?</Text>
@@ -105,14 +118,17 @@ const makeStyles = (colors) => ({
   hourHint: { borderStyle: 'dashed', borderColor: colors.primary },
   hourText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.text },
   textOn: { color: colors.onColor, fontWeight: '800' },
-  qRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: spacing.md + 4 },
-  qInline: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: colors.text },
-  value: { fontSize: 16, fontWeight: '800', color: colors.primary },
-  money: { color: colors.accentText },
-  valueIdle: { fontSize: 13, fontWeight: '600', color: colors.muted },
-  ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -2 },
-  end: { fontSize: 12, fontWeight: '600', color: colors.muted },
-  endOn: { color: colors.accentText, fontWeight: '800' },
+  // Money: five chips across the width, filling like a rating.
+  coins: { flexDirection: 'row', gap: 6 },
+  coin: { flex: 1, height: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, borderRadius: radius.pill, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.goldLine, backgroundColor: colors.surface },
+  coinUnder: { borderColor: colors.gold[0], backgroundColor: colors.accentSoft },
+  coinOn: { borderColor: colors.gold[1] },
+  pressed: { transform: [{ scale: 0.96 }] },
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  coinText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.muted },
+  coinTextFilled: { color: colors.accentText },
+  coinTextOn: { color: colors.goldInk, fontWeight: '800' },
+  scaleOn: { color: colors.accentText, fontWeight: '700' },
   scale: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 6 },
   // Energy: two big buttons, half the width each, the same height as the app's main buttons.
   feels: { flexDirection: 'row', gap: spacing.sm },
