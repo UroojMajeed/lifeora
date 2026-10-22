@@ -214,6 +214,20 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                   style={styles.saveNext}
                 />
               ) : null}
+              {/* Done, right under Save & next on the right, once there's a task. */}
+              {items.length ? (
+                <View style={styles.doneRow}>
+                  <Button
+                    title={`Done · ${items.length}`}
+                    icon="checkmark"
+                    iconColor={colors.primary}
+                    variant="secondary"
+                    size="small"
+                    onPress={() => show('list')}
+                    style={styles.done}
+                  />
+                </View>
+              ) : null}
             </>
           ) : (
             <>
@@ -255,20 +269,6 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           {keyboardHeight ? <View style={{ height: keyboardHeight }} /> : null}
         </ScrollView>
 
-        {/* Done, on the lower right once there's a task (it stays put; the keyboard covers it while you type). */}
-        {mode === 'form' && items.length ? (
-          <View style={styles.bar}>
-            <Button
-              title={`Done · ${items.length}`}
-              icon="checkmark-circle"
-              iconColor={colors.success}
-              variant="secondary"
-              size="small"
-              onPress={() => show('list')}
-              style={[styles.barButton, styles.done]}
-            />
-          </View>
-        ) : null}
 
         {/* From the routine on to the DRIP Matrix (it stays put; the keyboard covers it while you type). */}
         {mode === 'list' && items.length && !inTab ? (
@@ -297,8 +297,7 @@ const makeStyles = (colors) => ({
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: spacing.sm },
   // The sticky bar.
   saveNext: { marginTop: spacing.md, minHeight: 52 },
-  bar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  barButton: {},
+  doneRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: spacing.sm + 4 },
   // "Done": short and outlined, on the right, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
   doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },
