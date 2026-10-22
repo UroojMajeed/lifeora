@@ -1,26 +1,29 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { HOUR_OPTIONS, MONEY_CAPTION, MONEY_LEVELS, dollars, usualHours } from '../constants/content';
+import StepSlider from './StepSlider';
+import { MONEY_CAPTION, MONEY_LEVELS, dollars, usualHours } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-const short = (h) => (h < 1 ? `${h * 60}m` : `${h}h`);
+// Time in 15-minute steps up to 8 hours.
+const HOURS = Array.from({ length: 32 }, (_, i) => (i + 1) / 4);
+const time = (h) => (h < 1 ? `${h * 60} min` : `${h} h`);
 const ENERGY = [
   { key: 'draining', label: 'Drains me', icon: 'battery-dead', tone: 'error' },
   { key: 'energizing', label: 'Energizes me', icon: 'flash', tone: 'success' },
 ];
 
 /**
- * The add-a-task form's three questions, all open at once (one tap each, no buttons to open first):
- * how long it takes a day, what it pays ($ to $$$$$), and how it feels. The rows stretch to the
+ * The add-a-task form's three questions, all open at once: how long it takes a day (a slider in
+ * 15-minute steps), what it pays (a 5-step $ slider, its meaning in words), and how it feels (two
+ * buttons). The rows stretch to the
  * screen's width. `item` is the task so far; `onChange(patch)` sets an answer.
  */
 export default function AuditChoices({ item, onChange }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const usual = usualHours(item.activity);
+  const usual = usualHours(item.activity) || 1;
   const pick = (patch) => {
     Haptics.selectionAsync().catch(() => {});
     onChange(patch);
@@ -28,54 +31,31 @@ export default function AuditChoices({ item, onChange }) {
 
   return (
     <View style={styles.wrap}>
-      {/* How long */}
-      <Text style={styles.q}>How long does it take a day?</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.edge} contentContainerStyle={styles.hours}>
-        {HOUR_OPTIONS.map((h) => {
-          const on = h === item.hours;
-          const hint = !item.hours && h === usual;
-          return (
-            <Pressable
-              key={h}
-              onPress={() => pick({ hours: h, per: 'day' })}
-              accessibilityRole="radio"
-              hitSlop={4}
-              accessibilityState={{ checked: on }}
-              accessibilityLabel={`${short(h)} a day`}
-              style={[styles.hour, on && styles.hourOn, hint && styles.hourHint]}
-            >
-              <Text style={[styles.hourText, on && styles.textOn]}>{short(h)}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* What it pays */}
-      <Text style={styles.q}>What does it pay?</Text>
-      <View style={styles.coins}>
-        {MONEY_LEVELS.map((m) => {
-          const on = item.money === m;
-          return (
-            <Pressable
-              key={m}
-              onPress={() => pick({ money: m })}
-              accessibilityRole="radio"
-              hitSlop={4}
-              accessibilityState={{ checked: on }}
-              accessibilityLabel={`${m} of 5: ${MONEY_CAPTION[m]}`}
-              style={[styles.coin, on && styles.coinOn]}
-            >
-              {on ? <LinearGradient colors={colors.gold} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fill} /> : null}
-              <Text style={[styles.coinText, on && styles.coinTextOn]} numberOfLines={1} adjustsFontSizeToFit>
-                {dollars(m)}
-              </Text>
-            </Pressable>
-          );
-        })}
+      {/* How long: a slider in 15-minute steps, the value shown on the right. */}
+      <View style={styles.qRow}>
+        <Text style={styles.qInline}>How long does it take a day?</Text>
+        <Text style={[styles.value, !item.hours && styles.valueIdle]}>{item.hours ? time(item.hours) : 'Drag to set'}</Text>
       </View>
-      <Text style={styles.scale}>
-        $ {MONEY_CAPTION[1].toLowerCase()} · $$$$$ {MONEY_CAPTION[5].toLowerCase()}
-      </Text>
+      <StepSlider steps={HOURS} value={item.hours} start={usual} color={colors.primary} label={(v) => `${time(v)} a day`} onChange={(v) => onChange({ hours: v, per: 'day' })} />
+      <View style={styles.ends}>
+        <Text style={styles.end}>15 min</Text>
+        <Text style={styles.end}>8 h</Text>
+      </View>
+
+      {/* What it pays: a 5-step slider, its meaning in words. */}
+      <View style={styles.qRow}>
+        <Text style={styles.qInline}>What does it pay?</Text>
+        <Text style={[styles.value, styles.money, !item.money && styles.valueIdle]}>{item.money ? dollars(item.money) : 'Drag to set'}</Text>
+      </View>
+      <StepSlider steps={MONEY_LEVELS} value={item.money} start={1} color={colors.gold[1]} label={(v) => `${dollars(v)}, ${MONEY_CAPTION[v]}`} onChange={(v) => onChange({ money: v })} />
+      <View style={styles.ends}>
+        {MONEY_LEVELS.map((m) => (
+          <Text key={m} style={[styles.end, item.money === m && styles.endOn]}>
+            {dollars(m)}
+          </Text>
+        ))}
+      </View>
+      <Text style={styles.scale}>{item.money ? MONEY_CAPTION[item.money] : '$ anyone could do it · $$$$$ only you, big money'}</Text>
 
       {/* How it feels */}
       <Text style={styles.q}>How does it feel?</Text>
@@ -108,32 +88,14 @@ export default function AuditChoices({ item, onChange }) {
 const makeStyles = (colors) => ({
   wrap: { marginTop: spacing.sm },
   q: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: colors.text, marginTop: spacing.md + 4, marginBottom: spacing.sm },
-  // Hours: one line, edge to edge (scroll for more).
-  edge: { marginHorizontal: -spacing.lg },
-  hours: { gap: spacing.sm, paddingHorizontal: spacing.lg },
-  hour: { height: 40, minWidth: 54, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
-  hourOn: { borderColor: colors.primary, backgroundColor: colors.primary },
-  hourHint: { borderStyle: 'dashed', borderColor: colors.primary },
-  hourText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.text },
-  textOn: { color: colors.onColor, fontWeight: '800' },
-  // Money: five coins across the width.
-  coins: { flexDirection: 'row', gap: spacing.sm },
-  coin: {
-    flex: 1,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: colors.gold[1],
-    backgroundColor: colors.accentSoft,
-  },
-  coinOn: { borderWidth: 2 },
-  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  coinText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.accentText },
-  coinTextOn: { color: colors.goldInk, fontWeight: '800' },
+  qRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: spacing.md + 4 },
+  qInline: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: colors.text },
+  value: { fontSize: 16, fontWeight: '800', color: colors.primary },
+  money: { color: colors.accentText },
+  valueIdle: { fontSize: 13, fontWeight: '600', color: colors.muted },
+  ends: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -2 },
+  end: { fontSize: 12, fontWeight: '600', color: colors.muted },
+  endOn: { color: colors.accentText, fontWeight: '800' },
   scale: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 6 },
   // Energy: two big buttons, half the width each, the same height as the app's main buttons.
   feels: { flexDirection: 'row', gap: spacing.sm },
