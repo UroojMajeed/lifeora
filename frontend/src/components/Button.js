@@ -11,8 +11,12 @@ const variants = (colors) => ({
   light: { bg: colors.white, fg: '#1B1530', border: colors.white },
 });
 
-/** Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"); `iconColor` overrides its colour. */
-export default function Button({ title, onPress, variant = 'primary', icon, iconColor, loading = false, disabled = false, style }) {
+/**
+ * Pill button. `icon` is an Ionicons name shown after the title (e.g. "arrow-forward"); `iconColor`
+ * overrides its colour. `size="small"` for secondary actions next to a main one (40 tall, 14 text).
+ */
+export default function Button({ title, onPress, variant = 'primary', size, icon, iconColor, loading = false, disabled = false, style }) {
+  const small = size === 'small';
   const { colors } = useTheme();
   const all = variants(colors);
   const v = all[variant] || all.primary;
@@ -26,6 +30,7 @@ export default function Button({ title, onPress, variant = 'primary', icon, icon
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
+        small && styles.small,
         { backgroundColor: v.bg, borderColor: v.border },
         variant === 'primary' && !isDisabled && { shadowColor: colors.primary, ...styles.glow },
         pressed && !isDisabled && styles.pressed,
@@ -37,8 +42,8 @@ export default function Button({ title, onPress, variant = 'primary', icon, icon
         <ActivityIndicator color={v.fg} />
       ) : (
         <View style={styles.row}>
-          <Text style={[styles.text, { color: v.fg }]}>{title}</Text>
-          {icon ? <Ionicons name={icon} size={iconColor ? 20 : 18} color={iconColor || v.fg} /> : null}
+          <Text style={[styles.text, small && styles.textSmall, { color: v.fg }]}>{title}</Text>
+          {icon ? <Ionicons name={icon} size={small ? 16 : iconColor ? 20 : 18} color={iconColor || v.fg} /> : null}
         </View>
       )}
     </Pressable>
@@ -54,6 +59,8 @@ const styles = StyleSheet.create(withFonts({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
+  small: { minHeight: 40, paddingHorizontal: spacing.md },
+  textSmall: { fontSize: 14, lineHeight: 18 },
   glow: { shadowOpacity: 0.3, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   // A fixed line height keeps the label exactly centred next to the icon.

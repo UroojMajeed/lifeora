@@ -263,6 +263,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
               icon="checkmark-circle"
               iconColor={colors.success}
               variant="secondary"
+              size="small"
               onPress={() => show('list')}
               style={[styles.barButton, styles.done]}
             />
@@ -297,7 +298,7 @@ const makeStyles = (colors) => ({
   // The sticky bar.
   saveNext: { marginTop: spacing.md, minHeight: 52 },
   bar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  barButton: { minHeight: 48 },
+  barButton: {},
   // "Done": short and outlined, on the right, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
   doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },

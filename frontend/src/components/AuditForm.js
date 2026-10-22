@@ -75,7 +75,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
   return (
     <View style={styles.card}>
       {/* The task: a roomy writing area (about three lines), calm text, a teal edge while you type. */}
-      {/* The whole area opens the keyboard on the first tap (not just the line with the text). */}
+      {/* The whole field opens the keyboard on the first tap. */}
       <Pressable
         onPress={() => inputRef.current?.focus()}
         accessible={false}
@@ -101,7 +101,6 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           multiline
           blurOnSubmit
           returnKeyType="done"
-          textAlignVertical="top"
           style={[styles.input, duplicate && { color: colors.error }]}
           accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
         />
@@ -151,16 +150,16 @@ export default AuditForm;
 const makeStyles = (colors, isDark) => ({
   card: {},
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
-  number: { position: 'absolute', right: spacing.md, bottom: spacing.sm, fontSize: 11, fontWeight: '700', color: colors.muted },
+  number: { fontSize: 12, fontWeight: '700', color: colors.muted },
   inputBox: {
+    // One line, like a standard text field (it grows if a long name wraps).
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 96,
+    minHeight: 52,
     paddingHorizontal: spacing.md,
-    paddingTop: 14,
-    paddingBottom: spacing.sm,
-    borderRadius: radius.lg,
+    paddingVertical: spacing.sm + 4,
+    borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.borderStrong, // a clear outline, so it reads as a field to write in
     backgroundColor: colors.surface, // white, so it reads as empty until you type
@@ -168,9 +167,9 @@ const makeStyles = (colors, isDark) => ({
   // Typing: a teal edge.
   inputBoxFocused: { borderColor: colors.primary },
   inputBoxError: { borderColor: colors.error },
-  inputIcon: { marginTop: 2 },
-  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, top: 16, fontSize: 14, color: colors.muted, opacity: 0.6 },
-  input: { flex: 1, alignSelf: 'stretch', minHeight: 70, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
+  inputIcon: {},
+  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, fontSize: 14, color: colors.muted, opacity: 0.6 },
+  input: { flex: 1, minHeight: 22, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
