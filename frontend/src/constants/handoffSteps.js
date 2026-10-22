@@ -86,4 +86,5 @@ export function startOptions(now = new Date()) {
 export const formatDay = (date) =>
   new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-export const sameDay = (a, b) => a && b && new Date(a).toDateString() === new Date(b).toDateString();
+// Always true or false (never null): it feeds accessibilityState, which Android only accepts as a boolean.
+export const sameDay = (a, b) => Boolean(a && b) && new Date(a).toDateString() === new Date(b).toDateString();
