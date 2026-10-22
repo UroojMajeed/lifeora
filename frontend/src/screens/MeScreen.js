@@ -13,6 +13,7 @@ import { boughtBackTotalHours } from '../storage/progress';
 import { milestoneList, nextMilestone, roundMilestone } from '../constants/milestones';
 import { loadMotivation } from '../storage/motivation';
 import { useOnboarding } from '../context/OnboardingContext';
+import { useHandoffs } from '../context/HandoffsContext';
 import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -46,6 +47,9 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
 /** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
 export default function MeScreen({ navigation }) {
   const { user, onboarding, startOver, signOut } = useOnboarding();
+  const { handoffs } = useHandoffs();
+  // Preview (development app only): the next task to try the delegation steps on.
+  const previewTask = handoffs.find((x) => x.status === 'mine' || x.status === 'in_progress');
   const saved = user && !user.isGuest;
   const { type } = useTheme();
   const [deleting, setDeleting] = useState(false);
@@ -175,6 +179,21 @@ export default function MeScreen({ navigation }) {
           danger
         />
       </Card>
+
+      {/* PREVIEW: work in progress, only in the development app (never in testers' updates). */}
+      {__DEV__ ? (
+        <>
+          <Text style={[type.label, styles.section]}>Preview</Text>
+          <Card style={styles.card}>
+            <Row
+              icon="flask-outline"
+              title="Delegation steps (in progress)"
+              value={previewTask ? `Try it on ${previewTask.activity}` : 'Nothing to hand off right now'}
+              onPress={previewTask ? () => navigation.navigate('DelegateFlow', { activity: previewTask.activity }) : undefined}
+            />
+          </Card>
+        </>
+      ) : null}
 
       <Text style={[type.label, styles.section]}>About</Text>
       <Card style={styles.card}>
