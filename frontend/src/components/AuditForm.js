@@ -12,9 +12,9 @@ const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
 
 /**
- * The audit's add-a-task form, filling the page and showing only what's needed: at first just the task
- * box and quick picks under it; once the task has a name, its three questions all open at once (how
- * long, what it pays, how it feels: one tap each). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
+ * The audit's add-a-task form, filling the page with the whole task at once: the task
+ * box with quick picks, then its three questions, all shown from the start (how long, what it pays,
+ * how it feels: one tap each). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
  * with `onReadyChange(ready)` telling it when everything is filled in.
  */
 const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onReadyChange, onReveal }, ref) {
@@ -140,8 +140,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </>
       ) : null}
 
-      {/* The three questions, all open at once: one tap each. */}
-      {name ? <AuditChoices item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} /> : null}
+      {/* The three questions, all shown from the start so the whole task is clear: one tap each. */}
+      <AuditChoices item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} />
     </View>
   );
 });
