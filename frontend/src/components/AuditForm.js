@@ -156,7 +156,7 @@ const makeStyles = (colors, isDark) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 52,
+    minHeight: 60,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     borderRadius: radius.md,
@@ -168,7 +168,7 @@ const makeStyles = (colors, isDark) => ({
   inputBoxFocused: { borderColor: colors.primary },
   inputBoxError: { borderColor: colors.error },
   inputIcon: {},
-  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, fontSize: 14, color: colors.muted, opacity: 0.6 },
+  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, fontSize: 15, color: colors.muted, opacity: 0.6 },
   input: { flex: 1, minHeight: 22, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
