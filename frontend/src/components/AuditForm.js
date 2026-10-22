@@ -3,10 +3,10 @@ import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FIELDS } from './AuditTaskCard';
-import AuditChoices from './AuditChoices';
+import AuditSliders from './AuditSliders';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { cardShadow, radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
@@ -139,8 +139,10 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </>
       ) : null}
 
-      {/* The three questions, all shown from the start so the whole task is clear: one tap each. */}
-      <AuditChoices item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} />
+      {/* The three questions, all shown from the start: a time slider, a $ slider, and a toggle. */}
+      <View style={styles.questions}>
+        <AuditSliders item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} />
+      </View>
     </View>
   );
 });
@@ -148,7 +150,9 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
-  card: {},
+  // The task, on a white card under your day.
+  card: { padding: spacing.md + 4, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
+  questions: { marginTop: spacing.lg },
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
   number: { fontSize: 12, fontWeight: '700', color: colors.muted },
   inputBox: {
@@ -174,8 +178,8 @@ const makeStyles = (colors, isDark) => ({
   // Same columns and gap as the Time / Money / Energy buttons below them.
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.md },
-  suggestions: { gap: 6, paddingHorizontal: spacing.lg },
+  suggestionsLine: { marginHorizontal: -(spacing.md + 4), marginTop: spacing.md },
+  suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
   suggestion: {
     maxWidth: 200,
     flexDirection: 'row',
