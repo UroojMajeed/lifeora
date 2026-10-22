@@ -3,12 +3,14 @@ import { Keyboard, LayoutAnimation, Platform, Pressable, ScrollView, Text, View 
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import StepHeader from '../../components/StepHeader';
+import PageHeader from '../../components/PageHeader';
 import Button from '../../components/Button';
 import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import AuditForm from '../../components/AuditForm';
 import AuditStats from '../../components/AuditStats';
 import { useOnboarding } from '../../context/OnboardingContext';
+import { useHandoffs } from '../../context/HandoffsContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
@@ -22,10 +24,12 @@ const MAX_ACTIVITIES = 30;
  * the routine once, as a list: each card with its Time, Money and Energy buttons to change them, in
  * its DRIP quadrant's colour. From there, the full DRIP Matrix.
  */
-export default function AuditScreen({ navigation, route }) {
+export default function AuditScreen({ navigation, route, inTab = false }) {
   // A new round of the Loop (after onboarding): the whole routine gets audited again.
   const round = route.params?.round;
+  // The Routine tab: the same list, edited the same way, without the onboarding step around it.
   const { onboarding, saveStep } = useOnboarding();
+  const { refresh: refreshHandoffs } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
@@ -87,10 +91,13 @@ export default function AuditScreen({ navigation, route }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, round ? 'done' : 'schedule').catch(() => {});
+      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, round || inTab ? 'done' : 'schedule')
+        // In the tab, what drains you (and so your handoffs) follows the routine.
+        .then(() => (inTab ? refreshHandoffs() : null))
+        .catch(() => {});
     }, 600);
     return () => clearTimeout(autosave.current);
-  }, [items, saveStep, round]);
+  }, [items, saveStep, round, inTab, refreshHandoffs]);
 
   // Pressing Time, Money or Energy on a card opens its choices there (pressing it again closes them).
   const showField = (name, field) => {
@@ -163,9 +170,12 @@ export default function AuditScreen({ navigation, route }) {
 
   return (
     // The screen stays still while you type (the keyboard slides over the bottom; nothing is lifted or resized).
-    <Screen scroll={false} tinted contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+    <Screen scroll={false} tinted={!inTab} edges={inTab ? ['top'] : undefined} contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={styles.body}>
         <ScrollView ref={listRef} style={styles.list} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          {inTab ? (
+            <PageHeader eyebrow="Routine" title="Your Routine" subtitle="Everything you do on a normal work day." />
+          ) : (
           <StepHeader
             step={stepNumber('schedule')}
             editing={Boolean(round)}
@@ -179,6 +189,7 @@ export default function AuditScreen({ navigation, route }) {
                 : 'Add your work tasks, one at a time.'
             }
           />
+          )}
           {mode === 'form' ? (
             <>
               {/* Your totals so far, big and clear. */}
@@ -259,7 +270,7 @@ export default function AuditScreen({ navigation, route }) {
         ) : null}
 
         {/* From the routine on to the DRIP Matrix (it stays put; the keyboard covers it while you type). */}
-        {mode === 'list' && items.length ? (
+        {mode === 'list' && items.length && !inTab ? (
           <View style={styles.actionRow}>
             <Button
               title={ready ? 'See what drains you' : `Finish ${unfinished} ${unfinished === 1 ? 'task' : 'tasks'}`}
