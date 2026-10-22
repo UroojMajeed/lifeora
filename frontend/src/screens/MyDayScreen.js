@@ -1,132 +1,122 @@
+import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
+import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
-import { Card, HeroCard } from '../components/Card';
-import DripRow from '../components/DripRow';
+import CardHeader, { homeCard } from '../components/CardHeader';
+import DripGraph from '../components/DripGraph';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
-import { DRIP, summarizeSchedule } from '../constants/content';
-import { FILL_TIMES, dayNow, scheduleNow } from '../constants/fill';
-import { formatHours, formatMoney } from '../utils/format';
+import { quadrantFor, valueForMoney } from '../constants/content';
+import { dayNow, scheduleNow } from '../constants/fill';
+import { formatHours } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
-// Active activities first, then new ones from Fill, then what you've handed off.
+// Active tasks first, then reinvested time, then what you've handed off.
 const order = (a) => (a.handedOff ? 2 : a.isFill ? 1 : 0);
+const quadrantOf = (a) => a.quadrant || (a.energy ? quadrantFor({ value: a.money ? valueForMoney(a.money) : a.value, energy: a.energy }) : null);
 
-/** Your day as it is now: what still drains you, every activity (handed-off tasks marked, filled time in), and ways to change it. */
+/**
+ * Your routine as it is now, in Home's style: your DRIP Matrix (where each task sits today: handed-off
+ * tasks out, reinvested time in), then every task with its hours (handed off and reinvested marked),
+ * and a way to edit them.
+ */
 export default function MyDayScreen({ navigation }) {
   const { onboarding } = useOnboarding();
-  const { handoffs, fills, summary: handoffSummary } = useHandoffs();
+  const { handoffs, fills } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const rate = onboarding?.buybackRate || 0;
-  const currency = onboarding?.currency || 'USD';
-  const schedule = onboarding?.schedule || [];
+  const [selected, setSelected] = useState(null);
 
+  const schedule = onboarding?.schedule || [];
   const day = dayNow(schedule, handoffs, fills);
-  const summary = summarizeSchedule(scheduleNow(day), rate);
+  const now = scheduleNow(day);
   const unsorted = schedule.filter((i) => !i.energy).length;
   const rows = [...day].sort((a, b) => order(a) - order(b));
+  const total = now.reduce((t, a) => t + a.hours, 0);
+  const tasks = now.length;
 
   return (
-    <Screen edges={['top']} contentStyle={styles.top}>
+    <Screen edges={['top']}>
+      <PageHeader eyebrow="Routine" title="Your Routine" subtitle="Your work day as it is now." />
+
       {unsorted ? (
-        <Button
-          title={`Rate ${unsorted} new ${unsorted === 1 ? 'activity' : 'activities'}`}
-          icon="stats-chart"
-          onPress={() => navigation.navigate('Swipe', { editing: true })}
-          style={styles.unsorted}
-        />
+        <View style={[styles.card, styles.cardUrgent]}>
+          <CardHeader icon="sparkles" iconColor={colors.primary} title={`${unsorted} New ${unsorted === 1 ? 'Task' : 'Tasks'}`} sub="Rate them to see where they sit" />
+          <Button title="Rate now" icon="arrow-forward" onPress={() => navigation.navigate('Swipe', { editing: true })} style={styles.cardButton} />
+        </View>
       ) : null}
 
-      {summary.drainingHours > 0 ? (
-        <HeroCard>
-          <Text style={styles.heroLabel}>Still draining you</Text>
-          <Text style={styles.heroBig}>{formatHours(summary.drainingHours)} a day</Text>
-          <Text style={styles.heroBody}>
-            Handing them off at your {formatMoney(rate, currency)}/hr Buyback Rate costs about{' '}
-            {formatMoney(summary.dailyBuybackCost, currency, { decimals: 0 })} a day.
-          </Text>
-        </HeroCard>
+      {/* Where each task sits today. */}
+      {now.some((a) => a.energy) ? (
+        <View style={styles.card}>
+          <CardHeader icon="grid" iconColor={colors.accentText} title="Your DRIP Matrix" sub="Tap a task to see it" />
+          <View style={styles.graph}>
+            <DripGraph items={now} selected={selected} onSelect={(name) => setSelected((cur) => (cur === name ? null : name))} height={300} />
+          </View>
+        </View>
       ) : null}
 
+      {/* Every task, with its hours. */}
       {rows.length ? (
-        <>
-          <Text style={[styles.section, !summary.drainingHours && styles.first]}>Your routine now</Text>
-          <Card style={styles.list}>
+        <View style={styles.card}>
+          <CardHeader icon="list" iconColor={colors.primary} title="Every Task" sub={`${formatHours(total)} a day · ${tasks} ${tasks === 1 ? 'task' : 'tasks'}`} />
+          <View style={styles.list}>
             {rows.map((a, i) => {
-              const q = a.quadrant ? DRIP[a.quadrant] : null;
-              const when = a.when ? FILL_TIMES.find((t) => t.key === a.when)?.label : null;
+              const q = quadrantOf(a);
               return (
-                <View key={`${a.activity}-${i}`} style={[styles.row, i > 0 && styles.rowBorder]}>
-                  <View style={[styles.dot, { backgroundColor: q ? colors[q.color] : colors.border }]} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.name, a.handedOff && styles.nameOff]} numberOfLines={1}>
+                <View key={`${a.activity}-${i}`} style={[styles.row, i > 0 && styles.rowLine]}>
+                  <View style={[styles.dot, { backgroundColor: q ? colors.chart[q] : colors.border }]} />
+                  <View style={styles.rowMain}>
+                    <Text style={[styles.name, a.handedOff && styles.off]} numberOfLines={1}>
                       {a.activity}
                     </Text>
-                    <View style={styles.tags}>
-                      {a.handedOff ? (
-                        <Text style={[styles.tag, { color: colors.success, backgroundColor: colors.successSoft }]}>Handed off</Text>
-                      ) : null}
-                      {a.isFill || a.fillHours ? (
-                        <Text style={[styles.tag, { color: colors.primaryDark, backgroundColor: colors.primarySoft }]}>
-                          {a.isFill ? 'New from Fill' : `+${formatHours(a.fillHours)} from Fill`}
-                        </Text>
-                      ) : null}
-                      {when ? <Text style={styles.when}>{when}</Text> : null}
-                      {!a.energy && !a.isFill ? <Text style={styles.when}>Not rated yet</Text> : null}
-                    </View>
+                    {a.handedOff || a.isFill || a.fillHours || (!a.energy && !a.isFill) ? (
+                      <View style={styles.tags}>
+                        {a.handedOff ? <Text style={[styles.tag, styles.tagDone]}>Handed off</Text> : null}
+                        {a.isFill ? <Text style={[styles.tag, styles.tagNew]}>Reinvested</Text> : null}
+                        {!a.isFill && a.fillHours ? <Text style={[styles.tag, styles.tagNew]}>+{formatHours(a.fillHours)} reinvested</Text> : null}
+                        {!a.energy && !a.isFill ? <Text style={styles.muted}>Not rated yet</Text> : null}
+                      </View>
+                    ) : null}
                   </View>
-                  <Text style={[styles.hours, a.handedOff && styles.nameOff]}>{formatHours(a.hours + a.fillHours)}</Text>
+                  <Text style={[styles.hours, a.handedOff && styles.off]}>{formatHours(a.hours + a.fillHours)}</Text>
                 </View>
               );
             })}
-          </Card>
-          {/* The DRIP Matrix of the routine as it is now, folded into a row (tap to open the graph). */}
-          <DripRow items={scheduleNow(day)} summary={summary} style={styles.gap} />
-        </>
-      ) : null}
-
-      {(handoffSummary?.boughtBackHours || 0) > 0 ? (
-        <Button title="Fill your freed time" icon="sunny-outline" onPress={() => navigation.navigate('Fill')} style={styles.gap} />
+          </View>
+        </View>
       ) : null}
 
       <Button
-        title="Edit your routine"
+        title="Edit your tasks"
         variant="secondary"
         icon="create-outline"
         onPress={() => navigation.navigate('Schedule', { editing: true })}
-        style={styles.gap}
+        style={styles.edit}
       />
-      <View style={styles.hintRow}>
-        <Ionicons name="information-circle-outline" size={14} color={colors.muted} />
-        <Text style={styles.hint}>Filled time is changed in Fill. It joins your routine for good at the next round.</Text>
-      </View>
     </Screen>
   );
 }
 
-const makeStyles = (colors) => ({
-  top: { paddingTop: spacing.md },
-  gap: { marginTop: spacing.md },
-  unsorted: { marginBottom: spacing.md },
-  section: { fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 1, marginTop: spacing.lg, marginBottom: spacing.sm },
-  first: { marginTop: 0 },
-  list: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
+const makeStyles = (colors, isDark) => ({
+  card: { ...homeCard(colors, isDark), backgroundColor: colors.surface, marginBottom: spacing.md },
+  cardUrgent: { borderWidth: 1.5, borderColor: colors.primary },
+  cardButton: { marginTop: spacing.md },
+  graph: { marginTop: spacing.md },
+  list: { marginTop: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, paddingVertical: spacing.sm + 2 },
-  rowBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  rowLine: { borderTopWidth: 1, borderTopColor: colors.border },
   dot: { width: 10, height: 10, borderRadius: 5 },
+  rowMain: { flex: 1, minWidth: 0 },
   name: { fontSize: 15, fontWeight: '700', color: colors.text },
-  nameOff: { color: colors.muted, textDecorationLine: 'line-through' },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 2 },
+  off: { color: colors.muted, textDecorationLine: 'line-through' },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 3 },
   tag: { fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
-  when: { fontSize: 12, color: colors.muted },
+  tagDone: { color: colors.chart.production, backgroundColor: colors.successSoft },
+  tagNew: { color: colors.accentText, backgroundColor: colors.accentSoft },
+  muted: { fontSize: 12, color: colors.muted },
   hours: { fontSize: 15, fontWeight: '800', color: colors.text },
-  heroLabel: { color: colors.heroMuted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  heroBig: { color: colors.heroText, fontSize: 24, fontWeight: '800', letterSpacing: -0.5, marginTop: 4 },
-  heroBody: { color: colors.heroMuted, fontSize: 15, lineHeight: 22, marginTop: spacing.sm },
-  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: spacing.sm },
-  hint: { fontSize: 12, color: colors.muted, textAlign: 'center', flexShrink: 1 },
+  edit: { marginTop: spacing.sm },
 });
