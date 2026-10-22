@@ -11,7 +11,7 @@ import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
 import { formatDay, sameDay, startOptions } from '../constants/handoffSteps';
-import { DONE_DRAFT, TOOL_IDEAS, handoverDraft, jobPostDraft, journeyOf, stepSummary } from '../constants/journey';
+import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, handoverDraft, jobPostDraft, journeyOf, stepSummary } from '../constants/journey';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, radius, spacing } from '../theme';
 
@@ -109,6 +109,26 @@ export default function HandoffJourneyScreen({ navigation, route }) {
         </View>
       </View>
 
+      {/* The 10-80-10 brief, once it's written: your start and finish, their middle. */}
+      {task.method !== 'drop' && task.doneLooksLike && task.checkHow ? (
+        <View style={styles.brief}>
+          <Text style={styles.briefTitle}>The Brief</Text>
+          {[
+            ['10%', 'You', `Done looks like: ${task.doneLooksLike}`],
+            ['80%', task.who || 'Them', 'Does the work, their way'],
+            ['10%', 'You', `Check: ${task.checkHow}`],
+          ].map(([pct, by, what], i) => (
+            <View key={i} style={[styles.briefRow, i > 0 && styles.briefLine]}>
+              <Text style={[styles.briefPct, i === 1 && styles.briefPctThem]}>{pct}</Text>
+              <View style={styles.briefMain}>
+                <Text style={styles.briefBy}>{by}</Text>
+                <Text style={styles.briefWhat}>{what}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {finished ? (
         <Animated.View entering={ZoomIn.duration(350)} style={styles.win}>
           <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
@@ -144,6 +164,7 @@ function StepSheet({ stepKey, task, onDone }) {
   const [method, setMethod] = useState(task.method || null);
   const [plan, setPlan] = useState(task.plan || '');
   const [doneText, setDoneText] = useState(task.doneLooksLike || '');
+  const [checkText, setCheckText] = useState(task.checkHow || '');
   const [who, setWho] = useState(task.who || '');
   const [find, setFind] = useState(false);
   const [start, setStart] = useState(task.startDate || null);
@@ -218,16 +239,38 @@ function StepSheet({ stepKey, task, onDone }) {
   }
 
   if (stepKey === 'done') {
+    const auto = task.method === 'automate';
     return (
       <View>
-        <Text style={styles.sheetTitle}>What does "done" look like?</Text>
-        <Text style={styles.sheetSub}>So they know when it's finished and good enough.</Text>
-        <TextInput value={doneText} onChangeText={setDoneText} placeholder="Type it here" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
-        <Pressable onPress={() => setDoneText(task.method === 'automate' ? DONE_DRAFT.automate : DONE_DRAFT.default)} style={styles.draft} accessibilityRole="button">
+        <Text style={styles.sheetTitle}>Write the brief</Text>
+        <Text style={styles.sheetSub}>You set the start and the finish. They own the 80% in between.</Text>
+        <Text style={styles.qLabel}>
+          <Text style={styles.qPct}>10% · </Text>What does done look like?
+        </Text>
+        <TextInput value={doneText} onChangeText={setDoneText} placeholder="e.g. Finished the same day" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
+        <Text style={styles.qLabel}>
+          <Text style={styles.qPct}>10% · </Text>How will you check it?
+        </Text>
+        <TextInput value={checkText} onChangeText={setCheckText} placeholder="e.g. A look every Friday" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
+        <Pressable
+          onPress={() => {
+            setDoneText(auto ? DONE_DRAFT.automate : DONE_DRAFT.default);
+            setCheckText(auto ? CHECK_DRAFT.automate : CHECK_DRAFT.default);
+          }}
+          style={styles.draft}
+          accessibilityRole="button"
+        >
           <Ionicons name="sparkles" size={15} color={colors.accentText} />
-          <Text style={styles.draftText}>Draft it for me</Text>
+          <Text style={styles.draftText}>Draft both for me</Text>
         </Pressable>
-        <Button title="Save" icon="checkmark" disabled={!doneText.trim()} loading={saving} onPress={() => save({ doneLooksLike: doneText.trim() })} style={styles.save} />
+        <Button
+          title="Save"
+          icon="checkmark"
+          disabled={!doneText.trim() || !checkText.trim()}
+          loading={saving}
+          onPress={() => save({ doneLooksLike: doneText.trim(), checkHow: checkText.trim() })}
+          style={styles.save}
+        />
       </View>
     );
   }
@@ -268,7 +311,7 @@ function StepSheet({ stepKey, task, onDone }) {
   }
 
   if (stepKey === 'handover') {
-    const message = handoverDraft({ task, who: task.who, doneLooksLike: task.doneLooksLike, start });
+    const message = handoverDraft({ task, who: task.who, doneLooksLike: task.doneLooksLike, checkHow: task.checkHow, start });
     return (
       <View>
         <Text style={styles.sheetTitle}>When does it start?</Text>
@@ -346,7 +389,19 @@ const makeStyles = (colors) => ({
   winTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
   winText: { fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center', marginTop: 4 },
   winBtn: { marginTop: spacing.md },
+  // The brief
+  brief: { marginTop: spacing.sm, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
+  briefTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.xs },
+  briefRow: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm },
+  briefLine: { borderTopWidth: 1, borderTopColor: colors.border },
+  briefPct: { width: 44, fontSize: 16, fontWeight: '800', color: colors.accentText },
+  briefPctThem: { color: colors.primary },
+  briefMain: { flex: 1, minWidth: 0 },
+  briefBy: { fontSize: 13, fontWeight: '800', color: colors.text },
+  briefWhat: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 1 },
   // The sheet
+  qLabel: { fontSize: 14, fontWeight: '800', color: colors.text, marginTop: spacing.md },
+  qPct: { color: colors.accentText },
   sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
   sheetSub: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
   label: { fontSize: 12, fontWeight: '700', color: colors.accentText, marginTop: spacing.md, marginBottom: spacing.sm },

@@ -19,6 +19,7 @@ const emptyHandoff = (activity) => ({
   method: null,
   who: '',
   doneLooksLike: '',
+  checkHow: '',
   playbook: [],
   startDate: null,
   notes: '',
@@ -104,6 +105,11 @@ function sanitize(body = {}) {
     const d = String(body.doneLooksLike ?? '').trim();
     if (d.length > 200) errors.push('doneLooksLike must be 200 characters or fewer');
     else out.doneLooksLike = d;
+  }
+  if (body.checkHow !== undefined) {
+    const d = String(body.checkHow ?? '').trim();
+    if (d.length > 200) errors.push('checkHow must be 200 characters or fewer');
+    else out.checkHow = d;
   }
   if (body.playbook !== undefined) {
     const steps = Array.isArray(body.playbook) ? body.playbook.map((s) => String(s ?? '').trim()).filter(Boolean) : null;

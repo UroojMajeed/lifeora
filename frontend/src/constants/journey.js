@@ -5,7 +5,7 @@ import { formatMoney } from '../utils/format';
 
 export const STEP_INFO = {
   how: { title: 'Choose how', icon: 'git-branch-outline' },
-  done: { title: 'Define done', icon: 'flag-outline' },
+  done: { title: 'Write the brief', icon: 'document-text-outline' }, // 10-80-10: what done looks like, and how you'll check it
   who: { title: 'Find who', icon: 'person-outline' },
   handover: { title: 'Hand it over', icon: 'paper-plane-outline' },
   drop: { title: 'Stop doing it', icon: 'close-circle-outline' },
@@ -16,7 +16,7 @@ export const journeySteps = (method) => (method === 'drop' ? ['how', 'drop'] : [
 
 const isDone = {
   how: (h) => Boolean(h.method),
-  done: (h) => Boolean(h.doneLooksLike),
+  done: (h) => Boolean(h.doneLooksLike && h.checkHow),
   who: (h) => Boolean(h.who),
   handover: (h) => Boolean(h.startDate) && (h.status === 'in_progress' || h.status === 'done'),
   drop: (h) => h.status === 'done',
@@ -33,7 +33,7 @@ export function journeyOf(h) {
 /** A one-line summary of a finished step, shown on its station. */
 export function stepSummary(key, h, methodLabel) {
   if (key === 'how') return methodLabel;
-  if (key === 'done') return `"${h.doneLooksLike}"`;
+  if (key === 'done') return `Done: ${h.doneLooksLike} · Check: ${h.checkHow}`;
   if (key === 'who') return h.who;
   if (key === 'handover') return h.startDate ? `From ${new Date(h.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}` : '';
   if (key === 'drop') return 'Off your list';
@@ -44,6 +44,11 @@ export function stepSummary(key, h, methodLabel) {
 export const DONE_DRAFT = {
   default: 'Finished the same day, checked for mistakes, and only problems come to me',
   automate: 'Runs every day without me, nothing gets missed, and I get an alert if it fails',
+};
+
+export const CHECK_DRAFT = {
+  default: "I'll look at it every Friday for the first two weeks, then once a month",
+  automate: "I'll check its alerts once a week",
 };
 
 export const TOOL_IDEAS = ['Zapier', 'Calendly', 'Google Calendar', 'QuickBooks', 'Gmail filters', 'Buffer', 'Mailchimp', 'Notion'];
@@ -57,11 +62,12 @@ export function jobPostDraft({ task, doneLooksLike, rate, currency }) {
 }
 
 /** A short, friendly handover message to send to whoever takes it. */
-export function handoverDraft({ task, who, doneLooksLike, start }) {
+export function handoverDraft({ task, who, doneLooksLike, checkHow, start }) {
   const name = who && !/^(zapier|calendly|google|quickbooks|gmail|buffer|mailchimp|notion)/i.test(who) ? who.split(' ')[0] : 'there';
   const when = start ? new Date(start).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'soon';
   const lines = [`Hi ${name}! From ${when}, ${task.activity.toLowerCase()} is yours.`];
   if (doneLooksLike) lines.push(`Done looks like: ${doneLooksLike}.`);
-  lines.push("Bring me anything you're unsure about in the first week. Thank you!");
+  if (checkHow) lines.push(`How I'll check it: ${checkHow}.`);
+  lines.push("Everything in between is yours. Bring me anything you're unsure about in the first week. Thank you!");
   return lines.join(' ');
 }

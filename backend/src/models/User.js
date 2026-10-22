@@ -59,6 +59,8 @@ const handoffSchema = new mongoose.Schema(
     who: { type: String, trim: true, maxlength: 60, default: '' },
     // The handoff checklist: what a good result looks like, the playbook steps, and when it starts.
     doneLooksLike: { type: String, trim: true, maxlength: 200, default: '' },
+    // 10-80-10: you set what done looks like (first 10%) and how you'll check it (last 10%); they own the 80% between.
+    checkHow: { type: String, trim: true, maxlength: 200, default: '' },
     playbook: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
     startDate: Date,
     notes: { type: String, trim: true, maxlength: 1000, default: '' },
