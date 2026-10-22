@@ -9,7 +9,6 @@ import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import AuditForm from '../../components/AuditForm';
 import AuditStats from '../../components/AuditStats';
-import DayBar from '../../components/DayBar';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
@@ -194,8 +193,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           {mode === 'form' ? (
             <>
               {/* Your totals so far, big and clear. */}
-              {/* Your day, filling up as you add tasks. */}
-              <DayBar items={items} style={styles.stats} />
+              {items.length ? <AuditStats items={items} style={styles.stats} /> : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
