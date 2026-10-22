@@ -187,9 +187,9 @@ export default function MeScreen({ navigation }) {
           <Card style={styles.card}>
             <Row
               icon="flask-outline"
-              title="Delegation steps (in progress)"
+              title="Handoff journey (in progress)"
               value={previewTask ? `Try it on ${previewTask.activity}` : 'Nothing to hand off right now'}
-              onPress={previewTask ? () => navigation.navigate('DelegateFlow', { activity: previewTask.activity }) : undefined}
+              onPress={previewTask ? () => navigation.navigate('HandoffJourney', { activity: previewTask.activity }) : undefined}
             />
           </Card>
         </>

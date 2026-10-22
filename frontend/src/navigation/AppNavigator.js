@@ -12,7 +12,7 @@ import HandoffDetailScreen from '../screens/HandoffDetailScreen';
 import AccountScreen from '../screens/AccountScreen';
 import FillScreen from '../screens/FillScreen';
 import CheckInScreen from '../screens/CheckInScreen';
-import DelegateFlowScreen from '../screens/DelegateFlowScreen';
+import HandoffJourneyScreen from '../screens/HandoffJourneyScreen';
 import MainTabs from './MainTabs';
 
 const Stack = createNativeStackNavigator();
@@ -42,7 +42,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Fill" component={FillScreen} />
       <Stack.Screen name="Account" component={AccountScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="DelegateFlow" component={DelegateFlowScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="HandoffJourney" component={HandoffJourneyScreen} />
     </Stack.Navigator>
   );
 }

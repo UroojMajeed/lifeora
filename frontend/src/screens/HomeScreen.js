@@ -9,6 +9,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
 import TimeBackCard from '../components/TimeBackCard';
+import JourneyPreviewCard from '../components/JourneyPreviewCard';
 import CardHeader, { homeCard } from '../components/CardHeader';
 import Button from '../components/Button';
 import { checkInStatus } from '../constants/checkin';
@@ -169,6 +170,8 @@ export default function HomeScreen({ navigation }) {
             ) : firstTask ? (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
             ) : null}
+            {/* PREVIEW: the handoff journey's card, development app only (testers never see it). */}
+            {__DEV__ ? <JourneyPreviewCard handoffs={handoffs} onOpen={(activity) => navigation.navigate('HandoffJourney', { activity })} /> : null}
             <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
@@ -182,6 +185,8 @@ export default function HomeScreen({ navigation }) {
             ) : (
               <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} />
             )}
+            {/* PREVIEW: the handoff journey's card, development app only (testers never see it). */}
+            {__DEV__ ? <JourneyPreviewCard handoffs={handoffs} onOpen={(activity) => navigation.navigate('HandoffJourney', { activity })} /> : null}
             <ProgressWaiting />
           </>
         )}
