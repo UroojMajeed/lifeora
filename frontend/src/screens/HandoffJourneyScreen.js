@@ -22,9 +22,11 @@ const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label |
  * Handing off one task, as a journey: a road of stations (Choose how → Define done → Find who →
  * Hand it over) ending at the sun. Finished stations show what you chose; the current one glows and
  * opens its step in a bottom sheet; later ones wait. Each step saves when it's done, so you can leave
- * and pick up here (or from the card on Home) where you left off. Route param: `activity`.
+ * and pick up here (or from the card on Home) where you left off. Handing it over counts as delegated
+ * (like "Yes" on Home's move card): its hours are bought back, and the weekly check-in asks if it
+ * stuck. Route param: `activity`.
  */
-export default function HandoffJourneyScreen({ route }) {
+export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { handoffs } = useHandoffs();
@@ -109,9 +111,11 @@ export default function HandoffJourneyScreen({ route }) {
 
       {finished ? (
         <Animated.View entering={ZoomIn.duration(350)} style={styles.win}>
+          <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
           <Text style={styles.winText}>
             {task.method === 'drop' ? 'Dropped. ' : 'Handed over. '}Your weekly check-in will ask how it went.
           </Text>
+          <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
       ) : null}
 
@@ -286,7 +290,7 @@ function StepSheet({ stepKey, task, onDone }) {
             <Button title="Send it" icon="share-social" variant="secondary" onPress={() => Share.share({ message }).catch(() => {})} style={styles.postBtn} />
           </Animated.View>
         ) : null}
-        <Button title="Hand it over" icon="paper-plane" disabled={!start} loading={saving} onPress={() => save({ startDate: start, status: 'in_progress' })} style={styles.save} />
+        <Button title="Hand it over" icon="paper-plane" disabled={!start} loading={saving} onPress={() => save({ startDate: start, status: 'done' })} style={styles.save} />
       </View>
     );
   }
@@ -330,7 +334,9 @@ const makeStyles = (colors) => ({
   destTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   destLine: { fontSize: 13, fontWeight: '700', color: colors.accentText, marginTop: 2 },
   win: { marginTop: spacing.lg, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.successSoft },
-  winText: { fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center' },
+  winTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
+  winText: { fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center', marginTop: 4 },
+  winBtn: { marginTop: spacing.md },
   // The sheet
   sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
   sheetSub: { fontSize: 14, lineHeight: 20, color: colors.muted, marginTop: 4 },
