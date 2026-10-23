@@ -6,7 +6,7 @@ import { FIELDS } from './AuditTaskCard';
 import AuditChoices from './AuditChoices';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { cardShadow, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
@@ -81,7 +81,6 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         accessible={false}
         style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
       >
-        <Ionicons name="pencil-outline" size={18} color={duplicate ? colors.error : focused ? colors.primary : colors.muted} style={styles.inputIcon} />
         {/* A short, pale hint: smaller than real text, so it never looks filled. */}
         {!form.name ? (
           <Text pointerEvents="none" style={styles.hint}>
@@ -112,7 +111,7 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
       {form.name.length >= 45 ? <Text style={styles.counter}>{form.name.length}/60</Text> : null}
 
       {/* Suggestions: right under the task box while it's empty (one line, scroll sideways for more). */}
-      {suggestions.length && !form.name ? (
+      {suggestions.length && !form.name && focused ? (
         <>
           <ScrollView
             horizontal
@@ -148,35 +147,32 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
-  // One card per task: the name and its three questions together, the sky around it.
-  card: { padding: spacing.md + 4, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
+  // No card: the task and its rows sit straight on the page.
+  card: {},
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
   number: { fontSize: 12, fontWeight: '700', color: colors.muted },
+  // The task: one underlined line, the name written big like a heading (no box).
   inputBox: {
-    // One line, like a standard text field (it grows if a long name wraps).
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minHeight: 60,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 4,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong, // a clear outline, so it reads as a field to write in
-    backgroundColor: colors.surface, // white, so it reads as empty until you type
+    minHeight: 52,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.borderStrong,
   },
   // Typing: a teal edge.
-  inputBoxFocused: { borderColor: colors.primary },
-  inputBoxError: { borderColor: colors.error },
+  inputBoxFocused: { borderBottomColor: colors.primary },
+  inputBoxError: { borderBottomColor: colors.error },
   inputIcon: {},
-  hint: { position: 'absolute', left: spacing.md + 18 + spacing.sm, fontSize: 15, color: colors.muted, opacity: 0.6 },
-  input: { flex: 1, minHeight: 22, fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.text, padding: 0 },
+  hint: { position: 'absolute', left: 0, fontSize: 20, fontWeight: '700', color: colors.muted, opacity: 0.45 },
+  input: { flex: 1, minHeight: 28, fontSize: 20, lineHeight: 28, fontWeight: '700', color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -(spacing.md + 4), marginTop: spacing.md },
-  suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
+  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.sm + 4 },
+  suggestions: { gap: 6, paddingHorizontal: spacing.lg },
   suggestion: {
     maxWidth: 200,
     flexDirection: 'row',

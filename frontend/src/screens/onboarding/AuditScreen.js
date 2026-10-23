@@ -186,14 +186,13 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                 ? 'Your routine has changed. Check how each task makes you feel now, and add anything new.'
                 : mode === 'list'
                 ? 'Everything you do on a normal work day.'
-                : 'Add your work tasks, one at a time.'
+                : undefined
             }
           />
           )}
           {mode === 'form' ? (
             <>
               {/* Your totals so far, big and clear. */}
-              {items.length ? <AuditStats items={items} style={styles.stats} /> : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
@@ -214,19 +213,12 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                   style={styles.saveNext}
                 />
               ) : null}
-              {/* Done, right under Save & next on the right, once there's a task. */}
+              {/* Done: a quiet text button under Save & next, once there's a task. */}
               {items.length ? (
-                <View style={styles.doneRow}>
-                  <Button
-                    title={`Done · ${items.length}`}
-                    icon="checkmark"
-                    iconColor={colors.primary}
-                    variant="secondary"
-                    size="small"
-                    onPress={() => show('list')}
-                    style={styles.done}
-                  />
-                </View>
+                <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
+                  <Text style={styles.doneText}>Done · {items.length}</Text>
+                  <Ionicons name="checkmark" size={17} color={colors.primary} />
+                </Pressable>
               ) : null}
             </>
           ) : (
@@ -296,11 +288,11 @@ const makeStyles = (colors) => ({
   stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: spacing.sm },
   // The sticky bar.
-  saveNext: { marginTop: spacing.md, minHeight: 52 },
-  doneRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: spacing.sm + 4 },
+  saveNext: { marginTop: spacing.lg },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: spacing.md, paddingVertical: spacing.xs },
   // "Done": short and outlined, on the right, so it never competes with "Save & next".
   done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
-  doneText: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
   // A small outlined pill: clearly a button, quieter than See what drains you.
   addMore: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },
   rows: { gap: spacing.sm + 2 },
