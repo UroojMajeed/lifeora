@@ -11,7 +11,7 @@ const SIDE = 40; // a stop's centre, in from the edge
 const NODE = 36;
 const NODE_NOW = 44;
 const BEND = 0.55; // how far the road runs straight down out of each stop before it turns
-// The road itself: light grey ahead, teal where you've been (with gold ticks on the finished stops).
+// The road itself: light grey ahead, teal where you've been (with apricot ticks on the finished stops).
 const ROAD_AHEAD = '#E2E8E6';
 const LINE_AHEAD = '#C3CECA';
 const LINE_DONE = '#FFFFFF';
@@ -67,7 +67,7 @@ export default function WindingRoad({ steps, current, onOpen, summaryOf, hours }
             return (
               <View key={s.id}>
                 <View style={[styles.node, { left: p.x - size / 2, top: p.y - size / 2, width: size, height: size, borderRadius: size / 2 }, s.done && styles.nodeDone, now && styles.nodeNow]}>
-                  {s.done ? <Ionicons name="checkmark" size={18} color={colors.goldInk} /> : <Text style={[styles.nodeNum, now && styles.nodeNumNow]}>{i + 1}</Text>}
+                  {s.done ? <Ionicons name="checkmark" size={18} color={brand.evergreen} /> : <Text style={[styles.nodeNum, now && styles.nodeNumNow]}>{i + 1}</Text>}
                 </View>
                 <Pressable
                   onPress={() => onOpen(s.id)}
@@ -126,7 +126,7 @@ const makeStyles = (colors, isDark) => ({
   pressed: { opacity: 0.85 },
   muted: { color: colors.muted },
   node: { position: 'absolute', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong },
-  nodeDone: { backgroundColor: colors.gold[1], borderColor: colors.gold[0] },
+  nodeDone: { backgroundColor: brand.apricot, borderColor: brand.apricot },
   nodeNow: { borderWidth: 3, borderColor: brand.apricot, backgroundColor: colors.accentSoft },
   nodeNum: { fontSize: 14, fontWeight: '800', color: colors.muted },
   nodeNumNow: { fontSize: 16, color: colors.accentText },
