@@ -92,10 +92,10 @@ export default function AuditChoices({ item, onChange }) {
               hitSlop={4}
               accessibilityState={{ checked: on }}
               accessibilityLabel={e.label}
-              style={[styles.feel, on && { backgroundColor: colors[e.tone], borderColor: colors[e.tone] }]}
+              style={[styles.feel, { borderColor: colors[e.tone] }, on && { backgroundColor: colors[e.tone] }]}
             >
-              <Ionicons name={e.icon} size={17} color={on ? colors.onColor : colors.muted} />
-              <Text style={[styles.feelText, { color: on ? colors.onColor : colors.text }]}>{e.label}</Text>
+              <Ionicons name={e.icon} size={17} color={on ? colors.onColor : colors[e.tone]} />
+              <Text style={[styles.feelText, { color: on ? colors.onColor : colors[e.tone] }]}>{e.label}</Text>
             </Pressable>
           );
         })}
@@ -104,8 +104,6 @@ export default function AuditChoices({ item, onChange }) {
   );
 }
 
-// Calm by default: every option is the same plain white pill until it's picked; only the pick gets its
-// colour (teal hours, gold pay, red or green feel).
 // The app's system: type scale (15 questions, 14 options, 12 helper line, with line heights), an
 // 8-point spacing grid and pill shapes like every other button. Options look compact (40-44 tall)
 // while hitSlop keeps each touch area at 48.
@@ -117,23 +115,23 @@ const makeStyles = (colors) => ({
   hours: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   hour: { height: 40, minWidth: 54, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
   hourOn: { borderColor: colors.primary, backgroundColor: colors.primary },
-  hourHint: { borderStyle: 'dashed' },
+  hourHint: { borderStyle: 'dashed', borderColor: colors.primary },
   hourText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.text },
   textOn: { color: colors.onColor, fontWeight: '800' },
   // Money: five chips across the width, filling like a rating.
   coins: { flexDirection: 'row', gap: 6 },
-  coin: { flex: 1, height: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, borderRadius: radius.pill, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
+  coin: { flex: 1, height: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, borderRadius: radius.pill, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.goldLine, backgroundColor: colors.surface },
   coinUnder: { borderColor: colors.gold[0], backgroundColor: colors.accentSoft },
   coinOn: { borderColor: colors.gold[1] },
   pressed: { transform: [{ scale: 0.96 }] },
   fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  coinText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.text },
+  coinText: { fontSize: 14, lineHeight: 18, fontWeight: '700', color: colors.muted },
   coinTextFilled: { color: colors.accentText },
   coinTextOn: { color: colors.goldInk, fontWeight: '800' },
   scaleOn: { color: colors.accentText, fontWeight: '700' },
   scale: { fontSize: 12, lineHeight: 16, color: colors.muted, marginTop: 6 },
   // Energy: two big buttons, half the width each, the same height as the app's main buttons.
   feels: { flexDirection: 'row', gap: spacing.sm },
-  feel: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
+  feel: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderRadius: radius.pill, borderWidth: 1.5, backgroundColor: colors.surface },
   feelText: { fontSize: 14, lineHeight: 18, fontWeight: '700' },
 });
