@@ -1,13 +1,15 @@
 import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useStyles, useTheme } from '../theme/ThemeContext';
+import { DARK_MODE, useStyles, useTheme } from '../theme/ThemeContext';
 import { brand } from '../theme';
 
 /** Round ☀️/🌙 button that switches between light and dark. `onHero` styles it for gradient backgrounds. */
 export default function ThemeToggle({ onHero = false }) {
   const { isDark, toggle, colors } = useTheme();
   const styles = useStyles(makeStyles);
+
+  if (!DARK_MODE) return null;
 
   const press = () => {
     Haptics.selectionAsync().catch(() => {});
