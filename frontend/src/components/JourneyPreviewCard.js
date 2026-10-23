@@ -48,7 +48,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: { ...homeCard(colors, isDark) },
+  card: { ...homeCard(colors, isDark), backgroundColor: colors.tintMove },
   track: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   seg: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface },
