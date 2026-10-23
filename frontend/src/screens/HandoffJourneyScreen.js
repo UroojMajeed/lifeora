@@ -23,7 +23,7 @@ const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label |
 
 /**
  * Handing off one task, as a road winding through a sunrise: one stop per step, ending at the sun.
- * At the top, what the task costs you and your Buyback Rate (pay less than that to buy your time back). The steps are the
+ * At the top, what the task costs you: its hours a day, and the money that time is worth. The steps are the
  * suggested ones unless you change them ("Edit steps": drag, rename, delete, add your own). The
  * current station opens its step in a sheet; its one button saves your answer and ticks the step.
  * Ticking the last step hands the task off: its hours are bought back, and the weekly check-in asks
@@ -49,7 +49,9 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   }
 
   const { steps, current, finished } = journeyOf(task);
-  const rate = onboarding?.buybackRate;
+  // What the task takes from you each day: its hours at what your hour is worth.
+  const worth = onboarding?.effectiveHourlyRate;
+  const money = (n) => formatMoney(n, onboarding?.currency || 'USD', { decimals: 0 });
   const open = (id) => {
     Haptics.selectionAsync().catch(() => {});
     setSheet((s) => ({ open: true, id, n: s.n + 1 }));
@@ -105,13 +107,15 @@ export default function HandoffJourneyScreen({ navigation, route }) {
           </Pressable>
         ) : null}
       </View>
-      {rate && task.method !== 'drop' ? (
+      {worth ? (
         <View style={styles.rateRow}>
           <View style={[styles.fact, styles.rateChip]}>
             <Ionicons name="cash-outline" size={14} color={colors.accentText} />
-            <Text style={[styles.factText, styles.rateText]}>Pay up to {formatMoney(rate, onboarding?.currency || 'USD', { decimals: 0 })}/hr</Text>
+            <Text style={[styles.factText, styles.rateText]}>Costs you {money(task.hours * worth)} a day</Text>
           </View>
-          <Text style={styles.rateNote}>Your Buyback Rate: help that costs less than this an hour buys your time back.</Text>
+          <Text style={styles.rateNote}>
+            Your hour is worth {money(worth)}, so {h(task.hours)} a day of this costs you {money(task.hours * worth)}. That's {money(task.hours * worth * 5)} a week.
+          </Text>
         </View>
       ) : null}
 
