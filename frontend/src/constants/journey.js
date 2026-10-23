@@ -40,17 +40,13 @@ export function planOf(h) {
   return defaultSteps(h.method).map((s) => ({ ...s, done: legacyDone[s.kind](h) }));
 }
 
-/**
- * Where one handoff stands: its plan (each step done or not), the current step, how many are done,
- * and whether the plan is confirmed. A handoff started before plans existed counts as confirmed.
- */
+/** Where one handoff stands: its steps (each done or not), the current one, and how many are done. */
 export function journeyOf(h) {
   const plan = planOf(h);
   const steps = plan.map((s) => ({ ...s, key: s.id, icon: STEP_INFO[s.kind]?.icon || STEP_INFO.custom.icon, done: h.status === 'done' || s.done }));
   const current = steps.find((s) => !s.done) || null;
   const doneCount = steps.filter((s) => s.done).length;
-  const confirmed = Boolean(h.planConfirmed) || (!h.steps?.length && doneCount > 0);
-  return { steps, current, doneCount, finished: !current, confirmed, started: confirmed || doneCount > 0 };
+  return { steps, current, doneCount, finished: !current, started: doneCount > 0 || Boolean(h.steps?.length) };
 }
 
 /**

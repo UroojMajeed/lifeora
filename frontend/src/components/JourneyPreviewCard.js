@@ -20,7 +20,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
   // The one you've started (a plan or a tick), or else the biggest drain.
   const task = open.find((x) => journeyOf(x).started && !journeyOf(x).finished) || open[0];
   if (!task) return null;
-  const { steps, current, doneCount, confirmed } = journeyOf(task);
+  const { steps, current, doneCount } = journeyOf(task);
 
   return (
     <View style={[styles.card, style]}>
@@ -46,9 +46,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
         ))}
       </View>
       <Text style={styles.next}>
-        {!confirmed ? (
-          'Make your plan, then start'
-        ) : current ? (
+        {current ? (
           <>
             Step {steps.indexOf(current) + 1} of {steps.length}: <Text style={styles.nextStrong}>{current.title}</Text>
           </>
@@ -56,7 +54,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
           'All steps done'
         )}
       </Text>
-      <Button title={!confirmed ? 'Make my plan' : doneCount ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
+      <Button title={doneCount ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
     </View>
   );
 }

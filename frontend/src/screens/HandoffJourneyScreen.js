@@ -20,8 +20,8 @@ const h = (n) => `${Math.round(n * 10) / 10} h`;
 const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label || '';
 
 /**
- * Handing off one task, in two parts. First the plan: the suggested steps, made yours (rename, move,
- * delete, add your own), then confirmed. Then the road: one station per step, ending at the sun. The
+ * Handing off one task, as a road: one station per step, ending at the sun. The steps are the
+ * suggested ones unless you change them ("Edit steps": drag, rename, delete, add your own). The
  * current station opens its step in a sheet, with its helpers (all optional) and one question: did
  * you do it? "I did it" ticks it; "Not yet" keeps your notes and waits. Ticking the last step hands
  * the task off: its hours are bought back, and the weekly check-in asks if it stuck. Route param: `activity`.
@@ -44,7 +44,7 @@ export default function HandoffJourneyScreen({ navigation, route }) {
     );
   }
 
-  const { steps, current, doneCount, finished, confirmed } = journeyOf(task);
+  const { steps, current, doneCount, finished } = journeyOf(task);
   const open = (id) => {
     Haptics.selectionAsync().catch(() => {});
     setSheet((s) => ({ open: true, id, n: s.n + 1 }));
@@ -56,25 +56,23 @@ export default function HandoffJourneyScreen({ navigation, route }) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setEditing(false);
     } catch (err) {
-      Alert.alert("Couldn't save your plan", err.message);
+      Alert.alert("Couldn't save your steps", err.message);
     } finally {
       setSavingPlan(false);
     }
   };
 
-  // The plan first (and again whenever you edit it).
-  if (!confirmed || editing) {
+  // Editing the steps (only when you ask for it).
+  if (editing) {
     return (
       <Screen scrollEnabled={!dragging}>
         <PageHeader eyebrow="Hand it off" title={task.activity} subtitle={`${h(task.hours)} a day · drains you`} />
         <PlanEditor
-          key={editing ? 'edit' : 'new'}
           initial={planOf(task)}
           method={task.method}
-          editing={confirmed}
           saving={savingPlan}
           onSave={savePlan}
-          onCancel={confirmed ? () => setEditing(false) : undefined}
+          onCancel={() => setEditing(false)}
           onDragging={setDragging}
         />
       </Screen>
@@ -148,7 +146,7 @@ export default function HandoffJourneyScreen({ navigation, route }) {
       {!finished ? (
         <Pressable onPress={() => setEditing(true)} hitSlop={8} style={styles.editPlan} accessibilityRole="button">
           <Ionicons name="create-outline" size={16} color={colors.primary} />
-          <Text style={styles.editPlanText}>Edit plan</Text>
+          <Text style={styles.editPlanText}>Edit steps</Text>
         </Pressable>
       ) : null}
 

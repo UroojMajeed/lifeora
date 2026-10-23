@@ -10,14 +10,14 @@ import { radius, spacing } from '../theme';
 const GAP = spacing.sm;
 
 /**
- * Making a handoff plan yours: rename a step (tap its name), drag it by its handle to a new place,
+ * Editing a handoff's steps: rename a step (tap its name), drag it by its handle to a new place,
  * delete it, or add your own (typed, or a quick pick). The last step finishes the handoff, so it stays
  * last and can't be deleted (you can still rename it). Ticked steps stay ticked. `onSave(steps)`
- * confirms the plan; `onCancel` (when editing a confirmed plan) leaves it as it was. `onDragging(on)`
+ * saves them; `onCancel` leaves them as they were. `onDragging(on)`
  * lets the screen stop scrolling while a step is dragged. Adding a step sits at the top, above the
  * list, so the keyboard never covers it.
  */
-export default function PlanEditor({ initial, method, editing, saving, onSave, onCancel, onDragging }) {
+export default function PlanEditor({ initial, method, saving, onSave, onCancel, onDragging }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [steps, setSteps] = useState(initial);
@@ -117,8 +117,8 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
 
   return (
     <View>
-      <Text style={styles.title}>{editing ? 'Edit your plan' : 'Your plan'}</Text>
-      <Text style={styles.sub}>{editing ? 'Change the steps, then save.' : 'Make the steps yours, then confirm.'}</Text>
+      <Text style={styles.title}>Edit your steps</Text>
+      <Text style={styles.sub}>Drag, rename, add or delete, then save.</Text>
 
       <View style={styles.addSlot}>
         {adding ? (
@@ -226,7 +226,7 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
         </Pressable>
       </View>
 
-      <Button title={editing ? 'Save my plan' : 'Confirm my plan'} icon="arrow-forward" loading={saving} onPress={confirm} style={styles.confirm} />
+      <Button title="Save steps" icon="arrow-forward" loading={saving} onPress={confirm} style={styles.confirm} />
       {onCancel ? (
         <Pressable onPress={onCancel} hitSlop={8} style={styles.cancel} accessibilityRole="button">
           <Text style={styles.link}>Cancel</Text>
