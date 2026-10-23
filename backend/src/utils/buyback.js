@@ -53,6 +53,10 @@ function summarizeSchedule(schedule = [], buybackRate = 0) {
 // 'later': kept for the next round of the Loop (e.g. a hire that takes months), so it doesn't block this one.
 const HANDOFF_STATUSES = ['mine', 'in_progress', 'done', 'later'];
 const HANDOFF_METHODS = ['hire', 'automate', 'team', 'drop'];
+// The steps of a handoff plan: the app's own (each with its helper) and the user's own ('custom').
+// 'handover' or 'drop' finishes a handoff, so a plan has exactly one of them, as its last step.
+const HANDOFF_STEP_KINDS = ['how', 'brief', 'who', 'handover', 'drop', 'custom'];
+const FINISH_STEP_KINDS = ['handover', 'drop'];
 const FILL_TIMES = ['morning', 'afternoon', 'evening'];
 
 const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip', 'done'];
@@ -73,4 +77,6 @@ module.exports = {
   ROLES,
   HANDOFF_STATUSES,
   HANDOFF_METHODS,
+  HANDOFF_STEP_KINDS,
+  FINISH_STEP_KINDS,
 };

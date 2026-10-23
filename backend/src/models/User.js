@@ -6,6 +6,7 @@ const {
   ROLES,
   HANDOFF_STATUSES,
   HANDOFF_METHODS,
+  HANDOFF_STEP_KINDS,
   FILL_TIMES,
 } = require('../utils/buyback');
 
@@ -48,6 +49,19 @@ const onboardingSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// One step of a handoff plan. `kind` is what the step is (the app's helpers for it), `title` the
+// user's own name for it; a step counts as done when the user says so ("I did it").
+const handoffStepSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, trim: true, maxlength: 24 },
+    kind: { type: String, enum: HANDOFF_STEP_KINDS, required: true },
+    title: { type: String, required: true, trim: true, maxlength: 40 },
+    done: { type: Boolean, default: false },
+    doneAt: Date,
+  },
+  { _id: false }
+);
+
 // Progress on handing off one draining activity, keyed by the activity's name in the schedule.
 const handoffSchema = new mongoose.Schema(
   {
@@ -64,6 +78,9 @@ const handoffSchema = new mongoose.Schema(
     playbook: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
     startDate: Date,
     notes: { type: String, trim: true, maxlength: 1000, default: '' },
+    // The user's own plan for this handoff (empty: the app's suggested steps), and whether they've confirmed it.
+    steps: { type: [handoffStepSchema], default: [] },
+    planConfirmed: { type: Boolean, default: false },
     doneAt: Date,
   },
   { _id: false }

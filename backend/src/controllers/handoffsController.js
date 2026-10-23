@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
-const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
+const { HANDOFF_STATUSES, HANDOFF_METHODS, HANDOFF_STEP_KINDS, FINISH_STEP_KINDS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 // Delegation first: the cheapest hours to buy back. Then Replacement, which needs a playbook first.
@@ -9,6 +9,7 @@ const QUADRANT_ORDER = { delegation: 0, replacement: 1 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const MAX_PLAYBOOK_STEPS = 15;
+const MAX_PLAN_STEPS = 10;
 const MAX_FILLS = 20;
 const MAX_ACTIVITIES = 30;
 
@@ -23,6 +24,8 @@ const emptyHandoff = (activity) => ({
   playbook: [],
   startDate: null,
   notes: '',
+  steps: [],
+  planConfirmed: false,
   doneAt: null,
 });
 
@@ -130,6 +133,28 @@ function sanitize(body = {}) {
     if (notes.length > 1000) errors.push('notes must be 1000 characters or fewer');
     else out.notes = notes;
   }
+  if (body.steps !== undefined) {
+    const list = Array.isArray(body.steps) ? body.steps : null;
+    if (!list || list.length > MAX_PLAN_STEPS) errors.push(`steps must be a list of up to ${MAX_PLAN_STEPS}`);
+    else {
+      const steps = list.map((s) => ({
+        id: String(s?.id ?? '').trim(),
+        kind: s?.kind,
+        title: String(s?.title ?? '').trim(),
+        done: s?.done === true,
+      }));
+      const bad = steps.some(
+        (s) => !s.id || s.id.length > 24 || !HANDOFF_STEP_KINDS.includes(s.kind) || !s.title || s.title.length > 40
+      );
+      const finishers = steps.filter((s) => FINISH_STEP_KINDS.includes(s.kind));
+      if (bad) errors.push('each step needs an id (24 characters or fewer), a kind and a title of 40 characters or fewer');
+      else if (new Set(steps.map((s) => s.id)).size !== steps.length) errors.push('step ids must be unique');
+      else if (steps.length && (finishers.length !== 1 || !FINISH_STEP_KINDS.includes(steps[steps.length - 1].kind))) {
+        errors.push('a plan ends with one finishing step (handover or drop)');
+      } else out.steps = steps;
+    }
+  }
+  if (body.planConfirmed !== undefined) out.planConfirmed = body.planConfirmed === true;
   if (errors.length) throw new ApiError(400, 'Validation failed', errors);
   return out;
 }
@@ -158,6 +183,11 @@ async function updateHandoff(req, res, next) {
       if (!handoff) {
         u.handoffs.push(emptyHandoff(activity.activity));
         handoff = u.handoffs[u.handoffs.length - 1];
+      }
+      // A step keeps the date it was first ticked; a newly ticked one gets today's.
+      if (data.steps) {
+        const before = new Map((handoff.steps || []).map((s) => [s.id, s.doneAt]));
+        data.steps = data.steps.map((s) => ({ ...s, doneAt: s.done ? before.get(s.id) || new Date() : undefined }));
       }
       Object.assign(handoff, data);
       handoff.doneAt = handoff.status === 'done' ? handoff.doneAt || new Date() : undefined;

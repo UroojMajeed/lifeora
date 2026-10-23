@@ -17,10 +17,10 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours);
-  const task = open.find((x) => x.method && !journeyOf(x).finished) || open[0];
+  // The one you've started (a plan or a tick), or else the biggest drain.
+  const task = open.find((x) => journeyOf(x).started && !journeyOf(x).finished) || open[0];
   if (!task) return null;
-  const { steps, current, doneCount } = journeyOf(task);
-  const started = doneCount > 0;
+  const { steps, current, doneCount, confirmed } = journeyOf(task);
 
   return (
     <View style={[styles.card, style]}>
@@ -46,15 +46,17 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style 
         ))}
       </View>
       <Text style={styles.next}>
-        {current ? (
+        {!confirmed ? (
+          'Make your plan, then start'
+        ) : current ? (
           <>
-            Step {doneCount + 1} of {steps.length}: <Text style={styles.nextStrong}>{current.title}</Text>
+            Step {steps.indexOf(current) + 1} of {steps.length}: <Text style={styles.nextStrong}>{current.title}</Text>
           </>
         ) : (
           'All steps done'
         )}
       </Text>
-      <Button title={started ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
+      <Button title={!confirmed ? 'Make my plan' : doneCount ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
     </View>
   );
 }
