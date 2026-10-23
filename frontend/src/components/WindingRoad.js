@@ -11,10 +11,15 @@ const SIDE = 40; // a stop's centre, in from the edge
 const NODE = 36;
 const NODE_NOW = 44;
 const BEND = 0.55; // how far the road runs straight down out of each stop before it turns
+// The road itself: light grey ahead, asphalt where you've been (so the teal ticks stand out on it).
+const ROAD_AHEAD = '#E2E8E6';
+const ROAD_DONE = '#45524F';
+const LINE_AHEAD = '#C3CECA';
+const LINE_DONE = '#FFFFFF';
 
 /**
  * The handoff as a winding road: one stop per step at the bends (left, right, left…), the road
- * teal as far as you've got, down to the sun. Done stops and the current one open their step;
+ * light grey ahead and asphalt as far as you've got, down to the sun. Done stops and the current one open their step;
  * later ones wait. `summaryOf(step)` is the line under a done step; `hours` a day the task frees.
  */
 export default function WindingRoad({ steps, current, onOpen, summaryOf, hours }) {
@@ -44,9 +49,14 @@ export default function WindingRoad({ steps, current, onOpen, summaryOf, hours }
       {width ? (
         <>
           <Svg width={width} height={height} style={styles.svg} pointerEvents="none">
-            <Path d={whole} stroke={colors.surface} strokeOpacity={0.9} strokeWidth={26} strokeLinecap="round" fill="none" />
-            {reached > 0 ? <Path d={roadTo(reached)} stroke={colors.primary} strokeWidth={26} strokeLinecap="round" fill="none" /> : null}
-            <Path d={whole} stroke={colors.borderStrong} strokeWidth={2} strokeDasharray="8 10" fill="none" />
+            <Path d={whole} stroke={ROAD_AHEAD} strokeWidth={26} strokeLinecap="round" fill="none" />
+            <Path d={whole} stroke={LINE_AHEAD} strokeWidth={2} strokeDasharray="8 10" fill="none" />
+            {reached > 0 ? (
+              <>
+                <Path d={roadTo(reached)} stroke={ROAD_DONE} strokeWidth={26} strokeLinecap="round" fill="none" />
+                <Path d={roadTo(reached)} stroke={LINE_DONE} strokeWidth={2} strokeDasharray="8 10" fill="none" />
+              </>
+            ) : null}
           </Svg>
 
           {steps.map((s, i) => {
