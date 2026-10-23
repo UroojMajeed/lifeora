@@ -21,13 +21,13 @@ function useKeyboardOpen() {
 }
 
 /** Standard screen: scrollable content (optionally pull-to-refresh) with a pinned footer (for the CTA), hidden while typing. */
-export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false, keepFooter = false, tinted = false }) {
+export default function Screen({ children, footer, scroll = true, scrollEnabled = true, edges = ['top', 'bottom'], contentStyle, refreshControl, keyboardDismissMode, avoidKeyboard = false, keepFooter = false, tinted = false, scrollRef }) {
   const { isDark, colors } = useTheme();
   const styles = useStyles(makeStyles);
   const keyboardOpen = useKeyboardOpen();
   const Body = scroll ? ScrollView : View;
   const bodyProps = scroll
-    ? { contentContainerStyle: [styles.content, contentStyle], keyboardShouldPersistTaps: 'handled', scrollEnabled, refreshControl, keyboardDismissMode }
+    ? { ref: scrollRef, contentContainerStyle: [styles.content, contentStyle], keyboardShouldPersistTaps: 'handled', scrollEnabled, refreshControl, keyboardDismissMode }
     : { style: [styles.content, styles.fill, contentStyle] };
 
   return (

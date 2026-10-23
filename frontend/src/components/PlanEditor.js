@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LayoutAnimation, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { Animated, LayoutAnimation, PanResponder, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Button from './Button';
@@ -7,18 +7,23 @@ import { MAX_PLAN_STEPS, STEP_INFO, STEP_PICKS, defaultSteps, isFinish, newStepI
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
+const GAP = spacing.sm;
+
 /**
- * Making a handoff plan yours: rename a step (tap its name), move it up or down, delete it, or add
- * your own (typed, or a quick pick). The last step finishes the handoff, so it stays last and can't
- * be deleted (you can still rename it). Ticked steps stay ticked. `onSave(steps)` confirms the plan;
- * `onCancel` (when editing a confirmed plan) leaves it as it was.
+ * Making a handoff plan yours: rename a step (tap its name), drag it by its handle to a new place,
+ * delete it, or add your own (typed, or a quick pick). The last step finishes the handoff, so it stays
+ * last and can't be deleted (you can still rename it). Ticked steps stay ticked. `onSave(steps)`
+ * confirms the plan; `onCancel` (when editing a confirmed plan) leaves it as it was. `onDragging(on)`
+ * lets the screen stop scrolling while a step is dragged; `onAddFocus` lets it bring the new step's
+ * field above the keyboard.
  */
-export default function PlanEditor({ initial, method, editing, saving, onSave, onCancel }) {
+export default function PlanEditor({ initial, method, editing, saving, onSave, onCancel, onDragging, onAddFocus }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [steps, setSteps] = useState(initial);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
+  const [dragId, setDragId] = useState(null);
   const last = steps.length - 1;
   const tick = () => Haptics.selectionAsync().catch(() => {});
   const change = (next) => {
@@ -26,11 +31,64 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
     setSteps(next);
   };
 
+  // Dragging: the dragged row follows the finger; the rows it passes slide out of its way; the new
+  // order is kept when it's dropped. The finishing step stays where it is (last).
+  const rowSpan = useRef(64); // one row's height plus the gap, measured
+  const shifts = useRef({});
+  const shiftOf = (id) => shifts.current[id] || (shifts.current[id] = new Animated.Value(0));
+  const drag = useRef(null);
+  const maxSlot = isFinish(steps[last]) ? last - 1 : last;
+
+  const dragStart = (i) => {
+    drag.current = { from: i, to: i };
+    setDragId(steps[i].id);
+    onDragging?.(true);
+    tick();
+  };
+  const dragMove = (dy) => {
+    if (!drag.current) return;
+    const { from } = drag.current;
+    const span = rowSpan.current;
+    const y = Math.max(-from * span, Math.min((maxSlot - from) * span, dy));
+    shiftOf(steps[from].id).setValue(y);
+    const to = Math.max(0, Math.min(maxSlot, from + Math.round(y / span)));
+    if (to === drag.current.to) return;
+    drag.current.to = to;
+    tick();
+    steps.forEach((s, i) => {
+      if (i === from || i > maxSlot) return;
+      const v = from < i && i <= to ? -span : to <= i && i < from ? span : 0;
+      Animated.timing(shiftOf(s.id), { toValue: v, duration: 140, useNativeDriver: true }).start();
+    });
+  };
+  const dragEnd = () => {
+    if (!drag.current) return;
+    const { from, to } = drag.current;
+    drag.current = null;
+    const next = [...steps];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setSteps(next);
+    setDragId(null);
+    onDragging?.(false);
+    setDrops((n) => n + 1);
+  };
+  // Once the new order is on screen, the rows drop their drag offsets (so nothing jumps).
+  const [drops, setDrops] = useState(0);
+  useLayoutEffect(() => {
+    Object.values(shifts.current).forEach((v) => v.setValue(0));
+  }, [drops]);
+  // Always the latest handlers (each row's drag responder is made once).
+  const handlers = useRef({});
+  handlers.current = { dragStart, dragMove, dragEnd };
+
   const rename = (id, title) => setSteps((list) => list.map((s) => (s.id === id ? { ...s, title } : s)));
   const move = (i, d) => {
+    const j = i + d;
+    if (j < 0 || j > maxSlot) return;
     tick();
     const next = [...steps];
-    [next[i], next[i + d]] = [next[i + d], next[i]];
+    [next[i], next[j]] = [next[j], next[i]];
     change(next);
   };
   const remove = (i) => {
@@ -63,9 +121,14 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
 
       <View style={styles.list}>
         {steps.map((s, i) => {
-          const finish = i === last && isFinish(s);
+          const fixed = i > maxSlot;
+          const lifted = dragId === s.id;
           return (
-            <View key={s.id} style={styles.row}>
+            <Animated.View
+              key={s.id}
+              onLayout={i === 0 ? (e) => (rowSpan.current = e.nativeEvent.layout.height + GAP) : undefined}
+              style={[styles.row, lifted && styles.rowLifted, { transform: [{ translateY: shiftOf(s.id) }] }]}
+            >
               <View style={[styles.num, s.done && styles.numDone]}>
                 {s.done ? <Ionicons name="checkmark" size={14} color={colors.onColor} /> : <Text style={styles.numText}>{i + 1}</Text>}
               </View>
@@ -82,19 +145,20 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
                   {s.done ? 'Done' : s.kind === 'custom' ? 'Your step' : 'Suggested'}
                 </Text>
               </View>
-              {finish ? (
+              {fixed ? (
                 <View style={styles.lock}>
                   <Ionicons name="lock-closed" size={11} color={colors.muted} />
                   <Text style={styles.lockText}>Finishes it</Text>
                 </View>
               ) : (
                 <>
-                  <Icon name="chevron-up" label="Move up" disabled={i === 0} onPress={() => move(i, -1)} />
-                  <Icon name="chevron-down" label="Move down" disabled={i >= last - 1} onPress={() => move(i, 1)} />
-                  <Icon name="close" label="Delete step" onPress={() => remove(i)} />
+                  <Pressable onPress={() => remove(i)} hitSlop={4} accessibilityRole="button" accessibilityLabel="Delete step" style={styles.icon}>
+                    <Ionicons name="close" size={17} color={colors.muted} />
+                  </Pressable>
+                  <DragHandle index={i} handlers={handlers} onStep={(d) => move(i, d)} color={lifted ? colors.primary : colors.muted} style={styles.handle} />
                 </>
               )}
-            </View>
+            </Animated.View>
           );
         })}
 
@@ -105,6 +169,7 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
                 value={name}
                 onChangeText={setName}
                 onSubmitEditing={() => add(name)}
+                onFocus={onAddFocus}
                 placeholder="Name your step"
                 placeholderTextColor={colors.muted}
                 maxLength={40}
@@ -136,7 +201,7 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
       </View>
 
       <View style={styles.foot}>
-        <Text style={styles.count}>{steps.length} steps</Text>
+        <Text style={styles.count}>{steps.length} steps · drag ≡ to reorder</Text>
         <Pressable onPress={reset} hitSlop={8} accessibilityRole="button">
           <Text style={styles.link}>Reset to suggested</Text>
         </Pressable>
@@ -150,21 +215,54 @@ export default function PlanEditor({ initial, method, editing, saving, onSave, o
       ) : null}
     </View>
   );
-
-  function Icon({ name: icon, label, disabled, onPress }) {
-    return (
-      <Pressable onPress={onPress} disabled={disabled} hitSlop={4} accessibilityRole="button" accessibilityLabel={label} style={[styles.icon, disabled && styles.off]}>
-        <Ionicons name={icon} size={17} color={colors.muted} />
-      </Pressable>
-    );
-  }
 }
 
-const makeStyles = (colors) => ({
+/** The ≡ handle a row is dragged by. Screen readers move the step up or down with it instead. */
+function DragHandle({ index, handlers, onStep, color, style }) {
+  const at = useRef(index);
+  at.current = index;
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => handlers.current.dragStart(at.current),
+      onPanResponderMove: (_, g) => handlers.current.dragMove(g.dy),
+      onPanResponderRelease: () => handlers.current.dragEnd(),
+      onPanResponderTerminate: () => handlers.current.dragEnd(),
+    })
+  ).current;
+  return (
+    <View
+      {...pan.panHandlers}
+      style={style}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel="Reorder step"
+      accessibilityActions={[{ name: 'decrement', label: 'Move up' }, { name: 'increment', label: 'Move down' }]}
+      onAccessibilityAction={(e) => onStep(e.nativeEvent.actionName === 'increment' ? 1 : -1)}
+    >
+      <Ionicons name="reorder-three" size={24} color={color} />
+    </View>
+  );
+}
+
+const makeStyles = (colors, isDark) => ({
   title: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: spacing.lg },
   sub: { fontSize: 14, color: colors.muted, marginTop: 2 },
-  list: { gap: spacing.sm, marginTop: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingLeft: spacing.sm + 2, paddingRight: 4, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  list: { gap: GAP, marginTop: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingLeft: spacing.sm + 2, paddingRight: 2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  // Picked up: above the others, with a shadow and a teal edge.
+  rowLifted: {
+    zIndex: 2,
+    elevation: 6,
+    borderColor: colors.primary,
+    shadowColor: '#0A1716',
+    shadowOpacity: isDark ? 0.5 : 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
   num: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   numDone: { backgroundColor: colors.primary },
   numText: { fontSize: 12, fontWeight: '800', color: colors.primary },
@@ -173,6 +271,7 @@ const makeStyles = (colors) => ({
   tag: { fontSize: 11, fontWeight: '700', color: colors.muted, marginTop: 1 },
   tagYours: { color: colors.accentText },
   icon: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  handle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   off: { opacity: 0.3 },
   lock: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingRight: spacing.sm },
   lockText: { fontSize: 11, fontWeight: '600', color: colors.muted },
