@@ -22,9 +22,9 @@ const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label |
 /**
  * Handing off one task, as a road: one station per step, ending at the sun. The steps are the
  * suggested ones unless you change them ("Edit steps": drag, rename, delete, add your own). The
- * current station opens its step in a sheet, with its helpers (all optional) and one question: did
- * you do it? "I did it" ticks it; "Not yet" keeps your notes and waits. Ticking the last step hands
- * the task off: its hours are bought back, and the weekly check-in asks if it stuck. Route param: `activity`.
+ * current station opens its step in a sheet; its one button saves your answer and ticks the step.
+ * Ticking the last step hands the task off: its hours are bought back, and the weekly check-in asks
+ * if it stuck. Route param: `activity`.
  */
 export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
@@ -185,7 +185,6 @@ export default function HandoffJourneyScreen({ navigation, route }) {
           <StepSheet
             key={sheet.n}
             step={sheetStep}
-            isCurrent={current?.id === sheetStep.id}
             task={task}
             onDone={(patch) => {
               setSheet((s) => ({ ...s, open: false }));
@@ -200,10 +199,11 @@ export default function HandoffJourneyScreen({ navigation, route }) {
 }
 
 /**
- * One step, in the sheet: its helpers (all optional, except choosing how), then "Did you…?" with
- * Not yet / I did it. A step you've already ticked opens with Save and Untick instead.
+ * One step, in the sheet: its question and helpers, and one button that saves the answer and ticks
+ * the step (Save; Hand it over or Drop it on the last step; Mark done on your own steps). A step
+ * you've already ticked opens to change its answer.
  */
-function StepSheet({ step, isCurrent, task, onDone }) {
+function StepSheet({ step, task, onDone }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { update } = useHandoffs();
@@ -215,12 +215,11 @@ function StepSheet({ step, isCurrent, task, onDone }) {
   const [who, setWho] = useState(task.who || '');
   const [find, setFind] = useState(false);
   const [start, setStart] = useState(task.startDate || null);
-  const [saving, setSaving] = useState(null); // 'tick' | 'save' | 'untick'
+  const [saving, setSaving] = useState(false);
   const tick = () => Haptics.selectionAsync().catch(() => {});
   const rate = onboarding?.buybackRate;
   const currency = onboarding?.currency || 'USD';
   const kind = step.kind;
-  const finished = task.status === 'done';
 
   // What the helpers hold, ready to save (only this step's own answers).
   const fields = () => {
@@ -232,8 +231,8 @@ function StepSheet({ step, isCurrent, task, onDone }) {
   };
   const strip = (list) => list.map(({ id, kind: k, title, done }) => ({ id, kind: k, title, done }));
 
-  const run = async (mode, patch) => {
-    setSaving(mode);
+  const run = async (patch) => {
+    setSaving(true);
     try {
       await update(task.activity, patch);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -241,27 +240,31 @@ function StepSheet({ step, isCurrent, task, onDone }) {
     } catch (err) {
       Alert.alert("Couldn't save that", err.message);
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
-  // I did it: tick this step (choosing how may also reshape the plan); the last one hands it off.
-  const didIt = () => {
+  // Save and tick this step (choosing how may also reshape the steps); the last one hands it off.
+  // An already ticked step just saves its new answer.
+  const save = () => {
+    if (step.done && kind !== 'how') return run(fields());
     const now = planOf(task);
     const next = kind === 'how' ? planForMethod(now, method) : now.map((s) => (s.id === step.id ? { ...s, done: true } : s));
     const all = next.every((s) => s.done);
-    run('tick', { ...fields(), steps: strip(next), planConfirmed: true, status: all ? 'done' : 'in_progress' });
-  };
-  const saveOnly = () => run('save', fields());
-  const untick = () => run('untick', { steps: strip(planOf(task).map((s) => (s.id === step.id ? { ...s, done: false } : s))) });
-  // Not yet: keep anything you wrote, and come back later.
-  const notYet = () => {
-    const f = fields();
-    if (Object.keys(f).length) run('save', f);
-    else onDone();
+    return run({ ...fields(), steps: strip(next), status: all ? 'done' : 'in_progress' });
   };
 
-  const canTick = kind !== 'how' || Boolean(method);
-  const question = `Did you ${step.title.charAt(0).toLowerCase() + step.title.slice(1)}?`;
+  // What the step needs before it can be saved, and its button.
+  const ready = {
+    how: Boolean(method),
+    brief: Boolean(doneText.trim() && checkText.trim()),
+    who: Boolean(who.trim()),
+    handover: Boolean(start),
+  }[kind] ?? true;
+  const action =
+    kind === 'handover' ? { title: 'Hand it over', icon: 'paper-plane' }
+    : kind === 'drop' ? { title: 'Drop it', icon: 'close' }
+    : kind === 'custom' ? { title: 'Mark done', icon: 'checkmark' }
+    : { title: 'Save', icon: 'checkmark' };
   const ideas = kind === 'how' ? handoffIdeas(task) : [];
   const automate = task.method === 'automate';
   const post = kind === 'who' ? jobPostDraft({ task, doneLooksLike: task.doneLooksLike, rate, currency }) : '';
@@ -322,7 +325,7 @@ function StepSheet({ step, isCurrent, task, onDone }) {
 
       {kind === 'brief' ? (
         <View>
-          <Text style={styles.sheetSub}>You set the start and the finish. They own the 80% in between. Optional: it goes into your handover message.</Text>
+          <Text style={styles.sheetSub}>You set the start and the finish. They own the 80% in between.</Text>
           <Text style={styles.qLabel}>
             <Text style={styles.qPct}>10% · </Text>What does done look like?
           </Text>
@@ -413,24 +416,8 @@ function StepSheet({ step, isCurrent, task, onDone }) {
 
       {kind === 'custom' ? <Text style={styles.sheetSub}>Your own step. Do it your way, then tick it here.</Text> : null}
 
-      {isCurrent ? (
-        <View style={styles.ask}>
-          <Text style={styles.askText}>{question}</Text>
-          {!canTick ? <Text style={styles.askHint}>Pick how first, then tick it.</Text> : null}
-          <View style={styles.answers}>
-            <Button title="Not yet" variant="secondary" loading={saving === 'save'} onPress={notYet} style={styles.answer} />
-            <Button title="I did it" icon="checkmark" disabled={!canTick} loading={saving === 'tick'} onPress={didIt} style={styles.answer} />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.ask}>
-          {Object.keys(fields()).length ? <Button title="Save" icon="checkmark" loading={saving === 'save'} onPress={saveOnly} /> : null}
-          {!finished ? (
-            <Pressable onPress={untick} hitSlop={8} style={styles.untick} accessibilityRole="button">
-              <Text style={styles.untickText}>{saving === 'untick' ? 'Unticking…' : 'Untick this step'}</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      {kind === 'custom' && step.done ? null : (
+        <Button title={action.title} icon={action.icon} disabled={!ready} loading={saving} onPress={save} style={styles.save} />
       )}
     </View>
   );
@@ -508,12 +495,4 @@ const makeStyles = (colors) => ({
   yours: { fontSize: 11, fontWeight: '800', color: colors.accentText },
   editPlan: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.xs, marginBottom: spacing.md, paddingVertical: spacing.xs },
   editPlanText: { fontSize: 14, fontWeight: '800', color: colors.primary },
-  // Did you do it?
-  ask: { marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  askText: { fontSize: 16, fontWeight: '800', color: colors.text },
-  askHint: { fontSize: 13, color: colors.muted, marginTop: 2 },
-  answers: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  answer: { flex: 1 },
-  untick: { alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.xs },
-  untickText: { fontSize: 14, fontWeight: '800', color: colors.muted },
 });
