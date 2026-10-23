@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { StyleSheet, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { darkColors, lightColors, makeType } from './index';
-
 import { withFonts } from './fonts';
 
 // Dark mode is hidden for now: the app always uses the light colours, and the ☀/🌙 button is gone.
