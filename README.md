@@ -1,5 +1,7 @@
 # Lifeora — Buy back your time
 
+> **New machine or new agent? Start with [PROJECT_GUIDE.md](PROJECT_GUIDE.md):** where everything lives, how to set up and ship, and the project rules.
+
 A mobile app built on the ideas in *Buy Back Your Time* by Dan Martell. It helps founders find the work that drains them, hand it off, and spend their hours where they matter most.
 
 ```
