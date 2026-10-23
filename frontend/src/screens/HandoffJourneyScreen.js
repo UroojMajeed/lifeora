@@ -8,19 +8,22 @@ import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import BottomSheet from '../components/BottomSheet';
 import PlanEditor from '../components/PlanEditor';
+import WindingRoad from '../components/WindingRoad';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
 import { formatDay, sameDay, startOptions } from '../constants/handoffSteps';
 import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, stepSummary } from '../constants/journey';
+import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label || '';
 
 /**
- * Handing off one task, as a road: one station per step, ending at the sun. The steps are the
+ * Handing off one task, as a road winding through a sunrise: one stop per step, ending at the sun.
+ * At the top, what the task costs you and your Buyback Rate (pay less than that to buy your time back). The steps are the
  * suggested ones unless you change them ("Edit steps": drag, rename, delete, add your own). The
  * current station opens its step in a sheet; its one button saves your answer and ticks the step.
  * Ticking the last step hands the task off: its hours are bought back, and the weekly check-in asks
@@ -30,6 +33,7 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { handoffs, update } = useHandoffs();
+  const { onboarding } = useOnboarding();
   const task = handoffs.find((x) => x.activity === route.params?.activity);
   const [sheet, setSheet] = useState({ open: false, id: null, n: 0 });
   const [editing, setEditing] = useState(false);
@@ -44,7 +48,8 @@ export default function HandoffJourneyScreen({ navigation, route }) {
     );
   }
 
-  const { steps, current, doneCount, finished } = journeyOf(task);
+  const { steps, current, finished } = journeyOf(task);
+  const rate = onboarding?.buybackRate;
   const open = (id) => {
     Haptics.selectionAsync().catch(() => {});
     setSheet((s) => ({ open: true, id, n: s.n + 1 }));
@@ -82,73 +87,35 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const sheetStep = steps.find((s) => s.id === sheet.id);
 
   return (
-    <Screen>
-      <PageHeader eyebrow="Hand it off" title={task.activity} subtitle={`${h(task.hours)} a day · ${doneCount} of ${steps.length} steps done`} />
+    <Screen tinted="dawn">
+      <PageHeader eyebrow="Hand it off" title={task.activity} />
 
-      {/* The road: one station per step, then the sun. */}
-      <View style={styles.road}>
-        {steps.map((s, i) => {
-          const isCurrent = current?.id === s.id;
-          const locked = !s.done && !isCurrent;
-          return (
-            <View key={s.id} style={styles.stop}>
-              <View style={styles.rail}>
-                <View style={[styles.node, s.done && styles.nodeDone, isCurrent && styles.nodeNow]}>
-                  {s.done ? (
-                    <Ionicons name="checkmark" size={16} color={colors.onColor} />
-                  ) : (
-                    <Text style={[styles.nodeNum, isCurrent && styles.nodeNumNow]}>{i + 1}</Text>
-                  )}
-                </View>
-                <View style={[styles.line, s.done && styles.lineDone]} />
-              </View>
-              <Pressable
-                onPress={() => open(s.id)}
-                disabled={locked}
-                accessibilityRole="button"
-                accessibilityLabel={`Step ${i + 1}, ${s.title}${s.done ? ', done' : isCurrent ? ', next' : ', later'}`}
-                style={({ pressed }) => [styles.station, isCurrent && styles.stationNow, locked && styles.stationLocked, pressed && styles.pressed]}
-              >
-                <View style={styles.stationHead}>
-                  <Ionicons name={s.icon} size={17} color={isCurrent ? colors.accentText : s.done ? colors.primary : colors.muted} />
-                  <Text style={[styles.stationTitle, locked && styles.mutedText]}>{s.title}</Text>
-                  {s.kind === 'custom' ? <Text style={styles.yours}>Yours</Text> : null}
-                </View>
-                {s.done ? (
-                  <Text style={styles.summary} numberOfLines={2}>
-                    {stepSummary(s.kind, task, methodLabel(task.method))}
-                  </Text>
-                ) : isCurrent ? (
-                  <View style={styles.go}>
-                    <Text style={styles.goText}>{doneCount ? 'Continue' : 'Start'}</Text>
-                    <Ionicons name="arrow-forward" size={15} color={brand.evergreen} />
-                  </View>
-                ) : null}
-              </Pressable>
-            </View>
-          );
-        })}
-
-        {/* The destination. */}
-        <View style={styles.stop}>
-          <View style={styles.rail}>
-            <View style={[styles.sun, finished && styles.sunOn]}>
-              <Ionicons name="sunny" size={22} color={finished ? '#FFFFFF' : colors.muted} />
-            </View>
-          </View>
-          <View style={styles.dest}>
-            <Text style={[styles.destTitle, !finished && styles.mutedText]}>{finished ? 'Off your plate!' : 'Off your plate'}</Text>
-            <Text style={styles.destLine}>+{h(task.hours * 5)} a week back</Text>
-          </View>
+      {/* What it costs you, and changing the steps. */}
+      <View style={styles.facts}>
+        <View style={styles.fact}>
+          <Ionicons name="time-outline" size={14} color={colors.text} />
+          <Text style={styles.factText}>
+            {h(task.hours)} a day · <Text style={styles.drains}>drains you</Text>
+          </Text>
         </View>
+        {!finished ? (
+          <Pressable onPress={() => setEditing(true)} hitSlop={8} style={styles.editPlan} accessibilityRole="button">
+            <Ionicons name="create-outline" size={15} color={colors.primary} />
+            <Text style={styles.editPlanText}>Edit steps</Text>
+          </Pressable>
+        ) : null}
       </View>
-
-      {!finished ? (
-        <Pressable onPress={() => setEditing(true)} hitSlop={8} style={styles.editPlan} accessibilityRole="button">
-          <Ionicons name="create-outline" size={16} color={colors.primary} />
-          <Text style={styles.editPlanText}>Edit steps</Text>
-        </Pressable>
+      {rate && task.method !== 'drop' ? (
+        <View style={styles.rateRow}>
+          <View style={[styles.fact, styles.rateChip]}>
+            <Ionicons name="cash-outline" size={14} color={colors.accentText} />
+            <Text style={[styles.factText, styles.rateText]}>Pay up to {formatMoney(rate, onboarding?.currency || 'USD', { decimals: 0 })}/hr</Text>
+          </View>
+          <Text style={styles.rateNote}>Your Buyback Rate: help that costs less than this an hour buys your time back.</Text>
+        </View>
       ) : null}
+
+      <WindingRoad steps={steps} current={current} hours={task.hours} onOpen={open} summaryOf={(s) => stepSummary(s.kind, task, methodLabel(task.method))} />
 
       {/* The 10-80-10 brief, once it's written: your start and finish, their middle. */}
       {task.method !== 'drop' && task.doneLooksLike && task.checkHow ? (
@@ -423,34 +390,18 @@ function StepSheet({ step, task, onDone }) {
   );
 }
 
-const NODE = 32;
 const makeStyles = (colors) => ({
   pressed: { opacity: 0.85 },
   mutedText: { color: colors.muted },
-  // The road
-  road: { marginTop: spacing.lg },
-  stop: { flexDirection: 'row', gap: spacing.md },
-  rail: { width: NODE, alignItems: 'center' },
-  node: { width: NODE, height: NODE, borderRadius: NODE / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong },
-  nodeDone: { backgroundColor: colors.primary, borderColor: colors.primary },
-  nodeNow: { borderColor: brand.apricot, backgroundColor: colors.accentSoft, borderWidth: 3 },
-  nodeNum: { fontSize: 14, fontWeight: '800', color: colors.muted },
-  nodeNumNow: { color: colors.accentText },
-  line: { flex: 1, width: 3, minHeight: 18, marginVertical: 4, borderRadius: 2, backgroundColor: colors.border },
-  lineDone: { backgroundColor: colors.primary },
-  station: { flex: 1, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
-  stationNow: { borderColor: brand.apricot, backgroundColor: colors.accentSoft },
-  stationLocked: { backgroundColor: 'transparent', borderStyle: 'dashed' },
-  stationHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  stationTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
-  summary: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
-  go: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.sm, paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: brand.apricot },
-  goText: { fontSize: 13, fontWeight: '800', color: brand.evergreen },
-  sun: { width: NODE + 8, height: NODE + 8, borderRadius: (NODE + 8) / 2, marginLeft: -4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt },
-  sunOn: { backgroundColor: brand.apricot },
-  dest: { flex: 1, paddingTop: 4 },
-  destTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  destLine: { fontSize: 13, fontWeight: '700', color: colors.accentText, marginTop: 2 },
+  // At the top
+  facts: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: -spacing.sm },
+  fact: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface },
+  factText: { fontSize: 13, fontWeight: '700', color: colors.text },
+  drains: { color: colors.error },
+  rateRow: { marginTop: spacing.sm, gap: 4 },
+  rateChip: { backgroundColor: colors.accentSoft },
+  rateText: { color: colors.accentText },
+  rateNote: { fontSize: 12, lineHeight: 17, color: colors.muted },
   win: { marginTop: spacing.lg, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.successSoft },
   winTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
   winText: { fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center', marginTop: 4 },
@@ -493,6 +444,6 @@ const makeStyles = (colors) => ({
   save: { marginTop: spacing.lg },
   note: { fontSize: 13, lineHeight: 19, color: colors.accentText, marginTop: spacing.md },
   yours: { fontSize: 11, fontWeight: '800', color: colors.accentText },
-  editPlan: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.xs, marginBottom: spacing.md, paddingVertical: spacing.xs },
+  editPlan: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
   editPlanText: { fontSize: 14, fontWeight: '800', color: colors.primary },
 });
