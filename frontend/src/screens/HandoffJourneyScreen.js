@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Alert, Keyboard, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -35,17 +35,6 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const [editing, setEditing] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const scrollRef = useRef(null);
-  // The new step's field sits low on the plan: once the keyboard is up, scroll it into view.
-  const showAddField = () => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
-      sub.remove();
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
-    });
-    setTimeout(() => sub.remove(), 1500);
-    // The keyboard may already be up (after renaming a step).
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
-  };
 
   if (!task) {
     return (
@@ -76,7 +65,7 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   // The plan first (and again whenever you edit it).
   if (!confirmed || editing) {
     return (
-      <Screen scrollRef={scrollRef} scrollEnabled={!dragging} avoidKeyboard>
+      <Screen scrollEnabled={!dragging}>
         <PageHeader eyebrow="Hand it off" title={task.activity} subtitle={`${h(task.hours)} a day · drains you`} />
         <PlanEditor
           key={editing ? 'edit' : 'new'}
@@ -87,7 +76,6 @@ export default function HandoffJourneyScreen({ navigation, route }) {
           onSave={savePlan}
           onCancel={confirmed ? () => setEditing(false) : undefined}
           onDragging={setDragging}
-          onAddFocus={showAddField}
         />
       </Screen>
     );
