@@ -12,7 +12,6 @@ import AuditStats from '../../components/AuditStats';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
-import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
@@ -180,7 +179,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           <StepHeader
             step={stepNumber('schedule')}
             editing={Boolean(round)}
-            eyebrow={(round ? `Round ${round}` : 'Step 2 of 4') + (mode === 'form' && items.length ? ` · ${items.length} ${items.length === 1 ? 'task' : 'tasks'}, ${formatHours(items.reduce((t, it) => t + (it.hours || 0), 0))}` : '')}
+            eyebrow={round ? `Round ${round}` : 'Step 2 of 4'}
             title={mode === 'list' ? 'Your routine' : 'Time and energy audit'}
             subtitle={
               round
@@ -193,6 +192,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           )}
           {mode === 'form' ? (
             <>
+              {/* Your totals so far, in one slim pill. */}
+              {items.length ? <AuditStats items={items} style={styles.formStats} /> : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
@@ -202,23 +203,6 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                   onReadyChange={setFormReady}
                   onReveal={() => listRef.current?.scrollToEnd({ animated: true })}
                 />
-              ) : null}
-              {/* Save & next, right under the task it saves. */}
-              {items.length < MAX_ACTIVITIES ? (
-                <Button
-                  title="Save & next"
-                  icon="arrow-forward"
-                  onPress={() => formRef.current?.save()}
-                  disabled={!formReady}
-                  style={styles.saveNext}
-                />
-              ) : null}
-              {/* Done: a quiet text button under Save & next, once there's a task. */}
-              {items.length ? (
-                <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
-                  <Text style={styles.doneText}>Done · {items.length} {items.length === 1 ? 'task' : 'tasks'}</Text>
-                  <Ionicons name="checkmark" size={17} color={colors.primary} />
-                </Pressable>
               ) : null}
             </>
           ) : (
@@ -262,6 +246,29 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
         </ScrollView>
 
 
+        {/* Adding a task: Save & next and Done, pinned to the bottom (the keyboard slides over them). */}
+        {mode === 'form' ? (
+          <View style={[styles.actionRow, styles.formBar]}>
+            {items.length < MAX_ACTIVITIES ? (
+              <Button
+                title="Save & next"
+                icon="arrow-forward"
+                onPress={() => formRef.current?.save()}
+                disabled={!formReady}
+                style={styles.actionButton}
+              />
+            ) : null}
+            {items.length ? (
+              <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
+                <Text style={styles.doneText}>
+                  Done · {items.length} {items.length === 1 ? 'task' : 'tasks'}
+                </Text>
+                <Ionicons name="checkmark" size={17} color={colors.primary} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* From the routine on to the DRIP Matrix (it stays put; the keyboard covers it while you type). */}
         {mode === 'list' && items.length && !inTab ? (
           <View style={styles.actionRow}>
@@ -287,11 +294,10 @@ const makeStyles = (colors) => ({
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: spacing.sm },
-  // The sticky bar.
-  saveNext: { marginTop: spacing.lg },
-  doneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: spacing.md, paddingVertical: spacing.xs },
-  // "Done": short and outlined, on the right, so it never competes with "Save & next".
-  done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
+  formStats: { marginBottom: spacing.lg },
+  // The pinned bar while adding a task: the page scrolls under it.
+  formBar: { backgroundColor: colors.background },
+  doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.xs },
   doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
   // A small outlined pill: clearly a button, quieter than See what drains you.
   addMore: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },

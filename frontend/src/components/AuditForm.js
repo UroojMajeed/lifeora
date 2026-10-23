@@ -3,7 +3,7 @@ import { Keyboard, LayoutAnimation, Pressable, ScrollView, Text, TextInput, View
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { FIELDS } from './AuditTaskCard';
-import AuditQuestionCards from './AuditQuestionCards';
+import AuditChoices from './AuditChoices';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -12,16 +12,16 @@ const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
 
 /**
- * The audit's add-a-task form: the task's name on a small card (with quick picks), then its three
- * questions as cards, one open at a time (how long, what it pays, how it feels). Each answer folds its
- * card and opens the next. The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
+ * The audit's add-a-task form, filling the page with the whole task at once: the task
+ * box with quick picks, then its three questions, all shown from the start (how long, what it pays,
+ * how it feels: one tap each). The 0/60 counter shows only near the limit. The screen's buttons save it: `ref.save()`,
  * with `onReadyChange(ready)` telling it when everything is filled in.
  */
 const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onReadyChange, onReveal }, ref) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [form, setForm] = useState(EMPTY);
-  const [field, setField] = useState('hours'); // the open card: 'hours' | 'money' | 'energy' | null
+  const [field, setField] = useState(null); // the open button: 'hours' | 'money' | 'energy'
   const [focused, setFocused] = useState(false);
   const inputRef = useRef(null);
 
@@ -54,17 +54,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
     if (!name || duplicate) return;
     openFirstMissing(form);
   };
-  // An answer: set it, fold its card and open the next one still missing.
-  const change = (patch) => {
-    const next = { ...form, ...patch };
-    setForm(next);
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setField(FIELDS.find((k) => !next[k]) ?? null);
-  };
-  const openCard = (k) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setField(k);
-  };
+  // An answer: just set it (all three questions are open, so the page stays still).
+  const change = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   useImperativeHandle(ref, () => ({
     save() {
@@ -74,28 +65,29 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
       onAdd({ activity: name.slice(0, 60), hours: form.hours, per: 'day', money: form.money, value: valueForMoney(form.money), energy: form.energy });
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setForm(EMPTY);
-      setField('hours');
+      setField(null);
     },
   }));
 
+  const energyIcon = (it) => (it.energy === 'energizing' ? 'flash' : 'battery-dead');
+  const energyColor = (it) => (it.energy === 'energizing' ? colors.success : colors.error);
+
   return (
     <View style={styles.card}>
-      {/* The task's name on a small white card: "Task N" on top, the name big under it, teal while you type. */}
-      {/* Anywhere on the card opens the keyboard. */}
+      {/* The task: a roomy writing area (about three lines), calm text, a teal edge while you type. */}
+      {/* The whole field opens the keyboard on the first tap. */}
       <Pressable
         onPress={() => inputRef.current?.focus()}
         accessible={false}
         style={[styles.inputBox, focused && styles.inputBoxFocused, duplicate && styles.inputBoxError]}
       >
-        <Text style={styles.number}>Task {items.length + 1}</Text>
-        <View>
-          {/* A pale hint, so it never looks filled. */}
-          {!form.name ? (
-            <Text pointerEvents="none" style={styles.hint}>
-              Type a task
-            </Text>
-          ) : null}
-          <TextInput
+        {/* A short, pale hint: smaller than real text, so it never looks filled. */}
+        {!form.name ? (
+          <Text pointerEvents="none" style={styles.hint}>
+            Type a task
+          </Text>
+        ) : null}
+        <TextInput
           ref={inputRef}
           value={form.name}
           // One line of meaning, but room to see it all: Return finishes (no new lines).
@@ -110,8 +102,9 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
           returnKeyType="done"
           style={[styles.input, duplicate && { color: colors.error }]}
           accessibilityLabel={duplicate ? "Task name. That's already in your routine." : 'Task name'}
-          />
-        </View>
+        />
+        {/* Which task this is, quietly (from the second one). */}
+        {items.length ? <Text style={styles.number}>Task {items.length + 1}</Text> : null}
       </Pressable>
       {duplicate ? <Text style={styles.warn}>That's already in your routine.</Text> : null}
       {/* The limit, only when it's close. */}
@@ -145,15 +138,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
         </>
       ) : null}
 
-      {/* The three questions, one card each, one open at a time. */}
-      <View style={styles.cards}>
-        <AuditQuestionCards
-          item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }}
-          open={field}
-          onOpen={openCard}
-          onChange={change}
-        />
-      </View>
+      {/* The three questions, all shown from the start so the whole task is clear: one tap each. */}
+      <AuditChoices item={{ activity: name, hours: form.hours, money: form.money, energy: form.energy }} onChange={change} />
     </View>
   );
 });
@@ -161,29 +147,31 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
+  // No card: the task and its rows sit straight on the page.
   card: {},
-  cards: { marginTop: spacing.md },
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
-  number: { fontSize: 12, fontWeight: '800', color: colors.muted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 2 },
-  // The name card.
+  number: { fontSize: 12, fontWeight: '700', color: colors.muted },
+  // The task: one underlined line, the name written big like a heading (no box).
   inputBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 56,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.borderStrong,
   },
-  // Typing: a teal edge (1.5, with the padding trimmed so nothing moves).
-  inputBoxFocused: { borderWidth: 1.5, borderColor: colors.primary, paddingVertical: 11.5, paddingHorizontal: 13.5 },
-  inputBoxError: { borderColor: colors.error },
-  hint: { position: 'absolute', left: 0, fontSize: 20, lineHeight: 28, fontWeight: '800', letterSpacing: -0.4, color: colors.muted, opacity: 0.45 },
-  input: { minHeight: 28, fontSize: 20, lineHeight: 28, fontWeight: '800', letterSpacing: -0.4, color: colors.text, padding: 0 },
+  // Typing: a teal edge.
+  inputBoxFocused: { borderBottomColor: colors.primary },
+  inputBoxError: { borderBottomColor: colors.error },
+  inputIcon: {},
+  hint: { position: 'absolute', left: 0, fontSize: 26, lineHeight: 34, fontWeight: '800', letterSpacing: -0.6, color: colors.muted, opacity: 0.45 },
+  input: { flex: 1, minHeight: 34, fontSize: 26, lineHeight: 34, fontWeight: '800', letterSpacing: -0.6, color: colors.text, padding: 0 },
   warn: { fontSize: 13, fontWeight: '600', color: colors.error, marginTop: 6 },
   // Same columns and gap as the Time / Money / Energy buttons below them.
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.sm + 4, marginBottom: spacing.xs },
+  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.sm + 4 },
   suggestions: { gap: 6, paddingHorizontal: spacing.lg },
   suggestion: {
     maxWidth: 200,
