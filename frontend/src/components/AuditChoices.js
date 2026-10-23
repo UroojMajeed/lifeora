@@ -109,10 +109,11 @@ export default function AuditChoices({ item, onChange }) {
 // while hitSlop keeps each touch area at 48.
 const makeStyles = (colors) => ({
   wrap: { marginTop: spacing.sm },
-  q: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: colors.text, marginTop: spacing.md + 4, marginBottom: spacing.sm },
+  // Each question starts with a thin line, so the card reads as three parts.
+  q: { fontSize: 15, lineHeight: 20, fontWeight: '800', color: colors.text, marginTop: spacing.md, paddingTop: spacing.md, marginBottom: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   // Hours: one line, edge to edge (scroll for more).
-  edge: { marginHorizontal: -spacing.lg },
-  hours: { gap: spacing.sm, paddingHorizontal: spacing.lg },
+  edge: { marginHorizontal: -(spacing.md + 4) }, // edge to edge inside the card
+  hours: { gap: spacing.sm, paddingHorizontal: spacing.md + 4 },
   hour: { height: 40, minWidth: 54, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.borderStrong, backgroundColor: colors.surface },
   hourOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   hourHint: { borderStyle: 'dashed', borderColor: colors.primary },

@@ -6,7 +6,7 @@ import { FIELDS } from './AuditTaskCard';
 import AuditChoices from './AuditChoices';
 import { suggestionsFor, valueForMoney } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { radius, spacing } from '../theme';
+import { cardShadow, radius, spacing } from '../theme';
 
 const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const EMPTY = { name: '', hours: null, money: null, energy: null };
@@ -148,7 +148,8 @@ const AuditForm = forwardRef(function AuditForm({ role, items = [], onAdd, onRea
 export default AuditForm;
 
 const makeStyles = (colors, isDark) => ({
-  card: {},
+  // One card per task: the name and its three questions together, the sky around it.
+  card: { padding: spacing.md + 4, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: isDark ? colors.border : 'transparent', ...cardShadow(colors, isDark) },
   counter: { alignSelf: 'flex-end', fontSize: 12, fontWeight: '600', color: colors.muted, marginTop: 4 },
   number: { fontSize: 12, fontWeight: '700', color: colors.muted },
   inputBox: {
@@ -174,8 +175,8 @@ const makeStyles = (colors, isDark) => ({
   // Same columns and gap as the Time / Money / Energy buttons below them.
   // One line of suggestions, edge to edge inside the card (scrolls sideways): soft grey quick picks,
   // no outline, so they never look like the Time / Money / Energy buttons.
-  suggestionsLine: { marginHorizontal: -spacing.lg, marginTop: spacing.md },
-  suggestions: { gap: 6, paddingHorizontal: spacing.lg },
+  suggestionsLine: { marginHorizontal: -(spacing.md + 4), marginTop: spacing.md },
+  suggestions: { gap: 6, paddingHorizontal: spacing.md + 4 },
   suggestion: {
     maxWidth: 200,
     flexDirection: 'row',
