@@ -8,14 +8,14 @@ import { brand, spacing } from '../theme';
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
 /**
- * PREVIEW (development app only): the handoff journey's card on Home. It shows the task you're
- * handing off and where you left off (one dot per step), and takes you back to that step. The task
- * is the one you've started, or else the next one to hand off.
+ * Home's move card: the drain you're handing off and where you left off in its steps (one dot per
+ * step), with a button back to that step. The task is the one you've started, or else the biggest
+ * drain not handed off yet. `next` once you've handed one off ("Your Next Move").
  */
-export default function JourneyPreviewCard({ handoffs = [], onOpen, style }) {
+export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress');
+  const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours);
   const task = open.find((x) => x.method && !journeyOf(x).finished) || open[0];
   if (!task) return null;
   const { steps, current, doneCount } = journeyOf(task);
@@ -23,7 +23,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, style }) {
 
   return (
     <View style={[styles.card, style]}>
-      <CardHeader icon="flask" iconColor={colors.accentText} title="First Move (Preview)" sub={started ? `Handing off ${task.activity}` : `Hand off ${task.activity} · ${h(task.hours)} a day`} />
+      <CardHeader icon="flag" iconColor={colors.accentText} title={next ? 'Your Next Move' : 'Your First Move'} sub={started ? `Handing off ${task.activity}` : `Hand off ${task.activity} · ${h(task.hours)} a day`} />
       {/* Where you are: one dot per step. */}
       <View style={styles.track}>
         {steps.map((s, i) => (
@@ -48,7 +48,7 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, style }) {
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: { ...homeCard(colors, isDark), backgroundColor: colors.surface, borderWidth: 1.5, borderColor: brand.apricot, borderStyle: 'dashed' },
+  card: { ...homeCard(colors, isDark) },
   track: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   seg: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface },

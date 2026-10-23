@@ -16,7 +16,7 @@ import { checkInStatus } from '../constants/checkin';
 import MilestoneSheet from '../components/MilestoneSheet';
 import { markMilestones } from '../storage/milestones';
 import { milestoneLine, reachedMilestones } from '../constants/milestones';
-import { DelegateAsk, MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
+import { MoveCard, ProductionCompare, ProgressWaiting } from '../components/HomeCards';
 import { api } from '../api/client';
 import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
@@ -39,7 +39,7 @@ const SHOW_MILESTONE_SHEET = false;
 
 export default function HomeScreen({ navigation }) {
   const { user, onboarding, replaceOnboarding } = useOnboarding();
-  const { handoffs, fills, checkIns = [], summary, refresh: refreshHandoffs, update, updateFills } = useHandoffs();
+  const { handoffs, fills, checkIns = [], summary, refresh: refreshHandoffs, updateFills } = useHandoffs();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const isFocused = useIsFocused();
@@ -96,10 +96,9 @@ export default function HomeScreen({ navigation }) {
   }, [isFocused, summary?.boughtBackHours]);
 
   const move = summary ? todaysMove({ schedule, handoffs, summary }) : null;
-  // The first move: the biggest drain not handed off yet, asked simply (have you delegated it?).
+  // The first move: a drain not handed off yet, handed off step by step (the journey).
   const firstTask = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours)[0];
-  const delegated = (activity) =>
-    update(activity, { status: 'done' }).catch((err) => Alert.alert("Couldn't save that", err.message));
+  const openJourney = (activity) => navigation.navigate('HandoffJourney', { activity });
 
   // Production time at the audit (the hours freed by delegating are added on top).
   const productionBefore = schedule
@@ -168,10 +167,8 @@ export default function HomeScreen({ navigation }) {
             {move?.stage === 'audit' || move?.action === 'nextRound' ? (
               <MoveCard move={move} onPress={doMove} loading={startingRound} />
             ) : firstTask ? (
-              <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} next />
+              <JourneyPreviewCard handoffs={handoffs} onOpen={openJourney} next />
             ) : null}
-            {/* PREVIEW: the handoff journey's card, development app only (testers never see it). */}
-            {__DEV__ ? <JourneyPreviewCard handoffs={handoffs} onOpen={(activity) => navigation.navigate('HandoffJourney', { activity })} /> : null}
             <ReinvestCard free={bought} fills={fills} role={onboarding?.role} schedule={schedule} onSave={saveFills} nudge={reinvestNudge} />
             <ProductionCompare before={productionBefore} gain={reinvestedInProduction} />
           </>
@@ -179,14 +176,12 @@ export default function HomeScreen({ navigation }) {
           <>
             {/* First visit: the routine, said in a graph and in words; the first move; progress waits. */}
             <RoutineStats items={routineNow} />
-            {/* New tasks to rate come first; otherwise one simple question about the biggest drain. */}
+            {/* New tasks to rate come first; otherwise the biggest drain, handed off step by step. */}
             {move?.stage === 'audit' || !firstTask ? (
               <MoveCard move={move} first onPress={doMove} loading={startingRound} />
             ) : (
-              <DelegateAsk key={firstTask.activity} task={firstTask} onYes={delegated} />
+              <JourneyPreviewCard handoffs={handoffs} onOpen={openJourney} />
             )}
-            {/* PREVIEW: the handoff journey's card, development app only (testers never see it). */}
-            {__DEV__ ? <JourneyPreviewCard handoffs={handoffs} onOpen={(activity) => navigation.navigate('HandoffJourney', { activity })} /> : null}
             <ProgressWaiting />
           </>
         )}
