@@ -248,10 +248,108 @@ One `users` document per person. Guests are created on first open (`POST /api/au
 
 ---
 
-## 11. Backlog / ideas
+## 11. Next steps: from testers to the real app
 
-- Cleanup of unused components.
-- A new APK with image sharing (view-shot + expo-sharing) and weekly check-in notifications.
-- Rounds as a time-based "fresh look" (on hold).
-- Replacement Ladder badges; Perfect Week.
-- Real AI drafts for the brief (needs the owner's go-ahead and an API key).
+### 11.1 Features still to build
+
+**Planned:**
+- **Next APK (native changes):**
+  - Weekly check-in **notifications**: a reminder on Friday. Needs `expo-notifications`.
+  - **Image sharing** of progress and milestones. Needs `react-native-view-shot` + `expo-sharing`.
+  - Bundle both into one rebuild, because each one adds native code.
+- **Cleanup** of unused components and old screens, once Home and onboarding are final.
+- **Handoff journey polish.** The road, Edit steps and the buy-back rule are live; collect testers' feedback first.
+
+**Ideas:**
+- Rounds as a time-based "fresh look" (re-audit every few weeks). On hold.
+- Replacement Ladder badges.
+- Perfect Week.
+- Real **AI drafts** for the brief and job post. The owner has to decide first, and it needs an Anthropic API key in Vercel. The backend already has an unused Claude endpoint.
+
+### 11.2 Make it production-ready (before any store)
+
+| Area | What to do |
+|---|---|
+| Separate production data | Today testers and the real app would share one Atlas database. Create a **production** database (or cluster) and a separate Vercel project or environment. Keep `preview` for testers. |
+| Hosting limits | Atlas M0 and Vercel Hobby are free tiers: fine for testers, tight for real users. Plan Atlas M10 (or Flex) and Vercel Pro (Hobby is for non-commercial use). |
+| Secrets | Use a new `JWT_SECRET` for production, never the testers' one. Keep all secrets in Vercel / EAS environment variables. |
+| Errors and analytics | Add crash and error reporting (e.g. Sentry, `@sentry/react-native`, a native change) and simple analytics. |
+| Accounts | Guests work, and "Save progress" creates a real account. Add **password reset** (email) before launch. |
+| Account deletion | Already in the app (Me → delete, `DELETE /api/auth/me`). Both stores require it. Also add a web page or form for deletion requests (Google asks for one). |
+| Privacy policy | Required by both stores. Host it on a public URL (a simple web page). It must say what's stored: pay, routine, handoffs, check-ins. The "your why" photo stays on the phone. |
+| App details | Final name and icon, splash, store screenshots (phone sizes), short and full descriptions, support email, content rating questionnaire. |
+| Versioning | `app.json` → `version` (e.g. 1.0.0). Android `versionCode` and iOS `buildNumber` must go up with every store upload (see 11.3). |
+| OTA rules | Store builds use the `production` channel (already in `eas.json`). Only JS and asset changes can ship as OTA updates. Native changes need a new store build. Keep `runtimeVersion` (policy `appVersion`) so old builds never get incompatible updates. |
+| Store content rules | No promises of income. Keep the "Buy Back Your Time" wording as inspiration, without the book's or author's branding (trademark). |
+
+### 11.3 Route A: Expo EAS (recommended, what we use today)
+
+No Mac needed for iOS, and signing keys are handled for you.
+
+1. **Developer accounts:** Google Play Console (one-time fee) and Apple Developer Program (yearly fee). The store listing names the account holder as the seller.
+2. In `eas.json`, the `production` profile already builds an Android **app bundle (.aab)** with the online API.
+   - Add `"autoIncrement": true` to `build.production`, and set `cli.appVersionSource` to `"remote"`, so EAS raises `versionCode` / `buildNumber` for you.
+3. **Build:**
+   ```bash
+   cd frontend
+   npx eas-cli@latest build -p android --profile production
+   npx eas-cli@latest build -p ios --profile production    # EAS asks to create certificates; say yes
+   ```
+4. **Submit:**
+   ```bash
+   npx eas-cli@latest submit -p android --latest   # needs a Google service-account key (once)
+   npx eas-cli@latest submit -p ios --latest       # uploads to App Store Connect / TestFlight
+   ```
+5. **Test first on each store's own track:** Play **internal testing**, then closed testing. New personal Play accounts must run a closed test with enough testers for about 2 weeks before production. On iOS, use **TestFlight**.
+6. **Fill in the store forms:**
+   - Play: Data safety, content rating, target audience, the privacy policy URL, the account-deletion URL.
+   - App Store: App Privacy, the review notes. Say that guests can use the app without signing in.
+7. **Release.** After that, JS fixes can go out with:
+   ```bash
+   npx eas-cli@latest update --channel production --message "…"
+   ```
+
+### 11.4 Route B: the "typical CLI" way (build locally, no EAS)
+
+Use this to stop depending on Expo's cloud. The JS code stays the same; what changes is how native builds are made, signed and updated.
+
+1. **Generate the native folders and keep them in git** (this makes the project "bare"):
+   ```bash
+   npx expo prebuild --clean
+   ```
+   This creates `android/` and `ios/`. Remove both lines from `frontend/.gitignore` (they are ignored today), commit the folders, and from then on change native settings there, not only in `app.json`.
+2. **Android signing:**
+   - Create a release keystore:
+     ```bash
+     keytool -genkeypair -v -storetype PKCS12 -keystore lifeora-release.keystore -alias lifeora -keyalg RSA -keysize 2048 -validity 10000
+     ```
+   - Keep it **out of git** and back it up. Losing it means you can't update the app, unless you use Play App Signing.
+   - Put the passwords in `~/.gradle/gradle.properties` (`LIFEORA_UPLOAD_STORE_FILE`, `…_PASSWORD`, `…_KEY_ALIAS`, `…_KEY_PASSWORD`).
+   - Add a `release` `signingConfig` in `android/app/build.gradle` that reads them.
+   - Turn on **Play App Signing** in the Console, so Google holds the app key and yours is only the upload key.
+3. **Android version and build:**
+   - Raise `versionCode` and `versionName` in `android/app/build.gradle` for each upload.
+   - Build the bundle:
+     ```bash
+     cd android && ./gradlew bundleRelease     # → app/build/outputs/bundle/release/app-release.aab
+     ```
+     For a local install instead, run `./gradlew assembleRelease` or `npx expo run:android --variant release`.
+   - On Windows, build from a short path with no spaces (see section 5).
+   - Upload the `.aab` in the Play Console by hand, or with `fastlane supply`.
+4. **iOS (needs a Mac with Xcode):**
+   - Run `cd ios && pod install`.
+   - Open `ios/Lifeora.xcworkspace`, and set the Team and signing for the bundle id `com.lifeora.app`.
+   - Product → Archive → Distribute to App Store Connect, or use `fastlane`.
+   - Raise the Build number for each upload.
+5. **The API address:** set `EXPO_PUBLIC_API_URL` at build time (e.g. `EXPO_PUBLIC_API_URL=https://… ./gradlew bundleRelease`, or a `.env.production`), because `eas.json` no longer sets it.
+6. **OTA updates:** `expo-updates` can stay, still publishing with `eas update` (no EAS Build needed). Alternatively, remove `expo-updates` and ship every change as a store release. Either way, keep `runtimeVersion` in sync with native changes.
+7. **Optional CI:** a GitHub Actions workflow that runs `gradlew bundleRelease` with the keystore stored as a secret and uploads to the Play internal track.
+
+**Which route to pick:** stay on EAS (Route A) until there's a reason not to. It covers iOS without a Mac, keys, version numbers and store uploads. Move to Route B if you need custom native code that config plugins can't express, or full control of builds in your own CI.
+
+### 11.5 Suggested order
+
+1. Gather testers' feedback on the current build (handoff road, audit form).
+2. Build the notifications + sharing APK (one native rebuild).
+3. Set up the production database / backend and privacy policy, and finish the polish.
+4. Production builds → Play internal testing + TestFlight → closed test → store release.
