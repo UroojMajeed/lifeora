@@ -12,6 +12,7 @@ import AuditStats from '../../components/AuditStats';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
 import { stepNumber, valueForMoney } from '../../constants/content';
+import { formatHours } from '../../utils/format';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
@@ -179,7 +180,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           <StepHeader
             step={stepNumber('schedule')}
             editing={Boolean(round)}
-            eyebrow={round ? `Round ${round}` : 'Step 2 of 4'}
+            eyebrow={(round ? `Round ${round}` : 'Step 2 of 4') + (mode === 'form' && items.length ? ` · ${items.length} ${items.length === 1 ? 'task' : 'tasks'}, ${formatHours(items.reduce((t, it) => t + (it.hours || 0), 0))}` : '')}
             title={mode === 'list' ? 'Your routine' : 'Time and energy audit'}
             subtitle={
               round
@@ -192,7 +193,6 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           )}
           {mode === 'form' ? (
             <>
-              {/* Your totals so far, big and clear. */}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
@@ -216,7 +216,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
               {/* Done: a quiet text button under Save & next, once there's a task. */}
               {items.length ? (
                 <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
-                  <Text style={styles.doneText}>Done · {items.length}</Text>
+                  <Text style={styles.doneText}>Done · {items.length} {items.length === 1 ? 'task' : 'tasks'}</Text>
                   <Ionicons name="checkmark" size={17} color={colors.primary} />
                 </Pressable>
               ) : null}
