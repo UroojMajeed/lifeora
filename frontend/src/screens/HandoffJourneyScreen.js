@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,15 +38,6 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const [editing, setEditing] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [dragging, setDragging] = useState(false);
-
-  // Opened from Home at one step (the settle-in check): open that step's sheet once.
-  const openKind = route.params?.openKind;
-  useEffect(() => {
-    if (!openKind || !task) return;
-    const target = journeyOf(task).steps.find((s) => s.kind === openKind);
-    if (target) setSheet((s) => ({ open: true, id: target.id, n: s.n + 1 }));
-    navigation.setParams({ openKind: undefined });
-  }, [openKind, task, navigation]);
 
   if (!task) {
     return (
