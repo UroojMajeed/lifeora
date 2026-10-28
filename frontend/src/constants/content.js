@@ -21,7 +21,7 @@ export const DRIP = {
   replacement: {
     name: 'Replacement',
     axes: 'Makes money · Drains you',
-    advice: "You're good at it, but it wears you down. Write the playbook and hire someone to replace you.",
+    advice: "You're good at it, but it wears you down. Write a clear brief and hire someone to replace you.",
     color: 'warm',
     soft: 'warmSoft',
   },
