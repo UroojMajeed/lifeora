@@ -1,12 +1,12 @@
-import { LayoutAnimation, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { brand, radius, spacing } from '../theme';
 
 /**
- * The tab bar as a floating white pill, lifted off the bottom with a soft shadow. The active tab shows its name in a warm apricot pill (which widens smoothly on a switch); the others show just their
- * icon. `tabs` is { [routeName]: [label, icon] } (Ionicons, outline when idle, filled when active).
+ * The tab bar as a floating white pill, lifted off the bottom with a soft shadow. Every tab shows its icon with its name under it, in equal slots; the active one
+ * sits in a warm apricot pill. `tabs` is { [routeName]: [label, icon] } (Ionicons, outline when idle, filled when active).
  * Badges come from each screen's `tabBarBadge` option: a number, or `true` for a dot.
  */
 export default function FloatingTabBar({ state, descriptors, navigation, tabs }) {
@@ -24,7 +24,6 @@ export default function FloatingTabBar({ state, descriptors, navigation, tabs })
           const press = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!focused && !event.defaultPrevented) {
-              LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'scaleXY'));
               navigation.navigate(route.name);
             }
           };
@@ -35,28 +34,24 @@ export default function FloatingTabBar({ state, descriptors, navigation, tabs })
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={`${label}${typeof badge === 'number' ? `, ${badge}` : badge ? ', new' : ''}`}
-              style={[styles.tab, focused && styles.tabOn]}
+              style={styles.tab}
               hitSlop={4}
             >
               <View style={[styles.pill, focused && styles.pillOn]}>
-                <View>
-                  <Ionicons name={focused ? icon : `${icon}-outline`} size={21} color={focused ? brand.evergreen : colors.muted} />
-                  {badge ? (
-                    typeof badge === 'number' ? (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{badge}</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.dot} />
-                    )
-                  ) : null}
-                </View>
-                {focused ? (
-                  <Text style={styles.label} numberOfLines={1}>
-                    {label}
-                  </Text>
+                <Ionicons name={focused ? icon : `${icon}-outline`} size={21} color={focused ? brand.evergreen : colors.muted} />
+                {badge ? (
+                  typeof badge === 'number' ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{badge}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.dot} />
+                  )
                 ) : null}
               </View>
+              <Text style={[styles.label, focused && styles.labelOn]} numberOfLines={1}>
+                {label}
+              </Text>
             </Pressable>
           );
         })}
@@ -71,8 +66,9 @@ const makeStyles = (colors, isDark) => ({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
-    borderRadius: radius.pill,
+    paddingVertical: 7,
+    paddingHorizontal: 4,
+    borderRadius: 28,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: isDark ? colors.border : 'rgba(18,60,58,0.06)',
@@ -82,25 +78,27 @@ const makeStyles = (colors, isDark) => ({
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
   },
-  tab: { flex: 1, alignItems: 'center' },
-  tabOn: { flex: 2.2 }, // the active tab makes room for its name
-  pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 44, paddingHorizontal: 12, borderRadius: radius.pill },
+  // Five equal slots: nothing shifts on a switch.
+  tab: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 2 },
+  pill: { width: 52, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
   pillOn: { backgroundColor: brand.apricot },
-  label: { fontSize: 13, fontWeight: '800', color: brand.evergreen },
+  label: { fontSize: 11, fontWeight: '600', color: colors.muted },
+  labelOn: { fontWeight: '800', color: brand.evergreen },
+  // Evergreen, so it reads on the white bar and on the apricot pill alike.
   badge: {
     position: 'absolute',
-    top: -6,
-    right: -10,
+    top: -3,
+    right: 4,
     minWidth: 17,
     height: 17,
     paddingHorizontal: 4,
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: brand.apricot,
+    backgroundColor: brand.evergreen,
     borderWidth: 2,
     borderColor: colors.surface,
   },
-  badgeText: { fontSize: 10, fontWeight: '800', color: brand.evergreen },
-  dot: { position: 'absolute', top: -2, right: -3, width: 9, height: 9, borderRadius: 5, backgroundColor: brand.apricot, borderWidth: 2, borderColor: colors.surface },
+  badgeText: { fontSize: 10, fontWeight: '800', color: '#FFFFFF' },
+  dot: { position: 'absolute', top: 2, right: 10, width: 9, height: 9, borderRadius: 5, backgroundColor: brand.evergreen, borderWidth: 2, borderColor: colors.surface },
 });
