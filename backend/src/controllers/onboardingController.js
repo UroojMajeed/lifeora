@@ -44,7 +44,7 @@ function sanitizeSchedule(schedule, errors) {
     // The quadrant is always derived here, never trusted from the client.
     const per = item?.per === 'week' ? 'week' : 'day';
     return { activity, hours, value, money, per, energy, quadrant: quadrantFor({ value, energy }) };
-  });
+  }).filter((item, i, all) => all.findIndex((x) => x.activity.toLowerCase() === item.activity.toLowerCase()) === i); // each task once
 
   const total = items.reduce((sum, item) => sum + (Number.isFinite(item.hours) ? item.hours : 0), 0);
   if (total > 24) errors.push('A day only has 24 hours. Trim a few activities.');

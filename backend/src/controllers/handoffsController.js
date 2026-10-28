@@ -34,7 +34,10 @@ const emptyHandoff = (activity) => ({
 /** Draining activities from the user's day, each with its saved handoff progress, plus totals. */
 function buildHandoffs(user) {
   const saved = new Map(user.handoffs.map((h) => [h.activity.toLowerCase(), h.toObject ? h.toObject() : h]));
-  const draining = (user.onboarding?.schedule || []).filter((a) => a.quadrant in QUADRANT_ORDER);
+  // Each task once (a routine saved before names were checked could hold one twice).
+  const draining = (user.onboarding?.schedule || []).filter(
+    (a, i, all) => a.quadrant in QUADRANT_ORDER && all.findIndex((x) => x.activity.toLowerCase() === a.activity.toLowerCase()) === i
+  );
 
   const items = draining
     .map((a) => ({
