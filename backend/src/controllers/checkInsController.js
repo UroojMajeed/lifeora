@@ -1,6 +1,7 @@
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
 const { buildHandoffs } = require('./handoffsController');
+const { FINISH_STEP_KINDS } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 const MAX_CHECKINS = 104; // two years of weeks
@@ -51,6 +52,10 @@ async function saveCheckIn(req, res, next) {
           if (h && h.status === 'done') {
             h.status = 'mine';
             h.doneAt = undefined;
+            // The rest of the plan (how, the brief, who) still stands; only the handover is undone.
+            (h.steps || []).forEach((s) => {
+              if (FINISH_STEP_KINDS.includes(s.kind)) Object.assign(s, { done: false, doneAt: undefined });
+            });
           }
         });
 

@@ -85,6 +85,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
   const firstRender = useRef(true);
   const autosave = useRef(null);
   const saving = useRef(null);
+  // Renames since the last save, in order: the server moves each task's handoff to its new name.
+  const renames = useRef([]);
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -92,10 +94,11 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, round || inTab ? 'done' : 'schedule')
+      const moved = renames.current.splice(0);
+      saving.current = saveStep({ schedule: items.filter((i) => i.hours), renames: moved }, round || inTab ? 'done' : 'schedule')
         // In the tab, what drains you (and so your handoffs) follows the routine.
         .then(() => (inTab ? refreshHandoffs() : null))
-        .catch(() => {});
+        .catch(() => renames.current.unshift(...moved));
     }, 600);
     return () => clearTimeout(autosave.current);
   }, [items, saveStep, round, inTab, refreshHandoffs]);
@@ -133,6 +136,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
   const rename = (oldName, newName) => {
     if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
     setItems((list) => list.map((it) => (it.activity === oldName ? { ...it, activity: newName } : it)));
+    renames.current.push({ from: oldName, to: newName });
     setOpen((o) => (o?.name === oldName ? { ...o, name: newName } : o));
     return true;
   };
@@ -156,11 +160,11 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
       await saving.current;
       // Everything is rated already, so the rating screen opens straight on the DRIP Matrix.
       if (round) {
-        await saveStep({ schedule: items }, 'done');
+        await saveStep({ schedule: items, renames: renames.current.splice(0) }, 'done');
         navigation.navigate('Swipe', { editing: true });
         return;
       }
-      await saveStep({ schedule: items }, 'swipe');
+      await saveStep({ schedule: items, renames: renames.current.splice(0) }, 'swipe');
       navigation.navigate('Swipe');
     } catch (err) {
       setError(err.message);

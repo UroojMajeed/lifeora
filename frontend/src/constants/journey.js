@@ -43,7 +43,8 @@ export function planOf(h) {
 /** Where one handoff stands: its steps (each done or not), the current one, and how many are done. */
 export function journeyOf(h) {
   const plan = planOf(h);
-  const steps = plan.map((s) => ({ ...s, key: s.id, icon: STEP_INFO[s.kind]?.icon || STEP_INFO.custom.icon, done: h.status === 'done' || s.done }));
+  const finished = h.status === 'done';
+  const steps = plan.map((s) => ({ ...s, key: s.id, icon: STEP_INFO[s.kind]?.icon || STEP_INFO.custom.icon, done: finished || (s.done && !isFinish(s)) }));
   const current = steps.find((s) => !s.done) || null;
   const doneCount = steps.filter((s) => s.done).length;
   return { steps, current, doneCount, finished: !current, started: doneCount > 0 || Boolean(h.steps?.length) };
@@ -60,6 +61,25 @@ export function planForMethod(plan, method) {
   else if (method !== 'drop' && wasDrop) next = defaultSteps(method);
   return next.map((s) => (s.kind === 'how' ? { ...s, done: true } : s));
 }
+
+/** Start-date choices for the handover. */
+export function startOptions(now = new Date()) {
+  const day = (offset) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+  // On Sunday, tomorrow is already Monday, so "next Monday" is the one after.
+  const daysToMonday = (8 - now.getDay()) % 7 || 7;
+  const toMonday = daysToMonday === 1 ? 8 : daysToMonday;
+  return [
+    { key: 'today', label: 'Today', date: day(0) },
+    { key: 'tomorrow', label: 'Tomorrow', date: day(1) },
+    { key: 'monday', label: 'Next Monday', date: day(toMonday) },
+  ];
+}
+
+export const formatDay = (date) =>
+  new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+// Always true or false (never null): it feeds accessibilityState, which Android only accepts as a boolean.
+export const sameDay = (a, b) => Boolean(a && b) && new Date(a).toDateString() === new Date(b).toDateString();
 
 /** A one-line summary of a finished step, shown on its station. */
 export function stepSummary(kind, h, methodLabel) {

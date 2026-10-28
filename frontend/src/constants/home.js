@@ -1,6 +1,6 @@
 // Home's "what now?" logic, built on the book's Buyback Loop: Audit → Transfer → Fill.
 import { formatHours } from '../utils/format';
-import { checkInDate, formatDay, nextStep, waitingForCheckIn } from './handoffSteps';
+import { journeyOf } from './journey';
 import { unfilledHours } from './fill';
 
 export const WORKDAYS_PER_WEEK = 5;
@@ -58,13 +58,12 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
     };
   }
 
-  // Transfer: the next checklist step of the first draining task that has something to do today.
-  // (A task in its first week after handover just waits, so we move on to the next one.)
-  const open = handoffs.filter((h) => h.status !== 'done' && h.status !== 'later');
-  const next = open.find((h) => !waitingForCheckIn(h)) || open[0];
+  // Transfer: the step the road is on for the first draining task that's still yours.
+  const next = handoffs.find((h) => h.status !== 'done' && h.status !== 'later');
   if (next) {
     const name = next.activity.toLowerCase();
-    const go = ['HandoffDetail', { activity: next.activity }];
+    const go = ['HandoffJourney', { activity: next.activity }];
+    const { current } = journeyOf(next);
     const hours = `${formatHours(next.hours)} a day`;
     const automate = next.method === 'automate';
     const MOVES = {
@@ -75,49 +74,44 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
         minutes: 2,
         cta: 'Pick a plan',
       },
-      define: {
-        icon: 'flag-outline',
-        title: `Describe "done" for ${name}`,
-        body: 'One line on what a good result looks like. Clear finish lines make handoffs stick.',
-        minutes: 2,
-        cta: 'Define done',
+      brief: {
+        icon: 'document-text-outline',
+        title: `Write the brief for ${name}`,
+        body: "What done looks like, and how you'll check it. Clear finish lines make handoffs stick.",
+        minutes: 3,
+        cta: 'Write the brief',
       },
-      playbook: {
-        icon: 'list-outline',
-        title: automate ? `List the setup steps for ${name}` : `Write the playbook for ${name}`,
-        body: automate
-          ? 'Which tool, which accounts, how to test it. Tap our suggestions to start.'
-          : 'The steps, tools and logins someone needs. Tap our suggestions to start.',
-        minutes: 5,
-        cta: automate ? 'List the steps' : 'Write the playbook',
+      who: {
+        icon: 'person-outline',
+        title: automate ? `Pick the tool for ${name}` : `Find who takes ${name}`,
+        body: automate ? 'Name the tool that will do it for you.' : 'A person, a service or a teammate: name who will do it.',
+        minutes: 2,
+        cta: automate ? 'Pick the tool' : 'Find who',
       },
       handover: {
         icon: automate ? 'flash-outline' : 'paper-plane-outline',
         title: automate ? `Switch on the automation for ${name}` : `Hand ${name} over`,
-        body: automate ? 'Name the tool and the day it starts running.' : 'Pick who takes it and the day they start.',
+        body: automate ? 'Pick the day it starts running.' : 'Pick the day they start, and send them the brief.',
         minutes: 3,
         cta: automate ? 'Switch it on' : 'Hand it over',
       },
-      checkin:
-        next.method === 'drop'
-          ? {
-              icon: 'close-circle-outline',
-              title: `Stop doing ${name}`,
-              body: `Tell anyone who needs to know, then mark it as dropped and win back ${hours}.`,
-              minutes: 2,
-              cta: 'Mark it dropped',
-            }
-          : {
-              icon: 'checkmark-done-outline',
-              title: `Check in on ${name}`,
-              body: waitingForCheckIn(next)
-                ? `Started ${formatDay(next.startDate)}. On ${formatDay(checkInDate(next))}, check: is it running without you?`
-                : `Is it running without you? Mark it handed off and win back ${hours}.`,
-              minutes: 1,
-              cta: 'Check in',
-            },
+      drop: {
+        icon: 'close-circle-outline',
+        title: `Stop doing ${name}`,
+        body: `Tell anyone who needs to know, then mark it as dropped and win back ${hours}.`,
+        minutes: 2,
+        cta: 'Drop it',
+      },
+      // A step the user added themselves.
+      custom: {
+        icon: 'checkbox-outline',
+        title: current ? current.title : `Hand off ${name}`,
+        body: `Next on the road to handing off ${name}.`,
+        minutes: 2,
+        cta: 'Continue',
+      },
     };
-    return { stage: 'transfer', go, ...MOVES[nextStep(next)?.key || 'checkin'] };
+    return { stage: 'transfer', go, ...(MOVES[current?.kind] || MOVES.custom) };
   }
 
   // Every task is kept for later and none handed off: this round needs at least one.
