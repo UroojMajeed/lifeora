@@ -1,10 +1,6 @@
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
-const { buildHandoffs } = require('./handoffsController');
-// The app's suggested plan (as in the app's journey), for a handoff saved before plans existed.
-const STEP_TITLES = { how: 'Choose how', brief: 'Write the brief', who: 'Find who', handover: 'Hand it over', drop: 'Stop doing it' };
-const suggestedSteps = (method) =>
-  (method === 'drop' ? ['how', 'drop'] : ['how', 'brief', 'who', 'handover']).map((k) => ({ id: k, kind: k, title: STEP_TITLES[k], done: k === 'how' }));
+const { buildHandoffs, slipBack } = require('./handoffsController');
 
 const WORKDAYS_PER_WEEK = 5;
 const MAX_CHECKINS = 104; // two years of weeks
@@ -52,18 +48,7 @@ async function saveCheckIn(req, res, next) {
         .filter((a) => a.answer === 'slipped')
         .forEach((a) => {
           const h = u.handoffs.find((x) => x.activity.toLowerCase() === a.activity.toLowerCase());
-          if (h && h.status === 'done') {
-            h.status = 'mine';
-            h.doneAt = undefined;
-            h.settleDay3 = '';
-            h.settleDay10 = '';
-            h.cameBackAt = new Date();
-            h.startDate = undefined;
-            if (!h.steps || !h.steps.length) h.steps = suggestedSteps(h.method);
-            h.steps.forEach((s) => {
-              if (s.kind !== 'how') Object.assign(s, { done: false, doneAt: undefined });
-            });
-          }
+          if (h && h.status === 'done') slipBack(h);
         });
 
       const kept = answers.filter((a) => a.answer === 'kept');

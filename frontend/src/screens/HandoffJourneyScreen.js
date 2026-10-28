@@ -31,7 +31,7 @@ const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label |
 export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const { handoffs, update } = useHandoffs();
+  const { handoffs, update, slipBack } = useHandoffs();
   const { onboarding } = useOnboarding();
   const task = handoffs.find((x) => x.activity === route.params?.activity);
   const [sheet, setSheet] = useState({ open: false, id: null, n: 0 });
@@ -55,6 +55,22 @@ export default function HandoffJourneyScreen({ navigation, route }) {
     Haptics.selectionAsync().catch(() => {});
     setSheet((s) => ({ open: true, id, n: s.n + 1 }));
   };
+  const confirmSlip = () =>
+    Alert.alert(
+      `Did ${task.activity.toLowerCase()} come back to you?`,
+      "Its steps open again with your answers kept, and its hours stop counting as bought back.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: "Yes, it's back",
+          style: 'destructive',
+          onPress: () =>
+            slipBack(task.activity)
+              .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}))
+              .catch((err) => Alert.alert("Couldn't save that", err.message)),
+        },
+      ]
+    );
   const savePlan = async (plan) => {
     setSavingPlan(true);
     try {
@@ -156,6 +172,13 @@ export default function HandoffJourneyScreen({ navigation, route }) {
           </Text>
           <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
+      ) : null}
+      {/* Handed off, but it came back: say so here (with a confirmation) instead of waiting for the check-in. */}
+      {finished && task.status === 'done' ? (
+        <Pressable onPress={confirmSlip} hitSlop={8} style={styles.slip} accessibilityRole="button">
+          <Ionicons name="refresh" size={15} color={colors.muted} />
+          <Text style={styles.slipText}>It slipped back?</Text>
+        </Pressable>
       ) : null}
 
       <BottomSheet visible={sheet.open} onClose={() => setSheet((s) => ({ ...s, open: false }))}>
@@ -473,6 +496,8 @@ const makeStyles = (colors) => ({
   draftText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
   post: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   postText: { fontSize: 14, lineHeight: 21, color: colors.text },
+  slip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  slipText: { fontSize: 14, fontWeight: '600', color: colors.muted },
   back: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft },
   backMain: { flex: 1, gap: 2 },
   backTitle: { fontSize: 14, fontWeight: '800', color: colors.accentText },

@@ -32,6 +32,28 @@ const emptyHandoff = (activity) => ({
   doneAt: null,
 });
 
+// The app's suggested plan (as in the app's journey), for a handoff saved before plans existed.
+const STEP_TITLES = { how: 'Choose how', brief: 'Write the brief', who: 'Find who', handover: 'Hand it over', drop: 'Stop doing it' };
+const suggestedSteps = (method) =>
+  (method === 'drop' ? ['how', 'drop'] : ['how', 'brief', 'who', 'handover']).map((k) => ({ id: k, kind: k, title: STEP_TITLES[k], done: k === 'how' }));
+
+/**
+ * A handed-off task that came back is yours again, to walk the road once more: "how" stays ticked,
+ * every later step is checked again (answers kept), and the new handover needs a new start date.
+ */
+function slipBack(h) {
+  h.status = 'mine';
+  h.doneAt = undefined;
+  h.settleDay3 = '';
+  h.settleDay10 = '';
+  h.cameBackAt = new Date();
+  h.startDate = undefined;
+  if (!h.steps || !h.steps.length) h.steps = suggestedSteps(h.method);
+  h.steps.forEach((s) => {
+    if (s.kind !== 'how') Object.assign(s, { done: false, doneAt: undefined });
+  });
+}
+
 /** Draining activities from the user's day, each with its saved handoff progress, plus totals. */
 function buildHandoffs(user) {
   const saved = new Map(user.handoffs.map((h) => [h.activity.toLowerCase(), h.toObject ? h.toObject() : h]));
@@ -170,6 +192,23 @@ function sanitize(body = {}) {
   return out;
 }
 
+// POST /api/handoffs/:activity/slip: a handed-off task came back (the user says so on its road).
+async function slipHandoff(req, res, next) {
+  try {
+    const name = String(req.params.activity || '').trim().toLowerCase();
+    const { user, result: activityName } = await updateUser(req.userId, (u) => {
+      const h = u.handoffs.find((x) => x.activity.toLowerCase() === name);
+      if (!h || h.status !== 'done') throw new ApiError(400, 'Only a handed-off task can come back');
+      slipBack(h);
+      return h.activity;
+    });
+    const result = buildHandoffs(user);
+    res.json({ handoff: result.handoffs.find((x) => x.activity.toLowerCase() === activityName.toLowerCase()), summary: result.summary });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listHandoffs(req, res, next) {
   try {
     const user = await User.findById(req.userId);
@@ -293,4 +332,4 @@ async function startNextRound(req, res, next) {
   }
 }
 
-module.exports = { listHandoffs, updateHandoff, updateFills, startNextRound, buildHandoffs };
+module.exports = { listHandoffs, updateHandoff, slipHandoff, updateFills, startNextRound, buildHandoffs, slipBack };

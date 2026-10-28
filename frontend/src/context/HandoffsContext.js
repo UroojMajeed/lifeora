@@ -48,6 +48,17 @@ export function HandoffsProvider({ children }) {
     }
   }, []);
 
+  /** A handed-off task came back: it's yours again, its steps open to walk once more. */
+  const slipBack = useCallback(async (activity) => {
+    const res = await api.slipHandoff(activity);
+    setData((d) => ({
+      ...d,
+      summary: res.summary,
+      handoffs: d.handoffs.map((h) => (h.activity === activity ? { ...h, ...res.handoff } : h)),
+    }));
+    return res;
+  }, []);
+
   /** Replaces the fills (Fill step). Shows right away, rolls back if the server says no. */
   const updateFills = useCallback(async (fills) => {
     const before = latest.current;
@@ -72,8 +83,8 @@ export function HandoffsProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ ...data, loading, error, refresh, update, updateFills, saveCheckIn }),
-    [data, loading, error, refresh, update, updateFills, saveCheckIn]
+    () => ({ ...data, loading, error, refresh, update, slipBack, updateFills, saveCheckIn }),
+    [data, loading, error, refresh, update, slipBack, updateFills, saveCheckIn]
   );
   return <HandoffsContext.Provider value={value}>{children}</HandoffsContext.Provider>;
 }
