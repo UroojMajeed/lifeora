@@ -14,7 +14,7 @@ import SettleInCard from '../components/SettleInCard';
 import { settleDue } from '../constants/journey';
 import CardHeader, { homeCard } from '../components/CardHeader';
 import Button from '../components/Button';
-import { checkInStatus } from '../constants/checkin';
+import { checkInStatus, weekKey } from '../constants/checkin';
 import MilestoneSheet from '../components/MilestoneSheet';
 import { markMilestones } from '../storage/milestones';
 import { milestoneLine, reachedMilestones } from '../constants/milestones';
@@ -68,9 +68,14 @@ export default function HomeScreen({ navigation }) {
   // This week's hours bought back join the weekly history (kept on this phone), for the time-back card.
   useEffect(() => {
     if (!summary) return;
-    const confirmed = Object.fromEntries(checkIns.map((x) => [x.week, x.confirmedHours || 0]));
+    // A check-in confirms its week. This week, tasks handed off after the check-in (a new one, or one
+    // that slipped and came back) add on top of what it confirmed.
+    const thisWeek = weekKey();
+    const after = (at) =>
+      handoffs.filter((x) => x.status === 'done' && x.doneAt && new Date(x.doneAt) > new Date(at)).reduce((t, x) => t + x.hours * WORKDAYS_PER_WEEK, 0);
+    const confirmed = Object.fromEntries(checkIns.map((x) => [x.week, (x.confirmedHours || 0) + (x.week === thisWeek && x.at ? after(x.at) : 0)]));
     recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6, confirmed).then(setTimeBack);
-  }, [summary, bought, checkIns]);
+  }, [summary, bought, checkIns, handoffs]);
 
   // The weekly check-in: a card on Home when it's ready (Friday to Sunday).
   const checkIn = checkInStatus({ checkIns, handoffs, fills });
