@@ -35,7 +35,7 @@ export default function HandoffsScreen({ navigation }) {
   const [doneN, goingN, todoN] = [count('done'), count('going'), count('todo')];
 
   return (
-    <Screen edges={['top']} tinted="dawn">
+    <Screen edges={['top']}>
       <PageHeader
         eyebrow="Transfer"
         title="Your handoffs"
