@@ -20,10 +20,23 @@ export const isFinish = (s) => s.kind === 'handover' || s.kind === 'drop';
 
 let seq = 0;
 export const newStepId = () => `s${Date.now().toString(36)}${(seq++).toString(36)}`.slice(0, 24);
-const step = (kind, done = false) => ({ id: kind, kind, title: STEP_INFO[kind].title, done });
+const step = (kind, title) => ({ id: kind, kind, title: title || STEP_INFO[kind].title, done: false });
 
-/** The suggested plan for a way of handing off: dropping is one decision; the others need a little setup. */
-export const defaultSteps = (method) => (method === 'drop' ? [step('how'), step('drop')] : ['how', 'brief', 'who', 'handover'].map((k) => step(k)));
+/**
+ * The suggested road for each way of handing off: dropping is one decision; automating is setting
+ * the tool up and switching it on (no brief: a tool has no "80%" to own); delegating needs the brief,
+ * someone to take it, and the handover.
+ */
+export const defaultSteps = (method) =>
+  method === 'drop'
+    ? [step('how'), step('drop')]
+    : method === 'automate'
+      ? [step('how'), step('who', 'Set it up'), step('handover', 'Switch it on')]
+      : ['how', 'brief', 'who', 'handover'].map((k) => step(k));
+const roadOf = (method) => (method === 'drop' || method === 'automate' ? method : 'delegate');
+
+/** Handed off, but its start day is still ahead: its hours count from that day. */
+export const startsLater = (h, now = new Date()) => h.status === 'done' && Boolean(h.startDate) && new Date(h.startDate) > now;
 
 // Handoffs from before plans existed: a step was done once its answer was saved.
 const legacyDone = {
@@ -51,14 +64,18 @@ export function journeyOf(h) {
 }
 
 /**
- * The plan after choosing how: dropping shortens it to How → Stop doing it; leaving drop brings the
- * suggested steps back; between other ways, your plan stays as it is. "How" comes back ticked.
+ * The plan after choosing how. A different kind of road (drop, automate, delegate) brings that road's
+ * suggested steps, keeping any steps you added yourself; another way on the same road keeps your plan
+ * as it is. "How" comes back ticked. `prev` is the way chosen before (none yet: the delegate road).
  */
-export function planForMethod(plan, method) {
-  const wasDrop = plan.some((s) => s.kind === 'drop');
+export function planForMethod(plan, method, prev) {
+  const before = plan.some((s) => s.kind === 'drop') ? 'drop' : roadOf(prev);
   let next = plan;
-  if (method === 'drop' && !wasDrop) next = defaultSteps('drop');
-  else if (method !== 'drop' && wasDrop) next = defaultSteps(method);
+  if (roadOf(method) !== before) {
+    const road = defaultSteps(method);
+    const own = plan.filter((s) => s.kind === 'custom');
+    next = [...road.slice(0, -1), ...own, road[road.length - 1]];
+  }
   return next.map((s) => (s.kind === 'how' ? { ...s, done: true } : s));
 }
 

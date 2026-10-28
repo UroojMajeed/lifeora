@@ -23,6 +23,7 @@ import { useOnboarding } from '../context/OnboardingContext';
 import { useHandoffs } from '../context/HandoffsContext';
 import { noticeBoughtBack, recordWeeklyBoughtBack } from '../storage/progress';
 import { quadrantFor, valueForMoney } from '../constants/content';
+import { startsLater } from '../constants/journey';
 import { WORKDAYS_PER_WEEK, greeting, todaysMove } from '../constants/home';
 import { dayNow, scheduleNow } from '../constants/fill';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -71,7 +72,7 @@ export default function HomeScreen({ navigation }) {
     // that slipped and came back) add on top of what it confirmed.
     const thisWeek = weekKey();
     const after = (at) =>
-      handoffs.filter((x) => x.status === 'done' && x.doneAt && new Date(x.doneAt) > new Date(at)).reduce((t, x) => t + x.hours * WORKDAYS_PER_WEEK, 0);
+      handoffs.filter((x) => x.status === 'done' && !startsLater(x) && x.doneAt && new Date(x.doneAt) > new Date(at)).reduce((t, x) => t + x.hours * WORKDAYS_PER_WEEK, 0);
     const confirmed = Object.fromEntries(checkIns.map((x) => [x.week, (x.confirmedHours || 0) + (x.week === thisWeek && x.at ? after(x.at) : 0)]));
     recordWeeklyBoughtBack(bought * WORKDAYS_PER_WEEK, 6, confirmed).then(setTimeBack);
   }, [summary, bought, checkIns, handoffs]);

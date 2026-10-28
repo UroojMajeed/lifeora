@@ -1,6 +1,7 @@
 // The weekly check-in: once a week (from Friday), did your handoffs stick, did you use your
 // reinvested hours, and how did the week feel? Weeks are keyed by their Monday, on the phone's calendar.
 import { TEST_MODE } from './testing';
+import { startsLater } from './journey';
 
 export const FEELINGS = [
   { value: 1, emoji: '😫', label: 'Rough' },
@@ -31,7 +32,7 @@ export function weekLabel(key) {
 export function checkInQuestions({ handoffs = [], fills = [] }) {
   return {
     // Each task once, even if the list ever holds it twice.
-    handoffs: handoffs.filter((h, i) => h.status === 'done' && handoffs.findIndex((x) => x.activity.toLowerCase() === h.activity.toLowerCase()) === i),
+    handoffs: handoffs.filter((h, i) => h.status === 'done' && !startsLater(h) && handoffs.findIndex((x) => x.activity.toLowerCase() === h.activity.toLowerCase()) === i),
     fills,
   };
 }

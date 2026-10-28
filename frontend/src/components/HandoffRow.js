@@ -3,12 +3,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { DRIP } from '../constants/content';
 import { WORKDAYS_PER_WEEK } from '../constants/home';
 import { formatHours } from '../utils/format';
-import { journeyOf } from '../constants/journey';
+import { formatDay, journeyOf, startsLater } from '../constants/journey';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
 /** Where a handoff stands, as the row's pill: handed off, on its way, kept for later, or not started. */
 export function rowStatus(item) {
+  if (startsLater(item)) return 'starting';
   if (item.status === 'done') return 'done';
   if (item.status === 'later') return 'later';
   if (item.cameBackAt) return 'back';
@@ -17,6 +18,7 @@ export function rowStatus(item) {
 const PILLS = {
   done: { label: 'Handed off', icon: 'checkmark-circle', fg: 'success', bg: 'successSoft' },
   going: { label: 'Handing off', icon: 'swap-horizontal', fg: 'warm', bg: 'warmSoft' },
+  starting: { label: 'Starts', icon: 'calendar-outline', fg: 'info', bg: 'infoSoft' },
   back: { label: 'Came back', icon: 'refresh', fg: 'accentText', bg: 'accentSoft' },
   later: { label: 'Next round', icon: 'time-outline', fg: 'muted', bg: 'tintWaiting' },
   todo: { label: 'Not started', icon: null, fg: 'muted', bg: 'surfaceAlt' },
@@ -31,16 +33,16 @@ export default function HandoffRow({ item, onPress }) {
   const styles = useStyles(makeStyles);
   const quadrant = DRIP[item.quadrant];
   const state = rowStatus(item);
-  const pill = PILLS[state];
+  const pill = state === 'starting' ? { ...PILLS.starting, label: `Starts ${formatDay(item.startDate).split(',')[0]}` } : PILLS[state];
   const done = state === 'done';
   const { steps, doneCount } = journeyOf(item);
-  const meta = done ? `+${formatHours(item.hours * WORKDAYS_PER_WEEK)} a week back` : `${formatHours(item.hours)} a day · ${doneCount}/${steps.length} steps`;
+  const meta = state === 'starting' ? `+${formatHours(item.hours * WORKDAYS_PER_WEEK)}\u00A0a\u00A0week from\u00A0${formatDay(item.startDate)}` : done ? `+${formatHours(item.hours * WORKDAYS_PER_WEEK)}\u00A0a\u00A0week back` : `${formatHours(item.hours)}\u00A0a\u00A0day · ${doneCount}/${steps.length}\u00A0steps`;
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${item.activity}, ${quadrant.name}, ${pill.label}, ${meta.replace(/ /g, ' ')}. Open.`}
+      accessibilityLabel={`${item.activity}, ${quadrant.name}, ${pill.label}, ${meta.replace(/\u00A0/g, ' ')}. Open.`}
       style={({ pressed }) => [styles.card, { borderLeftColor: done ? colors.success : colors.chart[item.quadrant] }, done && styles.cardDone, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.middle}>
@@ -54,7 +56,7 @@ export default function HandoffRow({ item, onPress }) {
           </View>
         </View>
         <Text style={[styles.meta, done && styles.metaDone]}>{meta}</Text>
-        {!done && steps.length ? (
+        {!done && state !== 'starting' && steps.length ? (
           <View style={styles.bar}>
             {steps.map((s) => (
               <View key={s.key} style={[styles.seg, s.done && styles.segOn]} />

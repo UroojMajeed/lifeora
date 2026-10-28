@@ -185,11 +185,12 @@ export const HANDOFF_STATUSES = [
 ];
 export const statusInfo = (key) => HANDOFF_STATUSES.find((s) => s.key === key) || HANDOFF_STATUSES[0];
 
+// In the book's order: drop it if you can, automate what's left, then hand the rest to someone.
 export const HANDOFF_METHODS = [
-  { key: 'hire', label: 'Hire someone', icon: 'person-add-outline' },
-  { key: 'automate', label: 'Automate it', icon: 'flash-outline' },
-  { key: 'team', label: 'Give to my team', icon: 'people-outline' },
   { key: 'drop', label: 'Drop it', icon: 'close-circle-outline' },
+  { key: 'automate', label: 'Automate it', icon: 'flash-outline' },
+  { key: 'hire', label: 'Hire someone', icon: 'person-add-outline' },
+  { key: 'team', label: 'Give to my team', icon: 'people-outline' },
 ];
 
 // Ways to buy back a draining task, written for each activity we suggest. `method` matches HANDOFF_METHODS.

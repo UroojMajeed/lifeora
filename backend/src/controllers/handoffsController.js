@@ -74,7 +74,10 @@ function buildHandoffs(user) {
 
   const sum = (list) => round2(list.reduce((t, h) => t + h.hours, 0));
   const drainingHours = sum(items);
-  const boughtBackHours = sum(items.filter((h) => h.status === 'done'));
+  // Handed off with a start day still ahead: its hours count from that day, not before.
+  const now = new Date();
+  const live = (h) => h.status === 'done' && (!h.startDate || new Date(h.startDate) <= now);
+  const boughtBackHours = sum(items.filter(live));
   const o = user.onboarding || {};
   const fills = (user.fills || []).map((f) => (f.toObject ? f.toObject() : f));
 
@@ -89,6 +92,7 @@ function buildHandoffs(user) {
       drainingHours,
       boughtBackHours,
       inProgressHours: sum(items.filter((h) => h.status === 'in_progress')),
+      startingHours: sum(items.filter((h) => h.status === 'done' && !live(h))),
       percent: drainingHours ? Math.round((boughtBackHours / drainingHours) * 100) : 0,
       boughtBackPerWeek: round2(boughtBackHours * WORKDAYS_PER_WEEK),
       done: items.filter((h) => h.status === 'done').length,

@@ -12,7 +12,7 @@ import WindingRoad from '../components/WindingRoad';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
-import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, sameDay, startOptions, stepSummary } from '../constants/journey';
+import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, sameDay, startOptions, startsLater, stepSummary } from '../constants/journey';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -166,10 +166,19 @@ export default function HandoffJourneyScreen({ navigation, route }) {
 
       {finished ? (
         <Animated.View entering={ZoomIn.duration(350)} style={styles.win}>
-          <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
-          <Text style={styles.winText}>
-            {task.method === 'drop' ? 'Dropped. ' : 'Handed over. '}Your weekly check-in will ask how it went.
-          </Text>
+          {startsLater(task) ? (
+            <>
+              <Text style={styles.winTitle}>Handed over · starts {formatDay(task.startDate)}</Text>
+              <Text style={styles.winText}>Your {h(task.hours * 5)} a week count from that day. Your weekly check-in will ask how it went.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
+              <Text style={styles.winText}>
+                {task.method === 'drop' ? 'Dropped. ' : 'Handed over. '}Your weekly check-in will ask how it went.
+              </Text>
+            </>
+          )}
           <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
       ) : null}
@@ -256,12 +265,12 @@ function StepSheet({ step, task, onDone }) {
       // For "how", only a new way counts: another idea for the same way just saves.
       const changed = kind === 'how' ? differs('method') : Object.keys(answer).some(differs);
       if (!changed) return Object.keys(answer).some(differs) ? run(answer) : onDone();
-      const reshaped = kind === 'how' ? planForMethod(now, method) : now;
+      const reshaped = kind === 'how' ? planForMethod(now, method, task.method) : now;
       const at = reshaped.findIndex((s) => s.id === step.id);
       const next = reshaped.map((s, i) => (i > at ? { ...s, done: false } : s));
       return run({ ...answer, steps: strip(next), status: 'in_progress' });
     }
-    const next = kind === 'how' ? planForMethod(now, method) : now.map((s) => (s.id === step.id ? { ...s, done: true } : s));
+    const next = kind === 'how' ? planForMethod(now, method, task.method) : now.map((s) => (s.id === step.id ? { ...s, done: true } : s));
     const all = next.every((s) => s.done);
     return run({ ...fields(), steps: strip(next), status: all ? 'done' : 'in_progress' });
   };
@@ -274,7 +283,7 @@ function StepSheet({ step, task, onDone }) {
     handover: Boolean(start),
   }[kind] ?? true;
   const action =
-    kind === 'handover' ? { title: 'Hand it over', icon: 'paper-plane' }
+    kind === 'handover' ? (task.method === 'automate' ? { title: 'Switch it on', icon: 'flash' } : { title: 'Hand it over', icon: 'paper-plane' })
     : kind === 'drop' ? { title: 'Drop it', icon: 'close' }
     : kind === 'custom' ? { title: 'Mark done', icon: 'checkmark' }
     : { title: 'Save', icon: 'checkmark' };
@@ -289,7 +298,7 @@ function StepSheet({ step, task, onDone }) {
 
       {kind === 'how' ? (
         <View>
-          <Text style={styles.sheetSub}>How will you hand it off?</Text>
+          <Text style={styles.sheetSub}>Ask in this order: can you drop it? Automate it? Then hand it to someone.</Text>
           <View style={styles.grid}>
             {HANDOFF_METHODS.map((m) => {
               const on = method === m.key;
@@ -333,6 +342,7 @@ function StepSheet({ step, task, onDone }) {
             })}
           </ScrollView>
           {method === 'drop' && task.method !== 'drop' ? <Text style={styles.note}>Dropping it shortens your plan to one more step: stop doing it.</Text> : null}
+          {method === 'automate' && task.method !== 'automate' ? <Text style={styles.note}>Automating it makes your plan two steps: set it up, then switch it on.</Text> : null}
         </View>
       ) : null}
 

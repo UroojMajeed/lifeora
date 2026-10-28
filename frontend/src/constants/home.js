@@ -83,10 +83,10 @@ export function todaysMove({ schedule = [], handoffs = [], summary }) {
       },
       who: {
         icon: 'person-outline',
-        title: automate ? `Pick the tool for ${name}` : `Find who takes ${name}`,
-        body: automate ? 'Name the tool that will do it for you.' : 'A person, a service or a teammate: name who will do it.',
-        minutes: 2,
-        cta: automate ? 'Pick the tool' : 'Find who',
+        title: automate ? `Set up the tool for ${name}` : `Find who takes ${name}`,
+        body: automate ? 'Pick the tool and follow its setup steps.' : 'A person, a service or a teammate: name who will do it.',
+        minutes: automate ? 10 : 2,
+        cta: automate ? 'Set it up' : 'Find who',
       },
       handover: {
         icon: automate ? 'flash-outline' : 'paper-plane-outline',
