@@ -1,5 +1,6 @@
 // The weekly check-in: once a week (from Friday), did your handoffs stick, did you use your
 // reinvested hours, and how did the week feel? Weeks are keyed by their Monday, on the phone's calendar.
+import { TEST_MODE } from './testing';
 
 export const FEELINGS = [
   { value: 1, emoji: '😫', label: 'Rough' },
@@ -43,10 +44,10 @@ export function checkInStatus({ checkIns = [], handoffs = [], fills = [] }, now 
   const week = weekKey(now);
   const done = checkIns.find((c) => c.week === week) || null;
   const q = checkInQuestions({ handoffs, fills });
-  if (done) return { state: 'done', week, entry: done };
+  if (done && !TEST_MODE) return { state: 'done', week, entry: done };
   if (!q.handoffs.length && !q.fills.length && !checkIns.length) return { state: 'none', week };
   const day = now.getDay();
-  if (day >= OPENS_ON || day === 0) return { state: 'due', week };
+  if (TEST_MODE || day >= OPENS_ON || day === 0) return { state: 'due', week };
   return { state: 'soon', week, daysToGo: OPENS_ON - day };
 }
 

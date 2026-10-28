@@ -2,6 +2,7 @@
 // task's handoff record as soon as it's done, so leaving halfway is fine: the journey (and the preview
 // card on Home) pick up at the first step that isn't done.
 import { formatMoney } from '../utils/format';
+import { TEST_MODE } from './testing';
 
 // What each kind of step is: its suggested name and icon. 'custom' is a step the user adds.
 export const STEP_INFO = {
@@ -216,7 +217,7 @@ export function settleDue(handoffs = [], now = new Date()) {
   for (const h of handoffs) {
     if (h.status !== 'done' || h.method === 'drop' || !h.startDate) continue;
     const s = new Date(h.startDate);
-    const days = Math.round((today - new Date(s.getFullYear(), s.getMonth(), s.getDate())) / DAY_MS);
+    const days = TEST_MODE ? (h.settleDay3 ? 10 : 3) : Math.round((today - new Date(s.getFullYear(), s.getMonth(), s.getDate())) / DAY_MS);
     if (days >= 10 && !h.settleDay10) return { task: h, day: 10 };
     if (days >= 3 && days < 10 && !h.settleDay3) return { task: h, day: 3 };
   }
