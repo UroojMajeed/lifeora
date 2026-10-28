@@ -10,6 +10,8 @@ import RoutineStats from '../components/RoutineStats';
 import ReinvestCard from '../components/ReinvestCard';
 import TimeBackCard from '../components/TimeBackCard';
 import JourneyPreviewCard from '../components/JourneyPreviewCard';
+import SettleInCard from '../components/SettleInCard';
+import { settleDue } from '../constants/journey';
 import CardHeader, { homeCard } from '../components/CardHeader';
 import Button from '../components/Button';
 import { checkInStatus } from '../constants/checkin';
@@ -98,7 +100,8 @@ export default function HomeScreen({ navigation }) {
   const move = summary ? todaysMove({ schedule, handoffs, summary }) : null;
   // The first move: a drain not handed off yet, handed off step by step (the journey).
   const firstTask = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours)[0];
-  const openJourney = (activity) => navigation.navigate('HandoffJourney', { activity });
+  const openJourney = (activity, openKind) => navigation.navigate('HandoffJourney', { activity, openKind });
+  const settle = settleDue(handoffs);
 
   // Production time at the audit (the hours freed by delegating are added on top).
   const productionBefore = schedule
@@ -160,6 +163,7 @@ export default function HomeScreen({ navigation }) {
                 <Button title="Start check-in" icon="arrow-forward" onPress={() => navigation.navigate('CheckIn')} style={styles.checkInButton} />
               </View>
             ) : null}
+            {settle ? <SettleInCard key={`${settle.task.activity}-${settle.day}`} due={settle} onOpen={openJourney} /> : null}
             <TimeBackCard weeks={timeBack.weeks} totalHours={timeBack.totalHours} />
             <RoutineStats
               items={routineNow}

@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
-const { HANDOFF_STATUSES, HANDOFF_METHODS, HANDOFF_STEP_KINDS, FINISH_STEP_KINDS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
+const { HANDOFF_STATUSES, HANDOFF_METHODS, HANDOFF_STEP_KINDS, FINISH_STEP_KINDS, SETTLE_ANSWERS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 // Delegation first: the cheapest hours to buy back. Then Replacement, which needs a playbook first.
@@ -26,6 +26,8 @@ const emptyHandoff = (activity) => ({
   notes: '',
   steps: [],
   planConfirmed: false,
+  settleDay3: '',
+  settleDay10: '',
   doneAt: null,
 });
 
@@ -155,6 +157,11 @@ function sanitize(body = {}) {
     }
   }
   if (body.planConfirmed !== undefined) out.planConfirmed = body.planConfirmed === true;
+  ['settleDay3', 'settleDay10'].forEach((key) => {
+    if (body[key] === undefined) return;
+    if (!SETTLE_ANSWERS.includes(body[key] ?? '')) errors.push(`${key} must be one of: well, help`);
+    else out[key] = body[key] ?? '';
+  });
   if (errors.length) throw new ApiError(400, 'Validation failed', errors);
   return out;
 }

@@ -52,6 +52,8 @@ async function saveCheckIn(req, res, next) {
           if (h && h.status === 'done') {
             h.status = 'mine';
             h.doneAt = undefined;
+            h.settleDay3 = '';
+            h.settleDay10 = '';
             // The rest of the plan (how, the brief, who) still stands; only the handover is undone.
             (h.steps || []).forEach((s) => {
               if (FINISH_STEP_KINDS.includes(s.kind)) Object.assign(s, { done: false, doneAt: undefined });

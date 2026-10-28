@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ import WindingRoad from '../components/WindingRoad';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
-import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, sameDay, startOptions, stepSummary } from '../constants/journey';
+import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, sameDay, startOptions, stepSummary } from '../constants/journey';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -38,6 +38,15 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const [editing, setEditing] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [dragging, setDragging] = useState(false);
+
+  // Opened from Home at one step (the settle-in check): open that step's sheet once.
+  const openKind = route.params?.openKind;
+  useEffect(() => {
+    if (!openKind || !task) return;
+    const target = journeyOf(task).steps.find((s) => s.kind === openKind);
+    if (target) setSheet((s) => ({ open: true, id: target.id, n: s.n + 1 }));
+    navigation.setParams({ openKind: undefined });
+  }, [openKind, task, navigation]);
 
   if (!task) {
     return (
@@ -328,7 +337,18 @@ function StepSheet({ step, task, onDone }) {
                 </Pressable>
               ))}
             </ScrollView>
-          ) : task.method === 'hire' ? (
+          ) : null}
+          {automate && recipeFor(who) ? (
+            <View>
+              <Text style={styles.label}>How to set it up · about {recipeFor(who).minutes} min</Text>
+              {recipeFor(who).steps.map((s, i) => (
+                <View key={s} style={styles.recipeRow}>
+                  <Text style={styles.recipeNum}>{i + 1}</Text>
+                  <Text style={styles.recipeText}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          ) : !automate && task.method === 'hire' ? (
             <>
               <Pressable onPress={() => setFind((v) => !v)} style={styles.draft} accessibilityRole="button" accessibilityState={{ expanded: find }}>
                 <Ionicons name="sparkles" size={15} color={colors.accentText} />
@@ -440,6 +460,9 @@ const makeStyles = (colors) => ({
   draftText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
   post: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   postText: { fontSize: 14, lineHeight: 21, color: colors.text },
+  recipeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  recipeNum: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', textAlign: 'center', lineHeight: 22, fontSize: 12, fontWeight: '800', color: colors.primary, backgroundColor: colors.primarySoft },
+  recipeText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.text },
   postBtn: { marginTop: spacing.sm + 4, minHeight: 44 },
   postNote: { fontSize: 12, color: colors.muted, marginTop: spacing.sm, textAlign: 'center' },
   save: { marginTop: spacing.lg },

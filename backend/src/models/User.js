@@ -6,7 +6,7 @@ const {
   ROLES,
   HANDOFF_STATUSES,
   HANDOFF_METHODS,
-  HANDOFF_STEP_KINDS,
+  HANDOFF_STEP_KINDS, SETTLE_ANSWERS,
   FILL_TIMES,
 } = require('../utils/buyback');
 
@@ -81,6 +81,9 @@ const handoffSchema = new mongoose.Schema(
     // The user's own plan for this handoff (empty: the app's suggested steps), and whether they've confirmed it.
     steps: { type: [handoffStepSchema], default: [] },
     planConfirmed: { type: Boolean, default: false },
+    // The settle-in check after the handover: how it was going on day 3 and day 10 ('' until answered).
+    settleDay3: { type: String, enum: SETTLE_ANSWERS, default: '' },
+    settleDay10: { type: String, enum: SETTLE_ANSWERS, default: '' },
     doneAt: Date,
   },
   { _id: false }

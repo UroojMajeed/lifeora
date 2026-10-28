@@ -103,6 +103,126 @@ export const CHECK_DRAFT = {
 
 export const TOOL_IDEAS = ['Zapier', 'Calendly', 'Google Calendar', 'QuickBooks', 'Gmail filters', 'Buffer', 'Mailchimp', 'Notion'];
 
+// Real setup steps for the tools on the chips. Matched by name, so "Gmail filters" and "gmail" both work.
+const RECIPES = [
+  {
+    match: 'zapier',
+    minutes: 15,
+    steps: [
+      'Sign in at zapier.com and create a new Zap',
+      'Pick the trigger: the app and the event that starts it (a new form entry, a new email)',
+      'Add the action: what should happen in the other app',
+      'Test each step with a real example, then switch the Zap on',
+      'After a week, look at the Zap history for errors',
+    ],
+  },
+  {
+    match: 'calendly',
+    minutes: 10,
+    steps: [
+      'Connect your calendar so busy times are blocked',
+      'Set the hours you take meetings, with a buffer between them',
+      'Create an event type (a 30-minute call) and the questions you need answered',
+      'Send your link instead of trading emails about times',
+      'Turn on email reminders so people show up',
+    ],
+  },
+  {
+    match: 'google calendar',
+    minutes: 10,
+    steps: [
+      'In Google Calendar, tap Create, then Appointment schedule',
+      'Set how long a meeting is and the hours you are open',
+      'Share the booking page link wherever people ask for your time',
+      'Block your focus time as a repeating event so it stays free',
+      'Set default reminders for new events',
+    ],
+  },
+  {
+    match: 'quickbooks',
+    minutes: 20,
+    steps: [
+      'Connect your bank and card accounts',
+      'Add bank rules so regular payments sort themselves into the right category',
+      'Set up recurring invoices for clients you bill every month',
+      'Turn on automatic payment reminders for invoices',
+      'Once a week, review anything left uncategorized',
+    ],
+  },
+  {
+    match: 'gmail',
+    minutes: 5,
+    steps: [
+      'In Gmail, search for the emails you want handled (a sender, a subject)',
+      'Open the search options at the end of the search bar, then Create filter',
+      'Pick what happens: add a label, skip the inbox, mark as read or forward',
+      'Tick "Also apply filter to matching conversations"',
+      'Check it again in a week: anything missed?',
+    ],
+  },
+  {
+    match: 'buffer',
+    minutes: 15,
+    steps: [
+      'Connect your social accounts',
+      'Set your posting schedule: which days and times',
+      'Write a week of posts in one sitting and add them to the queue',
+      'Let the queue post for you on schedule',
+      'Once a week, look at what worked and plan the next batch',
+    ],
+  },
+  {
+    match: 'mailchimp',
+    minutes: 20,
+    steps: [
+      'Import your contacts into an audience',
+      'Create an automation, like a welcome email for new subscribers',
+      'Write the emails once',
+      'Send a test to yourself, then switch it on',
+      'After a week, check opens and unsubscribes',
+    ],
+  },
+  {
+    match: 'notion',
+    minutes: 15,
+    steps: [
+      'Make one page for the task: the steps, links and logins',
+      'Turn the repeating part into a template (or a database with a repeating template)',
+      'Share it with whoever needs it',
+      'Add dates with reminders so nothing slips',
+      'Review it once a month and update what changed',
+    ],
+  },
+];
+const ANY_TOOL = {
+  minutes: 10,
+  steps: ["Set it up with the tool's own quick start", 'Test it once with a real example', 'Turn on alerts so you hear when it fails', 'Check it after a week: anything missed?'],
+};
+
+/** How to set up the tool that will do a task: its recipe, a general one for any other tool, or null with no tool yet. */
+export function recipeFor(tool) {
+  const name = String(tool || '').trim().toLowerCase();
+  if (!name) return null;
+  return RECIPES.find((r) => name.includes(r.match)) || ANY_TOOL;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * The settle-in check due now, if any: { task, day } for the first handed-off task on day 3 or later
+ * (or day 10 or later) after its start that hasn't been answered. A missed day-3 check gives way to day 10.
+ */
+export function settleDue(handoffs = [], now = new Date()) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  for (const h of handoffs) {
+    if (h.status !== 'done' || h.method === 'drop' || !h.startDate) continue;
+    const s = new Date(h.startDate);
+    const days = Math.round((today - new Date(s.getFullYear(), s.getMonth(), s.getDate())) / DAY_MS);
+    if (days >= 10 && !h.settleDay10) return { task: h, day: 10 };
+    if (days >= 3 && days < 10 && !h.settleDay3) return { task: h, day: 3 };
+  }
+  return null;
+}
+
 /** A job post for a task, priced at the user's Buyback Rate. */
 export function jobPostDraft({ task, doneLooksLike, rate, currency }) {
   const lines = [`Looking for help with ${task.activity.toLowerCase()}: about ${Math.round(task.hours * 5 * 10) / 10} h a week.`];

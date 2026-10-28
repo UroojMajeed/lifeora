@@ -57,6 +57,8 @@ const HANDOFF_METHODS = ['hire', 'automate', 'team', 'drop'];
 // 'handover' or 'drop' finishes a handoff, so a plan has exactly one of them, as its last step.
 const HANDOFF_STEP_KINDS = ['how', 'brief', 'who', 'handover', 'drop', 'custom'];
 const FINISH_STEP_KINDS = ['handover', 'drop'];
+// The settle-in check: going well, or needs a hand ('' is not answered yet).
+const SETTLE_ANSWERS = ['', 'well', 'help'];
 const FILL_TIMES = ['morning', 'afternoon', 'evening'];
 
 const ONBOARDING_STEPS = ['profile', 'buyback_rate', 'schedule', 'swipe', 'drip', 'done'];
@@ -79,4 +81,5 @@ module.exports = {
   HANDOFF_METHODS,
   HANDOFF_STEP_KINDS,
   FINISH_STEP_KINDS,
+  SETTLE_ANSWERS,
 };
