@@ -15,6 +15,7 @@ import { settleDue } from '../constants/journey';
 import CardHeader, { homeCard } from '../components/CardHeader';
 import Button from '../components/Button';
 import { checkInStatus, weekKey } from '../constants/checkin';
+import { TEST_MODE } from '../constants/testing';
 import MilestoneSheet from '../components/MilestoneSheet';
 import { markMilestones } from '../storage/milestones';
 import { milestoneLine, reachedMilestones } from '../constants/milestones';
@@ -162,9 +163,15 @@ export default function HomeScreen({ navigation }) {
         {started ? (
           <>
             {/* After a handoff: your hours back, your routine now, what to do next, Reinvest, and production. */}
-            {checkIn.state === 'due' ? (
+            {/* With the testing switch on, a done check-in can be done again (it replaces this week's). */}
+            {checkIn.state === 'due' || (TEST_MODE && checkIn.state === 'done') ? (
               <View style={styles.checkIn}>
-                <CardHeader icon="pulse" iconColor={colors.primary} title="Your Weekly Check-in" sub="Ready · about 2 minutes" />
+                <CardHeader
+                  icon="pulse"
+                  iconColor={colors.primary}
+                  title="Your Weekly Check-in"
+                  sub={checkIn.state === 'done' ? 'Testing · do this week again' : 'Ready · about 2 minutes'}
+                />
                 <Button title="Start check-in" icon="arrow-forward" onPress={() => navigation.navigate('CheckIn')} style={styles.checkInButton} />
               </View>
             ) : null}
