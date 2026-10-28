@@ -30,7 +30,8 @@ export function weekLabel(key) {
 /** What there is to ask: your handed-off tasks and your reinvestments. */
 export function checkInQuestions({ handoffs = [], fills = [] }) {
   return {
-    handoffs: handoffs.filter((h) => h.status === 'done'),
+    // Each task once, even if the list ever holds it twice.
+    handoffs: handoffs.filter((h, i) => h.status === 'done' && handoffs.findIndex((x) => x.activity.toLowerCase() === h.activity.toLowerCase()) === i),
     fills,
   };
 }
@@ -44,7 +45,7 @@ export function checkInStatus({ checkIns = [], handoffs = [], fills = [] }, now 
   const week = weekKey(now);
   const done = checkIns.find((c) => c.week === week) || null;
   const q = checkInQuestions({ handoffs, fills });
-  if (done && !TEST_MODE) return { state: 'done', week, entry: done };
+  if (done) return { state: 'done', week, entry: done };
   if (!q.handoffs.length && !q.fills.length && !checkIns.length) return { state: 'none', week };
   const day = now.getDay();
   if (TEST_MODE || day >= OPENS_ON || day === 0) return { state: 'due', week };
