@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import JourneyTiles from '../../components/JourneyTiles';
+import Roadmap from '../../components/Roadmap';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
+import ThemeToggle from '../../components/ThemeToggle';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { spacing } from '../../theme';
@@ -15,7 +16,7 @@ import { spacing } from '../../theme';
  */
 export default function JourneyScreen({ navigation }) {
   const { user, startAsGuest } = useOnboarding();
-  const { colors } = useTheme();
+  const { type, colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
@@ -59,32 +60,28 @@ export default function JourneyScreen({ navigation }) {
   );
 
   return (
-    // The four steps as tiles, then where they lead. Scrolls on short phones.
-    <Screen footer={footer}>
-      <Text style={styles.hero} accessibilityRole="header">
-        Buy back{'\n'}your time
+    // No scrolling: the road map takes exactly the room between the heading and the button.
+    <Screen tinted="dawn" scroll={false} footer={footer}>
+      <View style={styles.top}>
+        <ThemeToggle />
+      </View>
+      {/* One line on every phone: it shrinks a little on very narrow screens rather than wrap. */}
+      <Text style={type.title} numberOfLines={1} adjustsFontSizeToFit>
+        Buy back your time
       </Text>
       <View style={styles.note}>
-        <Ionicons name="lock-closed-outline" size={14} color={colors.muted} />
+        <Ionicons name="lock-closed-outline" size={13} color={colors.muted} />
         <Text style={styles.noteText}>Setup takes 2 minutes · Private to you</Text>
       </View>
-      <JourneyTiles />
-      <View style={styles.end}>
-        <Ionicons name="sunny" size={40} color={colors.accent} />
-        <Text style={styles.endTitle}>Your time back</Text>
-        <Text style={styles.endSub}>for the work and life you love</Text>
-      </View>
+      <Roadmap />
     </Screen>
   );
 }
 
 const makeStyles = (colors) => ({
-  hero: { fontSize: 44, lineHeight: 48, fontWeight: '800', letterSpacing: -1.2, color: colors.primaryDark, marginTop: spacing.lg },
-  note: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
-  noteText: { fontSize: 14, color: colors.muted },
-  end: { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.sm },
-  endTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5, color: colors.primaryDark, marginTop: spacing.xs },
-  endSub: { fontSize: 16, fontWeight: '700', color: colors.accentText, marginTop: 2 },
+  top: { flexDirection: 'row', justifyContent: 'flex-end', paddingTop: spacing.sm, marginBottom: spacing.sm },
+  note: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  noteText: { fontSize: 13, color: colors.muted },
   error: { color: colors.error, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: spacing.sm },
   signIn: { alignItems: 'center', paddingTop: spacing.sm + 4 },
   signInText: { fontSize: 14, color: colors.muted },
