@@ -11,11 +11,13 @@ import { cardShadow, radius, spacing } from '../theme';
 export function rowStatus(item) {
   if (item.status === 'done') return 'done';
   if (item.status === 'later') return 'later';
+  if (item.cameBackAt) return 'back';
   return journeyOf(item).doneCount ? 'going' : 'todo';
 }
 const PILLS = {
   done: { label: 'Handed off', icon: 'checkmark-circle', fg: 'success', bg: 'successSoft' },
   going: { label: 'Handing off', icon: 'swap-horizontal', fg: 'warm', bg: 'warmSoft' },
+  back: { label: 'Came back', icon: 'refresh', fg: 'accentText', bg: 'accentSoft' },
   later: { label: 'Next round', icon: 'time-outline', fg: 'muted', bg: 'tintWaiting' },
   todo: { label: 'Not started', icon: null, fg: 'muted', bg: 'surfaceAlt' },
 };

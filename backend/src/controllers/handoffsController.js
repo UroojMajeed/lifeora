@@ -28,6 +28,7 @@ const emptyHandoff = (activity) => ({
   planConfirmed: false,
   settleDay3: '',
   settleDay10: '',
+  cameBackAt: null,
   doneAt: null,
 });
 
@@ -201,6 +202,7 @@ async function updateHandoff(req, res, next) {
       }
       Object.assign(handoff, data);
       handoff.doneAt = handoff.status === 'done' ? handoff.doneAt || new Date() : undefined;
+      if (handoff.status === 'done') handoff.cameBackAt = undefined; // handed off again
       return activity.activity;
     });
     const result = buildHandoffs(user);

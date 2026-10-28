@@ -84,6 +84,8 @@ const handoffSchema = new mongoose.Schema(
     // The settle-in check after the handover: how it was going on day 3 and day 10 ('' until answered).
     settleDay3: { type: String, enum: SETTLE_ANSWERS, default: '' },
     settleDay10: { type: String, enum: SETTLE_ANSWERS, default: '' },
+    // When a weekly check-in said it slipped back (cleared once it's handed off again).
+    cameBackAt: Date,
     doneAt: Date,
   },
   { _id: false }

@@ -125,6 +125,16 @@ export default function HandoffJourneyScreen({ navigation, route }) {
         </View>
       ) : null}
 
+      {task.cameBackAt && task.status !== 'done' ? (
+        <View style={styles.back}>
+          <Ionicons name="refresh" size={18} color={colors.accentText} />
+          <View style={styles.backMain}>
+            <Text style={styles.backTitle}>Came back · {formatDay(task.cameBackAt)}</Text>
+            <Text style={styles.backText}>It slipped back. Your answers are kept: check each step, fix what didn't work, then hand it over again.</Text>
+          </View>
+        </View>
+      ) : null}
+
       <WindingRoad steps={steps} current={current} hours={task.hours} onOpen={open} summaryOf={(s) => stepSummary(s.kind, task, methodLabel(task.method))} />
 
       {/* The 10-80-10 brief, once it's written: your start and finish, their middle. */}
@@ -221,10 +231,22 @@ function StepSheet({ step, task, onDone }) {
     }
   };
   // Save and tick this step (choosing how may also reshape the steps); the last one hands it off.
-  // An already ticked step just saves its new answer.
+  // Changing a ticked step's answer un-ticks the steps after it (their answers stay) so they get
+  // checked again; saving it unchanged changes nothing. A handed-off task just saves the edit.
   const save = () => {
-    if (step.done && kind !== 'how') return run(fields());
     const now = planOf(task);
+    if (task.status === 'done') return run(fields());
+    if (step.done) {
+      const answer = fields();
+      const differs = (k) => String(answer[k] ?? '') !== String(task[k] ?? '');
+      // For "how", only a new way counts: another idea for the same way just saves.
+      const changed = kind === 'how' ? differs('method') : Object.keys(answer).some(differs);
+      if (!changed) return Object.keys(answer).some(differs) ? run(answer) : onDone();
+      const reshaped = kind === 'how' ? planForMethod(now, method) : now;
+      const at = reshaped.findIndex((s) => s.id === step.id);
+      const next = reshaped.map((s, i) => (i > at ? { ...s, done: false } : s));
+      return run({ ...answer, steps: strip(next), status: 'in_progress' });
+    }
     const next = kind === 'how' ? planForMethod(now, method) : now.map((s) => (s.id === step.id ? { ...s, done: true } : s));
     const all = next.every((s) => s.done);
     return run({ ...fields(), steps: strip(next), status: all ? 'done' : 'in_progress' });
@@ -460,6 +482,10 @@ const makeStyles = (colors) => ({
   draftText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
   post: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   postText: { fontSize: 14, lineHeight: 21, color: colors.text },
+  back: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  backMain: { flex: 1, gap: 2 },
+  backTitle: { fontSize: 14, fontWeight: '800', color: colors.accentText },
+  backText: { fontSize: 13, lineHeight: 19, color: colors.text },
   recipeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   recipeNum: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', textAlign: 'center', lineHeight: 22, fontSize: 12, fontWeight: '800', color: colors.primary, backgroundColor: colors.primarySoft },
   recipeText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.text },

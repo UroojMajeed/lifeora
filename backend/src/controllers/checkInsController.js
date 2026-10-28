@@ -1,7 +1,10 @@
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
 const { buildHandoffs } = require('./handoffsController');
-const { FINISH_STEP_KINDS } = require('../utils/buyback');
+// The app's suggested plan (as in the app's journey), for a handoff saved before plans existed.
+const STEP_TITLES = { how: 'Choose how', brief: 'Write the brief', who: 'Find who', handover: 'Hand it over', drop: 'Stop doing it' };
+const suggestedSteps = (method) =>
+  (method === 'drop' ? ['how', 'drop'] : ['how', 'brief', 'who', 'handover']).map((k) => ({ id: k, kind: k, title: STEP_TITLES[k], done: k === 'how' }));
 
 const WORKDAYS_PER_WEEK = 5;
 const MAX_CHECKINS = 104; // two years of weeks
@@ -54,9 +57,11 @@ async function saveCheckIn(req, res, next) {
             h.doneAt = undefined;
             h.settleDay3 = '';
             h.settleDay10 = '';
-            // The rest of the plan (how, the brief, who) still stands; only the handover is undone.
-            (h.steps || []).forEach((s) => {
-              if (FINISH_STEP_KINDS.includes(s.kind)) Object.assign(s, { done: false, doneAt: undefined });
+            h.cameBackAt = new Date();
+            h.startDate = undefined;
+            if (!h.steps || !h.steps.length) h.steps = suggestedSteps(h.method);
+            h.steps.forEach((s) => {
+              if (s.kind !== 'how') Object.assign(s, { done: false, doneAt: undefined });
             });
           }
         });

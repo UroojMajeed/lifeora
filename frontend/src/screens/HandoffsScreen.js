@@ -32,7 +32,7 @@ export default function HandoffsScreen({ navigation }) {
 
   const open = (item) => navigation.navigate('HandoffJourney', { activity: item.activity });
   const count = (state) => handoffs.filter((x) => rowStatus(x) === state).length;
-  const [doneN, goingN, todoN] = [count('done'), count('going'), count('todo')];
+  const [doneN, goingN, todoN] = [count('done'), count('going') + count('back'), count('todo')];
 
   return (
     <Screen edges={['top']}>
