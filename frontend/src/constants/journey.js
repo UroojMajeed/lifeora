@@ -94,8 +94,8 @@ export function jobPostDraft({ task, doneLooksLike, rate, currency }) {
 /** A short, friendly handover message to send to whoever takes it. */
 export function handoverDraft({ task, who, doneLooksLike, checkHow, start }) {
   const name = who && !/^(zapier|calendly|google|quickbooks|gmail|buffer|mailchimp|notion)/i.test(who) ? who.split(' ')[0] : 'there';
-  const when = start ? new Date(start).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : 'soon';
-  const lines = [`Hi ${name}! From ${when}, ${task.activity.toLowerCase()} is yours.`];
+  const when = start ? `From ${new Date(start).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}` : 'Soon';
+  const lines = [`Hi ${name}! ${when}, ${task.activity.toLowerCase()} is yours.`];
   if (doneLooksLike) lines.push(`Done looks like: ${doneLooksLike}.`);
   if (checkHow) lines.push(`How I'll check it: ${checkHow}.`);
   lines.push("Everything in between is yours. Bring me anything you're unsure about in the first week. Thank you!");

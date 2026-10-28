@@ -29,7 +29,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
   const round = route.params?.round;
   // The Routine tab: the same list, edited the same way, without the onboarding step around it.
   const { onboarding, saveStep } = useOnboarding();
-  const { refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs = [], refresh: refreshHandoffs } = useHandoffs();
+  const handedOff = new Set(handoffs.filter((x) => x.status === 'done').map((x) => x.activity.toLowerCase()));
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
@@ -234,6 +235,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                       onRename={(name) => rename(item.activity, name)}
                       onEditStart={() => bringIntoView(item.activity)}
                       onRemove={() => remove(item.activity)}
+                      handedOff={handedOff.has(item.activity.toLowerCase())}
                     />
                   </View>
                 ))}

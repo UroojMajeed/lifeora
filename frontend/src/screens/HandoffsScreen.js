@@ -30,7 +30,7 @@ export default function HandoffsScreen({ navigation }) {
     }, [refresh])
   );
 
-  const open = (item) => navigation.navigate('HandoffDetail', { activity: item.activity });
+  const open = (item) => navigation.navigate('HandoffJourney', { activity: item.activity });
 
   return (
     <Screen edges={['top']}>

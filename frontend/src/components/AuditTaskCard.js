@@ -163,7 +163,7 @@ export function AuditFields({ item, field, onField, onChange }) {
  * Tapping the name edits it in place; Enter or tapping away saves it (`onRename(name)`, which may
  * say no, e.g. for an empty or duplicate name, and then the old name stays).
  */
-export default function AuditTaskCard({ item, field, onField, onChange, onRename, onEditStart, onRemove }) {
+export default function AuditTaskCard({ item, field, onField, onChange, onRename, onEditStart, onRemove, handedOff }) {
   const { colors, isDark } = useTheme();
   const styles = useStyles(makeStyles);
   const [editing, setEditing] = useState(false);
@@ -211,6 +211,13 @@ export default function AuditTaskCard({ item, field, onField, onChange, onRename
             <Ionicons name="pencil" size={13} color={colors.muted} />
           </Pressable>
         )}
+        {/* Handed off already: it stays in your routine (it's your audit), marked as off your plate. */}
+        {handedOff && !editing ? (
+          <View style={styles.handed}>
+            <Ionicons name="checkmark-circle" size={13} color={colors.primary} />
+            <Text style={styles.handedText}>Handed off</Text>
+          </View>
+        ) : null}
         <Pressable onPress={onRemove} hitSlop={10} accessibilityRole="button" accessibilityLabel={`Remove ${item.activity}`}>
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
@@ -236,6 +243,8 @@ const makeStyles = (colors, isDark) => ({
   cardOpen: { borderColor: colors.primary },
   top: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { flexShrink: 1, fontSize: 16, fontWeight: '800', color: colors.text },
+  handed: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, backgroundColor: colors.primarySoft },
+  handedText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   nameTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'stretch' },
   nameInput: {
     flex: 1,

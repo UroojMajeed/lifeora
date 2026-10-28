@@ -161,7 +161,12 @@ export default function HomeScreen({ navigation }) {
               </View>
             ) : null}
             <TimeBackCard weeks={timeBack.weeks} totalHours={timeBack.totalHours} />
-            <RoutineStats items={routineNow} free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))} tip={false} />
+            <RoutineStats
+              items={routineNow}
+              free={Math.max(0, bought - fills.reduce((t, x) => t + x.hours, 0))}
+              handedOff={handoffs.filter((x) => x.status === 'done').length}
+              tip={false}
+            />
             {/* New tasks to rate, or the next drain to delegate. Once all are delegated, Reinvest below is
                 the next step (no separate "fill" move); when that's done too, round 2 starts here. */}
             {move?.stage === 'audit' || move?.action === 'nextRound' ? (

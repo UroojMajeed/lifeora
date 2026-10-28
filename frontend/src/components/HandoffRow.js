@@ -2,7 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DRIP, HANDOFF_METHODS, statusInfo } from '../constants/content';
 import { formatHours } from '../utils/format';
-import { handoffSteps } from '../constants/handoffSteps';
+import { journeyOf } from '../constants/journey';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { cardShadow, radius, spacing } from '../theme';
 
@@ -14,8 +14,7 @@ export default function HandoffRow({ item, onPress }) {
   const method = HANDOFF_METHODS.find((m) => m.key === item.method);
   const quadrant = DRIP[item.quadrant];
   const done = item.status === 'done';
-  const steps = handoffSteps(item);
-  const stepsDone = steps.filter((s) => s.done).length;
+  const { steps, doneCount: stepsDone } = journeyOf(item);
 
   return (
     <Pressable
@@ -32,19 +31,12 @@ export default function HandoffRow({ item, onPress }) {
         <Text style={[styles.title, done && styles.titleDone]} numberOfLines={1}>
           {item.activity}
         </Text>
-        <View style={styles.meta}>
+        {/* One line that may wrap, but only between phrases (no-break spaces keep each together). */}
+        <Text style={styles.metaText}>
           <Text style={[styles.tag, { color: colors[quadrant.color] }]}>{quadrant.name}</Text>
-          <Text style={styles.dot}>·</Text>
-          <Text style={styles.metaText}>{formatHours(item.hours)} a day</Text>
-          {!done ? (
-            <>
-              <Text style={styles.dot}>·</Text>
-              <Text style={styles.metaText}>
-                {stepsDone}/{steps.length} steps
-              </Text>
-            </>
-          ) : null}
-        </View>
+          {` · ${formatHours(item.hours)}\u00A0a\u00A0day`}
+          {!done ? ` · ${stepsDone}/${steps.length}\u00A0steps` : ''}
+        </Text>
         {item.plan ? (
           <View style={styles.planRow}>
             <Ionicons name={method?.icon || 'bulb-outline'} size={13} color={colors.primary} />
@@ -80,9 +72,7 @@ const makeStyles = (colors, isDark) => ({
   middle: { flex: 1, gap: 3 },
   title: { fontSize: 16, fontWeight: '700', color: colors.text },
   titleDone: { color: colors.muted, textDecorationLine: 'line-through' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   tag: { fontSize: 12, fontWeight: '700' },
-  dot: { fontSize: 12, color: colors.muted },
   metaText: { fontSize: 12, color: colors.muted },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   plan: { flex: 1, fontSize: 12, fontWeight: '600', color: colors.primary },
