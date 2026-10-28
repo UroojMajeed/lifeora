@@ -133,6 +133,12 @@ reclaim/
    | `npm run start:wifi` | Expo Go on the same Wi-Fi, using the online backend. |
    | `npm run start:online` | Expo Go from any network, through a Cloudflare tunnel, using the online backend. (Expo's own `--tunnel` is broken.) |
    | `npm run web` | Runs the app in a web browser. Good for quick checks; native-only things (haptics, share sheet) do nothing there. |
+   **Expo Go must match the SDK (57).** The Play Store version of Expo Go updates itself to the newest SDK and then refuses this project ("not compatible"). Fix it:
+   - Uninstall Expo Go.
+   - Install the SDK 57 build from https://expo.dev/go.
+   - In the Play Store, open Expo Go, then ⋮, and turn off auto update.
+
+   For a lasting fix, use a development build (step 5), which never updates itself. Upgrading to a newer SDK is a planned job: upgrade the packages, bump the app , then build a new tester APK *before* publishing any update.
 5. **Development APK (only when native code changes).** JavaScript changes load live from Metro, so you only rebuild when native dependencies or `app.json` change. Recipe for Windows:
    - Copy `frontend` (without `android/`) to a short path with no spaces, e.g. `C:\lf\frontend`. Paths containing spaces or longer than 260 characters break the native build.
    - Make the Android SDK reachable at `C:\Android\Sdk` (a junction works).
