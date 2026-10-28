@@ -138,7 +138,7 @@ reclaim/
    - Install the SDK 57 build from https://expo.dev/go.
    - In the Play Store, open Expo Go, then ⋮, and turn off auto update.
 
-   For a lasting fix, use a development build (step 5), which never updates itself. Upgrading to a newer SDK is a planned job: upgrade the packages, bump the app , then build a new tester APK *before* publishing any update.
+   For a lasting fix, use a development build (step 5), which never updates itself. Upgrading to a newer SDK is a planned job: upgrade the packages, bump the app `version` in `app.json`, then build a new tester APK *before* publishing any update.
 5. **Development APK (only when native code changes).** JavaScript changes load live from Metro, so you only rebuild when native dependencies or `app.json` change. Recipe for Windows:
    - Copy `frontend` (without `android/`) to a short path with no spaces, e.g. `C:\lf\frontend`. Paths containing spaces or longer than 260 characters break the native build.
    - Make the Android SDK reachable at `C:\Android\Sdk` (a junction works).
