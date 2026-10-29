@@ -107,6 +107,19 @@ export async function boughtBackTotalHours() {
 }
 
 /** Forget everything (used by "Start over"). */
+// Whether a guest said "Not now" to saving their progress (asked once, after a handoff).
+const SAVE_ASK_KEY = 'lifeora.saveAskDismissed';
+export async function saveAskDismissed() {
+  try {
+    return (await AsyncStorage.getItem(SAVE_ASK_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+export function dismissSaveAsk() {
+  return AsyncStorage.setItem(SAVE_ASK_KEY, '1').catch(() => {});
+}
+
 export function clearProgress() {
-  return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY, HISTORY_KEY]).catch(() => {});
+  return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY, HISTORY_KEY, SAVE_ASK_KEY]).catch(() => {});
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,8 @@ import Button from '../components/Button';
 import BottomSheet from '../components/BottomSheet';
 import PlanEditor from '../components/PlanEditor';
 import WindingRoad from '../components/WindingRoad';
+import SaveProgressCard from '../components/SaveProgressCard';
+import { dismissSaveAsk, saveAskDismissed } from '../storage/progress';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
@@ -32,7 +34,13 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { handoffs, update, slipBack } = useHandoffs();
-  const { onboarding } = useOnboarding();
+  const { onboarding, user } = useOnboarding();
+  // Guests get one ask to save their progress, in the "Done!" card (until they say "Not now").
+  const [askSave, setAskSave] = useState(false);
+  useEffect(() => {
+    if (user?.isGuest) saveAskDismissed().then((dismissed) => setAskSave(!dismissed));
+    else setAskSave(false);
+  }, [user?.isGuest]);
   const task = handoffs.find((x) => x.activity === route.params?.activity);
   const [sheet, setSheet] = useState({ open: false, id: null, n: 0 });
   const [editing, setEditing] = useState(false);
@@ -179,6 +187,15 @@ export default function HandoffJourneyScreen({ navigation, route }) {
               </Text>
             </>
           )}
+          {askSave ? (
+            <SaveProgressCard
+              onSave={() => navigation.navigate('Account', { mode: 'save' })}
+              onDismiss={() => {
+                setAskSave(false);
+                dismissSaveAsk();
+              }}
+            />
+          ) : null}
           <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
       ) : null}
@@ -198,8 +215,9 @@ export default function HandoffJourneyScreen({ navigation, route }) {
             task={task}
             onDone={(patch) => {
               setSheet((s) => ({ ...s, open: false }));
-              // Handed over (or dropped): straight back to Home, where the next task is waiting.
-              if (patch?.status === 'done') setTimeout(() => navigation.navigate('Main', { screen: 'Home' }), 260);
+              // Handed over (or dropped): straight back to Home, where the next task is waiting. A guest
+              // not yet asked stays on "Done!" to see the one ask to save their progress.
+              if (patch?.status === 'done' && !askSave) setTimeout(() => navigation.navigate('Main', { screen: 'Home' }), 260);
             }}
           />
         ) : null}

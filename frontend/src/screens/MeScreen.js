@@ -156,7 +156,7 @@ export default function MeScreen({ navigation }) {
             <Row
               icon="cloud-upload-outline"
               title="Save your progress"
-              value="Create an account so you never lose your data."
+              value="Your data is only on this phone. Save it to get it back on any phone."
               onPress={() => navigation.navigate('Account', { mode: 'save' })}
             />
             <View style={styles.divider} />
