@@ -6,7 +6,8 @@ import { Card } from './Card';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import { useOnboarding } from '../context/OnboardingContext';
-import { askForReminders, openPhoneSettings, reminderPermission, sendTestReminder } from '../notifications';
+import { askForReminders, openPhoneSettings, reminderPermission, sendTestReminders } from '../notifications';
+import { useHandoffs } from '../context/HandoffsContext';
 import { TEST_MODE } from '../constants/testing';
 import { CHECK_IN_DAYS, CHECK_IN_HOURS, DEFAULT_REMINDERS } from '../notifications/plan';
 import { useStyles, useTheme } from '../theme/ThemeContext';
@@ -22,6 +23,7 @@ const hourLabel = (hour) => `${hour % 12 || 12} ${hour < 12 ? 'am' : 'pm'}`;
 export default function RemindersSettings() {
   const styles = useStyles(makeStyles);
   const { user, updateReminders } = useOnboarding();
+  const { handoffs } = useHandoffs();
   const [prefs, setPrefs] = useState({ ...DEFAULT_REMINDERS, ...user?.reminders });
   const [permission, setPermission] = useState({ status: 'unavailable', canAsk: false });
   const [editing, setEditing] = useState(false);
@@ -49,12 +51,13 @@ export default function RemindersSettings() {
     await askForReminders();
     setPermission(await reminderPermission());
   };
-  // Testing only: a sample reminder in 10 seconds, to see how it looks and where a tap goes.
-  const [testSent, setTestSent] = useState(false);
+  // Testing only: one of each reminder (10, 25 and 40 seconds), to see them and where a tap goes.
+  const [testSent, setTestSent] = useState(0);
   const testNow = async () => {
-    if (await sendTestReminder().catch(() => false)) {
-      setTestSent(true);
-      setTimeout(() => setTestSent(false), 12000);
+    const sent = await sendTestReminders(handoffs).catch(() => 0);
+    if (sent) {
+      setTestSent(sent);
+      setTimeout(() => setTestSent(0), 42000);
     }
   };
   const saveTime = () => {
@@ -104,7 +107,7 @@ export default function RemindersSettings() {
           <Toggle icon="hourglass-outline" title="Stuck handoffs" value="A nudge after 3 quiet days, at most weekly" on={prefs.nudges} onToggle={(v) => change({ nudges: v })} />
           {TEST_MODE ? (
             <Pressable onPress={testNow} accessibilityRole="button" style={styles.test}>
-              <Text style={styles.testText}>{testSent ? 'Sent: switch away from the app to see it' : 'Send a test reminder in 10 seconds'}</Text>
+              <Text style={styles.testText}>{testSent ? `${testSent} on the way (10, 25, 40 s): switch away from the app` : 'Send test reminders (all three)'}</Text>
             </Pressable>
           ) : null}
         </>

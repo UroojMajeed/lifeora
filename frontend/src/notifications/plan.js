@@ -20,6 +20,43 @@ const at = (date, hour) => new Date(date.getFullYear(), date.getMonth(), date.ge
 const addDays = (date, n) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + n, date.getHours(), date.getMinutes());
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
+// What each kind of reminder says and opens (the real ones and the test ones use the same words).
+const checkInText = () => ({ title: 'Your weekly check-in is ready', body: 'Did your handoffs stick? About 2 minutes.', data: { screen: 'CheckIn' } });
+function startDayText(task) {
+  const name = task.activity.toLowerCase();
+  const automate = task.method === 'automate';
+  const who = task.who || (automate ? 'Your automation' : 'Your helper');
+  return {
+    title: automate ? `${who} takes over ${name} today` : `${who} starts on ${name} today`,
+    body: `Your ${h(task.hours * 5)} a week begin today.`,
+    data: { screen: 'HandoffJourney', params: { activity: task.activity } },
+  };
+}
+function nudgeText(task) {
+  const { steps, current, doneCount } = journeyOf(task);
+  const left = Math.max(1, steps.length - doneCount);
+  return {
+    title: `${task.activity}: ${left === 1 ? 'one step' : `${left} steps`} from off your plate`,
+    body: `Next: ${current?.title || 'Hand it over'}. It frees ${h(task.hours * 5)} a week.`,
+    data: { screen: 'HandoffJourney', params: { activity: task.activity } },
+  };
+}
+
+/**
+ * Testing: one reminder of each kind, worded from your own tasks, to send now. A kind with no task
+ * to be about (e.g. nothing handed off yet) borrows any task, so all three can always be seen.
+ */
+export function sampleReminders(handoffs = []) {
+  const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress');
+  const starting = handoffs.find((x) => startsLater(x)) || handoffs.find((x) => x.status === 'done') || handoffs[0];
+  const stuck = open.find((x) => journeyOf(x).doneCount) || open[0] || handoffs[0];
+  return [
+    { id: 'test-checkin', kind: 'checkIn', ...checkInText() },
+    starting ? { id: 'test-start', kind: 'startDay', ...startDayText(starting) } : null,
+    stuck ? { id: 'test-nudge', kind: 'nudge', ...nudgeText(stuck) } : null,
+  ].filter(Boolean);
+}
+
 /** The next `hour` o'clock that's still ahead of `now` (today or tomorrow). */
 const nextAt = (now, hour) => {
   const today = at(now, hour);
@@ -42,31 +79,14 @@ export function planReminders({ handoffs = [], checkIns = [], reminders = {}, nu
     while (date.getDay() !== r.checkInDay || date <= now) date = addDays(date, 1);
     for (let i = 0; i < CHECK_IN_WEEKS_AHEAD; i += 1, date = addDays(date, 7)) {
       if (done.has(weekKey(date))) continue;
-      list.push({
-        id: `checkin-${weekKey(date)}`,
-        kind: 'checkIn',
-        date,
-        title: 'Your weekly check-in is ready',
-        body: 'Did your handoffs stick? About 2 minutes.',
-        data: { screen: 'CheckIn' },
-      });
+      list.push({ id: `checkin-${weekKey(date)}`, kind: 'checkIn', date, ...checkInText() });
     }
   }
 
   handoffs.forEach((task) => {
-    const name = task.activity.toLowerCase();
     // A handover's start day: the morning it begins.
     if (r.startDay && startsLater(task, now)) {
-      const automate = task.method === 'automate';
-      const who = task.who || (automate ? 'Your automation' : 'Your helper');
-      list.push({
-        id: `start-${task.activity}`,
-        kind: 'startDay',
-        date: at(new Date(task.startDate), START_HOUR),
-        title: automate ? `${who} takes over ${name} today` : `${who} starts on ${name} today`,
-        body: `Your ${h(task.hours * 5)} a week begin today.`,
-        data: { screen: 'HandoffJourney', params: { activity: task.activity } },
-      });
+      list.push({ id: `start-${task.activity}`, kind: 'startDay', date: at(new Date(task.startDate), START_HOUR), ...startDayText(task) });
     }
 
     // A handoff you started but haven't moved on for a few days: a gentle nudge, at most weekly.
@@ -81,15 +101,7 @@ export function planReminders({ handoffs = [], checkIns = [], reminders = {}, nu
         if (again > date) date = again;
       }
       if (date <= now) date = nextAt(now, NUDGE_HOUR);
-      const left = steps.length - doneCount;
-      list.push({
-        id: `nudge-${task.activity}`,
-        kind: 'nudge',
-        date,
-        title: `${task.activity}: ${left === 1 ? 'one step' : `${left} steps`} from off your plate`,
-        body: `Next: ${current.title}. It frees ${h(task.hours * 5)} a week.`,
-        data: { screen: 'HandoffJourney', params: { activity: task.activity } },
-      });
+      list.push({ id: `nudge-${task.activity}`, kind: 'nudge', date, ...nudgeText(task) });
     }
   });
 

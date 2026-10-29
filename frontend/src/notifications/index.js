@@ -4,7 +4,7 @@
 import { Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireOptionalNativeModule } from 'expo';
-import { planReminders } from './plan';
+import { planReminders, sampleReminders } from './plan';
 
 const CHANNEL = 'reminders';
 const TEST_PREFIX = 'test-';
@@ -157,17 +157,23 @@ async function doSync({ handoffs, checkIns, reminders }) {
   await writeStore({ ...store, lastNudged, scheduledNudges });
 }
 
-/** Testing: a sample check-in reminder in 10 seconds (switch away from the app to see it; tap it to open the check-in). */
-export async function sendTestReminder() {
+/**
+ * Testing: one reminder of each kind, worded from your tasks, after 10, 25 and 40 seconds (switch
+ * away from the app to see them; tap one to check where it opens). Returns how many were sent.
+ */
+export async function sendTestReminders(handoffs) {
   const N = notifications();
-  if (!N) return false;
+  if (!N) return 0;
   await setUpReminders();
-  await N.scheduleNotificationAsync({
-    identifier: `${TEST_PREFIX}${Date.now()}`,
-    content: { title: 'Your weekly check-in is ready', body: 'Did your handoffs stick? About 2 minutes. (Test)', data: { screen: 'CheckIn' } },
-    trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 10, channelId: CHANNEL },
-  });
-  return true;
+  const samples = sampleReminders(handoffs);
+  for (const [i, n] of samples.entries()) {
+    await N.scheduleNotificationAsync({
+      identifier: `${TEST_PREFIX}${n.kind}-${Date.now()}`,
+      content: { title: n.title, body: `${n.body} (Test)`, data: n.data },
+      trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: [10, 25, 40][i], channelId: CHANNEL },
+    });
+  }
+  return samples.length;
 }
 
 // Something outside the sync component (e.g. permission just granted) asks for a re-plan.
