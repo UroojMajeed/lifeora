@@ -51,7 +51,7 @@ export default function MeScreen({ navigation }) {
   // Preview (development app only): the next task to try the delegation steps on.
   const previewTask = handoffs.find((x) => x.status === 'mine' || x.status === 'in_progress');
   const saved = user && !user.isGuest;
-  const { type } = useTheme();
+  const { type, colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
   const [motivation, setMotivation] = useState(null);
   const [miles, setMiles] = useState({ earned: [], next: null }); // milestones reached, and the next one
