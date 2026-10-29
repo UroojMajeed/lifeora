@@ -3,7 +3,6 @@ import { Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Screen from '../components/Screen';
-import PageHeader from '../components/PageHeader';
 import TextField from '../components/TextField';
 import Button from '../components/Button';
 import ErrorBanner from '../components/ErrorBanner';
@@ -12,29 +11,28 @@ import { resetTo } from '../constants/content';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme';
 
-const PERKS = [
-  { icon: 'shield-checkmark-outline', text: 'Keep everything if you lose or change your phone' },
-  { icon: 'phone-portrait-outline', text: 'Sign in on any phone and pick up where you left off' },
-  { icon: 'sparkles-outline', text: 'Nothing else changes: same app, same progress' },
-];
+// "Continue with Google" sits above the email form once Google sign-in is built (it needs the next APK).
+const GOOGLE_SIGN_IN = false;
 
-/** Save your progress (guest → account, keeps everything) or sign in to an existing account. */
+/**
+ * Save your progress (guest → account, keeps everything) or sign in, on one calm page: the quickest
+ * option first, then just email and password, a link to switch between the two, and the terms line.
+ */
 export default function AccountScreen({ navigation, route }) {
   const mode = route.params?.mode === 'signin' ? 'signin' : 'save';
   const saving = mode === 'save';
   const { user, saveAccount, signIn } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
-  const ready = /^\S+@\S+\.\S+$/.test(email.trim()) && password.length >= 8;
+  const validEmail = /^\S+@\S+\.\S+$/.test(email.trim());
+  const ready = validEmail && password.length >= 8;
 
   const submit = async () => {
     if (!ready || loading) return;
@@ -42,7 +40,7 @@ export default function AccountScreen({ navigation, route }) {
     setLoading(true);
     try {
       if (saving) {
-        await saveAccount({ name: name.trim() || undefined, email: email.trim(), password });
+        await saveAccount({ email: email.trim(), password });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         navigation.goBack();
       } else {
@@ -55,55 +53,41 @@ export default function AccountScreen({ navigation, route }) {
     }
   };
 
-  return (
-    <Screen
-      footer={
-        <Button
-          title={saving ? 'Save my progress' : 'Sign in'}
-          icon={saving ? 'cloud-upload-outline' : 'arrow-forward'}
-          onPress={submit}
-          loading={loading}
-          disabled={!ready}
-        />
-      }
-    >
-      <PageHeader
-        eyebrow={saving ? 'Your account' : 'Welcome back'}
-        title={saving ? 'Save your progress' : 'Sign in'}
-        subtitle={
-          saving
-            ? 'Create an account in a few seconds. Everything you have done so far comes with you.'
-            : 'Use the email and password you saved your progress with.'
-        }
-      />
+  // Opened from the start screen there is no guest yet, so "new here" just goes back to Get started.
+  const switchMode = () => {
+    setError('');
+    if (user) navigation.setParams({ mode: saving ? 'signin' : 'save' });
+    else navigation.goBack();
+  };
 
-      {saving ? (
-        <View style={styles.perks}>
-          {PERKS.map((p) => (
-            <View key={p.text} style={styles.perk}>
-              <Ionicons name={p.icon} size={18} color={colors.primaryDark} />
-              <Text style={styles.perkText}>{p.text}</Text>
-            </View>
-          ))}
-        </View>
+  const left = 8 - password.length;
+  return (
+    <Screen avoidKeyboard>
+      <Pressable onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close" style={styles.back}>
+        <Ionicons name="close" size={24} color={colors.text} />
+      </Pressable>
+
+      <View style={styles.icon}>
+        <Ionicons name={saving ? 'lock-closed' : 'person'} size={24} color={colors.primary} />
+      </View>
+      <Text style={styles.title} accessibilityRole="header">
+        {saving ? 'Save your progress' : 'Welcome back'}
+      </Text>
+      <Text style={styles.sub}>{saving ? "Get it back on any phone. Nothing you've done is lost." : 'Sign in to pick up where you left off.'}</Text>
+
+      {GOOGLE_SIGN_IN ? (
+        <>
+          {/* Filled in with Google sign-in: Google's standard white button. */}
+          <View style={styles.or}>
+            <View style={styles.rule} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.rule} />
+          </View>
+        </>
       ) : null}
 
       <View style={styles.form}>
-        {saving ? (
-          <TextField
-            label="Your name (optional)"
-            value={name}
-            onChangeText={setName}
-            placeholder="Urooj"
-            autoComplete="name"
-            textContentType="name"
-            returnKeyType="next"
-            onSubmitEditing={() => emailRef.current?.focus()}
-            maxLength={80}
-          />
-        ) : null}
         <TextField
-          ref={emailRef}
           label="Email"
           value={email}
           onChangeText={setEmail}
@@ -122,7 +106,7 @@ export default function AccountScreen({ navigation, route }) {
             label="Password"
             value={password}
             onChangeText={setPassword}
-            placeholder={saving ? 'At least 8 characters' : 'Your password'}
+            placeholder={saving ? 'Create a password' : 'Your password'}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
@@ -130,7 +114,7 @@ export default function AccountScreen({ navigation, route }) {
             textContentType={saving ? 'newPassword' : 'password'}
             returnKeyType="go"
             onSubmitEditing={submit}
-            hint={saving && password.length > 0 && password.length < 8 ? `${8 - password.length} more characters` : undefined}
+            hint={saving ? (password.length && left > 0 ? `${left} more ${left === 1 ? 'character' : 'characters'}` : '8+ characters') : undefined}
           />
           <Pressable
             onPress={() => setShowPassword((s) => !s)}
@@ -144,35 +128,45 @@ export default function AccountScreen({ navigation, route }) {
         </View>
       </View>
 
-      {!saving && user?.isGuest ? (
-        <Text style={styles.note}>Signing in replaces the guest progress on this phone.</Text>
-      ) : null}
-
+      {!saving && user?.isGuest ? <Text style={styles.note}>Signing in replaces the guest progress on this phone.</Text> : null}
       <ErrorBanner message={error} />
 
-      {/* Opened from the start screen there is no guest yet, so "new here" just goes back to Get started. */}
-      <Pressable
-        onPress={() => (user ? navigation.setParams({ mode: saving ? 'signin' : 'save' }) : navigation.goBack())}
-        accessibilityRole="button"
-        style={({ pressed }) => [styles.switch, pressed && { opacity: 0.7 }]}
-      >
+      <Button
+        title={saving ? 'Create account' : 'Sign in'}
+        icon={saving ? 'cloud-upload-outline' : 'arrow-forward'}
+        onPress={submit}
+        loading={loading}
+        disabled={!ready}
+        style={styles.submit}
+      />
+
+      <Pressable onPress={switchMode} accessibilityRole="button" style={({ pressed }) => [styles.switch, pressed && { opacity: 0.7 }]}>
         <Text style={styles.switchText}>
           {saving ? 'Already have an account? ' : 'New here? '}
-          <Text style={styles.switchLink}>{saving ? 'Sign in' : user ? 'Save your progress instead' : 'Get started'}</Text>
+          <Text style={styles.switchLink}>{saving ? 'Sign in' : user ? 'Save your progress' : 'Get started'}</Text>
         </Text>
       </Pressable>
+
+      {/* The policy pages become links once they're published (needed for the Play Store). */}
+      <Text style={styles.legal}>By continuing you agree to the Terms and Privacy Policy.</Text>
     </Screen>
   );
 }
 
 const makeStyles = (colors) => ({
-  perks: { gap: spacing.sm + 2, marginBottom: spacing.lg },
-  perk: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
-  perkText: { flex: 1, fontSize: 14, lineHeight: 20, color: colors.text },
+  back: { alignSelf: 'flex-start', paddingVertical: spacing.sm, marginBottom: spacing.sm },
+  icon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5, color: colors.text, marginTop: spacing.md },
+  sub: { fontSize: 15, lineHeight: 22, color: colors.muted, marginTop: 4, marginBottom: spacing.lg },
+  or: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.lg },
+  rule: { flex: 1, height: 1, backgroundColor: colors.border },
+  orText: { fontSize: 13, color: colors.muted },
   form: { gap: spacing.md },
   eye: { position: 'absolute', right: spacing.md, top: 42 },
   note: { fontSize: 13, color: colors.muted, marginTop: spacing.md },
-  switch: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
+  submit: { marginTop: spacing.lg },
+  switch: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
   switchText: { fontSize: 14, color: colors.muted },
   switchLink: { color: colors.primary, fontWeight: '700' },
+  legal: { fontSize: 12, lineHeight: 18, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
 });
