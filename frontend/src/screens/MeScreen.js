@@ -10,15 +10,11 @@ import BottomSheet from '../components/BottomSheet';
 import TextField from '../components/TextField';
 import RemindersSettings from '../components/RemindersSettings';
 import Button from '../components/Button';
-import MotivationCard from '../components/MotivationCard';
 import MilestoneBadges from '../components/MilestoneBadges';
 import { loadMilestones } from '../storage/milestones';
 import { boughtBackTotalHours } from '../storage/progress';
 import { milestoneList, nextMilestone, roundMilestone } from '../constants/milestones';
-import { loadMotivation } from '../storage/motivation';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useHandoffs } from '../context/HandoffsContext';
-import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -48,7 +44,7 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   );
 }
 
-/** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
+/** Settings and profile: your account, Buyback Rate, milestones, notifications, about. */
 export default function MeScreen({ navigation }) {
   const { user, onboarding, startOver, signOut, updateName } = useOnboarding();
   // Changing your name (tap the account card).
@@ -71,19 +67,14 @@ export default function MeScreen({ navigation }) {
       setSavingName(false);
     }
   };
-  const { handoffs } = useHandoffs();
-  // Preview (development app only): the next task to try the delegation steps on.
-  const previewTask = handoffs.find((x) => x.status === 'mine' || x.status === 'in_progress');
   const saved = user && !user.isGuest;
   const { type, colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
-  const [motivation, setMotivation] = useState(null);
   const [miles, setMiles] = useState({ earned: [], next: null }); // milestones reached, and the next one
 
   useFocusEffect(
     useCallback(() => {
-      loadMotivation().then(setMotivation);
-      // Milestones reached (kept on this phone) and the next one, from the hours bought back so far.
+      // Milestones reached (kept with your account) and the next one, from the hours bought back so far.
       Promise.all([loadMilestones(), boughtBackTotalHours()]).then(([map, hours]) => {
         const all = [...milestoneList(), ...Object.keys(map).filter((k) => k.startsWith('round-')).map((k) => roundMilestone(Number(k.split('-')[1])))];
         setMiles({ earned: all.filter((m) => map[m.key]), next: nextMilestone({ hours }) });
@@ -122,7 +113,7 @@ export default function MeScreen({ navigation }) {
   const confirmStartOver = () =>
     Alert.alert(
       saved ? 'Delete your account?' : 'Delete everything and start over?',
-      `Your ${saved ? 'account, ' : ''}Buyback Rate, your routine, your handoffs and your photo will be deleted for good.`,
+      `Your ${saved ? 'account, ' : ''}Buyback Rate, your routine and your handoffs will be deleted for good.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: deleteEverything },
@@ -131,7 +122,6 @@ export default function MeScreen({ navigation }) {
     );
   const styles = useStyles(makeStyles);
   const currency = onboarding?.currency || 'USD';
-  const role = ROLES.find((r) => r.key === onboarding?.role);
   const version = Constants.expoConfig?.version || '1.0.0';
 
   return (
@@ -175,9 +165,6 @@ export default function MeScreen({ navigation }) {
         <Button title="Save" icon="checkmark" onPress={saveName} loading={savingName} disabled={!newName.trim()} style={styles.sheetButton} />
       </BottomSheet>
 
-      <Text style={[type.label, styles.whyLabel]}>Your why</Text>
-      {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} /> : null}
-
       <Text style={[type.label, styles.section]}>Your numbers</Text>
       <Card style={styles.card}>
         <Row
@@ -185,13 +172,6 @@ export default function MeScreen({ navigation }) {
           title="Buyback Rate"
           value={`${formatMoney(onboarding?.buybackRate, currency)}/hr · from ${formatMoney(onboarding?.annualIncome, currency, { decimals: 0 })} a year`}
           onPress={() => navigation.navigate('BuybackRate', { editing: true })}
-        />
-        <View style={styles.divider} />
-        <Row
-          icon="briefcase-outline"
-          title="What describes you"
-          value={role?.label || 'Not set'}
-          onPress={() => navigation.navigate('Profile', { editing: true })}
         />
       </Card>
 
@@ -242,20 +222,6 @@ export default function MeScreen({ navigation }) {
         />
       </Card>
 
-      {/* PREVIEW: work in progress, only in the development app (never in testers' updates). */}
-      {__DEV__ ? (
-        <>
-          <Text style={[type.label, styles.section]}>Preview</Text>
-          <Card style={styles.card}>
-            <Row
-              icon="flask-outline"
-              title="Handoff journey (in progress)"
-              value={previewTask ? `Try it on ${previewTask.activity}` : 'Nothing to hand off right now'}
-              onPress={previewTask ? () => navigation.navigate('HandoffJourney', { activity: previewTask.activity }) : undefined}
-            />
-          </Card>
-        </>
-      ) : null}
 
       <Text style={[type.label, styles.section]}>About</Text>
       <Card style={styles.card}>
@@ -279,7 +245,6 @@ const makeStyles = (colors) => ({
   synced: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   syncedText: { fontSize: 12, fontWeight: '700', color: colors.success },
   section: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  whyLabel: { marginBottom: spacing.sm },
   card: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md - 2 },
   rowIcon: {
