@@ -60,14 +60,44 @@ async function saveAccount(req, res, next) {
   }
 }
 
-// PATCH /api/auth/me: what the app calls you. Only the name, for now.
+const REMINDER_SWITCHES = ['checkIn', 'startDay', 'nudges'];
+
+// PATCH /api/auth/me: what the app calls you, and your reminder settings. Either or both.
 async function updateMe(req, res, next) {
   try {
-    const name = String(req.body?.name ?? '').trim();
-    if (!name || name.length > 80) throw new ApiError(400, 'Validation failed', ['Name must be 1 to 80 characters']);
+    const body = req.body || {};
+    const errors = [];
+    const change = {};
+    if (body.name !== undefined) {
+      const name = String(body.name ?? '').trim();
+      if (!name || name.length > 80) errors.push('Name must be 1 to 80 characters');
+      else change.name = name;
+    }
+    if (body.reminders !== undefined) {
+      const r = body.reminders || {};
+      const out = {};
+      REMINDER_SWITCHES.forEach((k) => {
+        if (r[k] !== undefined) {
+          if (typeof r[k] !== 'boolean') errors.push(`reminders.${k} must be true or false`);
+          else out[k] = r[k];
+        }
+      });
+      if (r.checkInDay !== undefined) {
+        if (!Number.isInteger(r.checkInDay) || r.checkInDay < 0 || r.checkInDay > 6) errors.push('reminders.checkInDay must be 0 to 6');
+        else out.checkInDay = r.checkInDay;
+      }
+      if (r.checkInHour !== undefined) {
+        if (!Number.isInteger(r.checkInHour) || r.checkInHour < 8 || r.checkInHour > 20) errors.push('reminders.checkInHour must be 8 to 20');
+        else out.checkInHour = r.checkInHour;
+      }
+      change.reminders = out;
+    }
+    if (!Object.keys(change).length) errors.push('Nothing to change');
+    if (errors.length) throw new ApiError(400, 'Validation failed', errors);
     const user = await User.findById(req.userId);
     if (!user) throw new ApiError(404, 'User not found');
-    user.name = name;
+    if (change.name) user.name = change.name;
+    if (change.reminders) Object.entries(change.reminders).forEach(([k, v]) => user.set(`reminders.${k}`, v));
     await user.save();
     res.json({ user });
   } catch (err) {

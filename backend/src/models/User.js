@@ -151,6 +151,15 @@ const userSchema = new mongoose.Schema(
     fills: { type: [fillSchema], default: [] },
     rounds: { type: [roundSchema], default: [] },
     checkIns: { type: [checkInSchema], default: [] },
+    // Reminder settings (the phone schedules them; kept here so they follow you to a new phone).
+    // The weekly check-in reminder: day (0 Sunday … 6 Saturday) and hour (8 to 20, never at night).
+    reminders: {
+      checkIn: { type: Boolean, default: true },
+      checkInDay: { type: Number, min: 0, max: 6, default: 5 },
+      checkInHour: { type: Number, min: 8, max: 20, default: 17 },
+      startDay: { type: Boolean, default: true },
+      nudges: { type: Boolean, default: true },
+    },
     // Progress that follows you to a new phone: hours bought back per week (keyed by the week's
     // Monday), the weeks you made a move (the streak), and milestones already celebrated.
     progress: {

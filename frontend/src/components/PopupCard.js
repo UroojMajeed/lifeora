@@ -6,11 +6,10 @@ import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
 
 /**
- * The one real ask to save an account: a card that pops up for guests right after a handover (the
- * proudest moment, and the most to lose). "Not now" closes it for good; the quiet links on Home and Me stay.
- * `hours` is what the handoff gives back each week.
+ * A card that pops up over a dimmed screen for one clear ask (save your progress, turn on reminders):
+ * an icon, an optional line above the title, a short reason, one button and "Not now".
  */
-export default function SaveProgressCard({ visible, hours, onSave, onDismiss }) {
+export default function PopupCard({ visible, icon, kicker, title, body, action, actionIcon, onAction, onDismiss, busy }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   return (
@@ -19,12 +18,12 @@ export default function SaveProgressCard({ visible, hours, onSave, onDismiss }) 
         {visible ? (
           <Animated.View entering={ZoomIn.duration(250)} style={styles.card} accessibilityViewIsModal>
             <View style={styles.icon}>
-              <Ionicons name="lock-closed" size={26} color={colors.primary} />
+              <Ionicons name={icon} size={26} color={colors.primary} />
             </View>
-            <Text style={styles.kicker}>{hours ? `${hours} a week bought back` : 'Handed over'}</Text>
-            <Text style={styles.title}>Keep your progress safe</Text>
-            <Text style={styles.body}>Right now it lives only on this phone. Save it to get it back on any phone.</Text>
-            <Button title="Save my progress" icon="cloud-upload" onPress={onSave} style={styles.button} />
+            {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
+            <Text style={[styles.title, !kicker && styles.titleAlone]}>{title}</Text>
+            <Text style={styles.body}>{body}</Text>
+            <Button title={action} icon={actionIcon} onPress={onAction} loading={busy} style={styles.button} />
             <Pressable onPress={onDismiss} hitSlop={8} style={styles.later} accessibilityRole="button">
               <Text style={styles.laterText}>Not now</Text>
             </Pressable>
@@ -41,6 +40,7 @@ const makeStyles = (colors) => ({
   icon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primarySoft },
   kicker: { fontSize: 13, fontWeight: '700', color: colors.accentText, marginTop: spacing.md },
   title: { fontSize: 20, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 4 },
+  titleAlone: { marginTop: spacing.md },
   body: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
   button: { alignSelf: 'stretch', marginTop: spacing.lg },
   later: { marginTop: spacing.md, paddingVertical: 4 },

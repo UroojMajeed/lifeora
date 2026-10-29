@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader';
 import { Card } from '../components/Card';
 import BottomSheet from '../components/BottomSheet';
 import TextField from '../components/TextField';
+import RemindersSettings from '../components/RemindersSettings';
 import Button from '../components/Button';
 import MotivationCard from '../components/MotivationCard';
 import MilestoneBadges from '../components/MilestoneBadges';
@@ -202,6 +203,9 @@ export default function MeScreen({ navigation }) {
           </Card>
         </>
       ) : null}
+
+      <Text style={[type.label, styles.section]}>Notifications</Text>
+      <RemindersSettings />
 
       <Text style={[type.label, styles.section]}>Account</Text>
       <Card style={styles.card}>

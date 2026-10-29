@@ -4,6 +4,7 @@ import { screenForStep } from '../constants/content';
 import { loadMotivation, removeMotivation } from '../storage/motivation';
 import { clearProgress } from '../storage/progress';
 import { clearMilestones } from '../storage/milestones';
+import { clearReminders } from '../notifications';
 
 const OnboardingContext = createContext(null);
 
@@ -66,6 +67,7 @@ export function OnboardingProvider({ children }) {
     await removeMotivation(await loadMotivation());
     await clearProgress();
     await clearMilestones();
+    await clearReminders();
     applyUser(null);
   }, [applyUser]);
 
@@ -98,6 +100,15 @@ export function OnboardingProvider({ children }) {
     [applyUser]
   );
 
+  // Reminder settings ({ checkIn, checkInDay, checkInHour, startDay, nudges }, any of them).
+  const updateReminders = useCallback(
+    async (reminders) => {
+      const { user: u } = await api.updateMe({ reminders });
+      applyUser(u);
+    },
+    [applyUser]
+  );
+
   // Signs in to an existing account. A guest on this phone is replaced (and deleted, so nothing is
   // left behind). Returns the screen to land on.
   const signIn = useCallback(
@@ -124,11 +135,12 @@ export function OnboardingProvider({ children }) {
       startOver,
       saveAccount,
       updateName,
+      updateReminders,
       signIn,
       signOut: forgetThisPhone,
       replaceOnboarding: setOnboarding,
     }),
-    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, updateName, signIn, forgetThisPhone]
+    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, updateName, updateReminders, signIn, forgetThisPhone]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

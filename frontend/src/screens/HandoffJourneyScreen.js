@@ -9,7 +9,8 @@ import Button from '../components/Button';
 import BottomSheet from '../components/BottomSheet';
 import PlanEditor from '../components/PlanEditor';
 import WindingRoad from '../components/WindingRoad';
-import SaveProgressCard from '../components/SaveProgressCard';
+import PopupCard from '../components/PopupCard';
+import { askForReminders, dismissRemindersAsk, reminderPermission, remindersAsked } from '../notifications';
 import { dismissSaveAsk, saveAskDismissed } from '../storage/progress';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -35,13 +36,25 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const styles = useStyles(makeStyles);
   const { handoffs, update, slipBack } = useHandoffs();
   const { onboarding, user } = useOnboarding();
-  // Guests get one ask to save their progress, in the "Done!" card (until they say "Not now").
-  const [askSave, setAskSave] = useState(false);
-  const [showSave, setShowSave] = useState(false);
+  // After a handover, one ask at most: a guest not yet asked to save their progress; otherwise
+  // reminders, if this phone hasn't offered them yet. Never both at once.
+  const [nextAsk, setNextAsk] = useState(null); // 'save' | 'reminders' | null
+  const [popup, setPopup] = useState(null);
+  const [turningOn, setTurningOn] = useState(false);
   useEffect(() => {
-    if (user?.isGuest) saveAskDismissed().then((dismissed) => setAskSave(!dismissed));
-    else setAskSave(false);
+    let live = true;
+    (async () => {
+      let ask = null;
+      if (user?.isGuest && !(await saveAskDismissed())) ask = 'save';
+      else if ((await reminderPermission()).status === 'undetermined' && !(await remindersAsked())) ask = 'reminders';
+      if (live) setNextAsk(ask);
+    })();
+    return () => {
+      live = false;
+    };
   }, [user?.isGuest]);
+  const goHome = () => navigation.navigate('Main', { screen: 'Home' });
+  const checkInDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][user?.reminders?.checkInDay ?? 5];
   const task = handoffs.find((x) => x.activity === route.params?.activity);
   const [sheet, setSheet] = useState({ open: false, id: null, n: 0 });
   const [editing, setEditing] = useState(false);
@@ -207,26 +220,54 @@ export default function HandoffJourneyScreen({ navigation, route }) {
             task={task}
             onDone={(patch) => {
               setSheet((s) => ({ ...s, open: false }));
-              // Handed over (or dropped): straight back to Home, where the next task is waiting. A guest
-              // not yet asked gets the one ask to save their progress first (once the sheet has closed).
-              if (patch?.status === 'done') setTimeout(() => (askSave ? setShowSave(true) : navigation.navigate('Main', { screen: 'Home' })), askSave ? 400 : 260);
+              // Handed over (or dropped): straight back to Home, where the next task is waiting, after
+              // the one ask (if any) once the sheet has closed.
+              if (patch?.status === 'done') setTimeout(() => (nextAsk ? setPopup(nextAsk) : goHome()), nextAsk ? 400 : 260);
             }}
           />
         ) : null}
       </BottomSheet>
 
-      <SaveProgressCard
-        visible={showSave}
-        hours={startsLater(task) ? '' : h(task.hours * 5)}
-        onSave={() => {
-          setShowSave(false);
+      <PopupCard
+        visible={popup === 'save'}
+        icon="lock-closed"
+        kicker={startsLater(task) ? 'Handed over' : `${h(task.hours * 5)} a week bought back`}
+        title="Keep your progress safe"
+        body="Right now it lives only on this phone. Save it to get it back on any phone."
+        action="Save my progress"
+        actionIcon="cloud-upload"
+        onAction={() => {
+          setPopup(null);
           navigation.navigate('Account', { mode: 'save' });
         }}
         onDismiss={() => {
-          setShowSave(false);
-          setAskSave(false);
+          setPopup(null);
+          setNextAsk(null);
           dismissSaveAsk();
-          navigation.navigate('Main', { screen: 'Home' });
+          goHome();
+        }}
+      />
+      <PopupCard
+        visible={popup === 'reminders'}
+        icon="notifications"
+        title={`Want a reminder on ${checkInDay}?`}
+        body="We'll ask if your handoffs stuck, and ping you on start days. Never at night, never daily."
+        action="Turn on reminders"
+        actionIcon="notifications"
+        busy={turningOn}
+        onAction={async () => {
+          setTurningOn(true);
+          await askForReminders();
+          setTurningOn(false);
+          setPopup(null);
+          setNextAsk(null);
+          goHome();
+        }}
+        onDismiss={() => {
+          setPopup(null);
+          setNextAsk(null);
+          dismissRemindersAsk();
+          goHome();
         }}
       />
     </Screen>
