@@ -1,7 +1,7 @@
 // Reminders on this phone: permission, scheduling what planReminders() returns, and taps.
 // Scheduled locally (no push server), so they work for guests and offline. An app build without the
 // notifications module (testers' APK before the next one) simply has no reminders: nothing breaks.
-import { Linking, LogBox, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireOptionalNativeModule } from 'expo';
 import { planReminders } from './plan';
@@ -10,19 +10,41 @@ const CHANNEL = 'reminders';
 const TEST_PREFIX = 'test-';
 const STORE_KEY = 'lifeora.reminders'; // { lastNudged: { [activity]: iso }, scheduledNudges: { [activity]: iso }, asked: bool }
 
+// Only the parts of expo-notifications we use (local scheduling, permission, Android channel, taps),
+// each loaded from its own file. The library's main file also loads push features (push tokens,
+// topic subscriptions) whose native parts aren't in every app build (Expo Go lacks some), and that
+// one missing piece would fail the whole import. Every native part we need is checked first.
+const NATIVE_PARTS = [
+  'ExpoNotificationScheduler',
+  'ExpoNotificationPermissionsModule',
+  'ExpoNotificationsHandlerModule',
+  'ExpoNotificationsEmitter',
+  ...(Platform.OS === 'android' ? ['ExpoNotificationChannelManager'] : []),
+];
+
 let lib; // undefined: not looked up yet; null: not in this app build
 function notifications() {
   if (lib !== undefined) return lib;
   lib = null;
   if (Platform.OS === 'web') return lib;
-  // In Expo Go the library warns that *push* notifications (sent from a server) aren't available there.
-  // We only schedule local ones, which work, so those two notes are hidden from the in-app warning box.
-  if (__DEV__) {
-    LogBox.ignoreLogs(['`expo-notifications` functionality is not fully supported in Expo Go', '[expo-notifications] Push notifications (remote notifications) are unavailable in Expo Go']);
-  }
   try {
-    if (requireOptionalNativeModule('ExpoNotificationScheduler')) lib = require('expo-notifications');
-  } catch {
+    if (!NATIVE_PARTS.every((name) => requireOptionalNativeModule(name))) return lib;
+    const types = require('expo-notifications/build/Notifications.types');
+    const channelTypes = require('expo-notifications/build/NotificationChannelManager.types');
+    lib = {
+      ...require('expo-notifications/build/NotificationsHandler'),
+      ...require('expo-notifications/build/NotificationPermissions'),
+      ...require('expo-notifications/build/scheduleNotificationAsync'),
+      ...require('expo-notifications/build/getAllScheduledNotificationsAsync'),
+      ...require('expo-notifications/build/cancelScheduledNotificationAsync'),
+      ...require('expo-notifications/build/cancelAllScheduledNotificationsAsync'),
+      ...require('expo-notifications/build/setNotificationChannelAsync'),
+      ...require('expo-notifications/build/NotificationsEmitter'),
+      SchedulableTriggerInputTypes: types.SchedulableTriggerInputTypes,
+      AndroidImportance: channelTypes.AndroidImportance,
+    };
+  } catch (err) {
+    if (__DEV__) console.warn('Reminders are off in this app build:', err.message);
     lib = null;
   }
   return lib;
