@@ -21,7 +21,7 @@ const GOOGLE_SIGN_IN = false;
 export default function AccountScreen({ navigation, route }) {
   const mode = route.params?.mode === 'signin' ? 'signin' : 'save';
   const saving = mode === 'save';
-  const { user, saveAccount, signIn } = useOnboarding();
+  const { user, saveAccount, updateName, signIn } = useOnboarding();
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [email, setEmail] = useState('');
@@ -29,6 +29,8 @@ export default function AccountScreen({ navigation, route }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false); // the account was just created
+  const [name, setName] = useState('');
   const passwordRef = useRef(null);
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim());
@@ -42,7 +44,8 @@ export default function AccountScreen({ navigation, route }) {
       if (saving) {
         await saveAccount({ email: email.trim(), password });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        navigation.goBack();
+        setSaved(true);
+        setLoading(false);
       } else {
         const next = await signIn({ email: email.trim(), password });
         navigation.reset(resetTo(next));
@@ -59,6 +62,46 @@ export default function AccountScreen({ navigation, route }) {
     if (user) navigation.setParams({ mode: saving ? 'signin' : 'save' });
     else navigation.goBack();
   };
+
+  // The name is optional: Skip just closes; a name saves first (a failed save still closes).
+  const finish = async () => {
+    if (name.trim()) {
+      setLoading(true);
+      await updateName(name.trim()).catch(() => {});
+    }
+    navigation.goBack();
+  };
+
+  if (saved) {
+    return (
+      <Screen avoidKeyboard>
+        <View style={styles.done}>
+          <View style={[styles.icon, styles.iconDone]}>
+            <Ionicons name="checkmark" size={30} color={colors.onColor} />
+          </View>
+          <Text style={[styles.title, styles.center]} accessibilityRole="header">
+            Your progress is saved
+          </Text>
+          <Text style={[styles.sub, styles.center]}>Sign in on any phone to pick up where you left off.</Text>
+        </View>
+        <TextField
+          label="What should we call you?"
+          value={name}
+          onChangeText={setName}
+          placeholder="Your name"
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="done"
+          onSubmitEditing={finish}
+          maxLength={80}
+        />
+        <Button title="Done" icon="checkmark" onPress={finish} loading={loading} style={styles.submit} />
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" style={styles.switch}>
+          <Text style={[styles.switchText, styles.switchLink]}>Skip</Text>
+        </Pressable>
+      </Screen>
+    );
+  }
 
   const left = 8 - password.length;
   return (
@@ -168,5 +211,8 @@ const makeStyles = (colors) => ({
   switch: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
   switchText: { fontSize: 14, color: colors.muted },
   switchLink: { color: colors.primary, fontWeight: '700' },
+  done: { alignItems: 'center', marginTop: spacing.xl },
+  iconDone: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary },
+  center: { textAlign: 'center' },
   legal: { fontSize: 12, lineHeight: 18, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
 });

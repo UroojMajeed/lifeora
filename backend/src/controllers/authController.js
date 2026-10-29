@@ -60,6 +60,21 @@ async function saveAccount(req, res, next) {
   }
 }
 
+// PATCH /api/auth/me: what the app calls you. Only the name, for now.
+async function updateMe(req, res, next) {
+  try {
+    const name = String(req.body?.name ?? '').trim();
+    if (!name || name.length > 80) throw new ApiError(400, 'Validation failed', ['Name must be 1 to 80 characters']);
+    const user = await User.findById(req.userId);
+    if (!user) throw new ApiError(404, 'User not found');
+    user.name = name;
+    await user.save();
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function login(req, res, next) {
   try {
     const { email, password } = req.body || {};
@@ -96,4 +111,4 @@ async function deleteMe(req, res, next) {
   }
 }
 
-module.exports = { createGuest, register, saveAccount, login, me, deleteMe };
+module.exports = { createGuest, register, saveAccount, login, me, updateMe, deleteMe };

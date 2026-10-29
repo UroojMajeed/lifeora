@@ -40,6 +40,7 @@ export const api = {
   createGuest: () => request('/auth/guest', { method: 'POST' }),
   me: () => request('/auth/me'),
   deleteMe: () => request('/auth/me', { method: 'DELETE' }),
+  updateMe: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
   saveAccount: (payload) => request('/auth/save', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
   updateOnboarding: (payload) => request('/onboarding', { method: 'PUT', body: payload }),

@@ -17,7 +17,7 @@ import { useHandoffs } from '../context/HandoffsContext';
 import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   const { colors } = useTheme();
@@ -114,6 +114,26 @@ export default function MeScreen({ navigation }) {
     <Screen edges={['top']}>
       <PageHeader eyebrow="Me" title="Your settings" />
 
+      {saved ? (
+        <View style={styles.account}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{(user.name || user.email || '?').trim()[0].toUpperCase()}</Text>
+          </View>
+          <View style={styles.accountMain}>
+            <Text style={styles.accountName} numberOfLines={1}>
+              {user.name || 'Your account'}
+            </Text>
+            <Text style={styles.accountEmail} numberOfLines={1}>
+              {user.email}
+            </Text>
+            <View style={styles.synced}>
+              <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+              <Text style={styles.syncedText}>Saved · on any phone</Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       <Text style={[type.label, styles.whyLabel]}>Your why</Text>
       {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} /> : null}
 
@@ -147,8 +167,6 @@ export default function MeScreen({ navigation }) {
       <Card style={styles.card}>
         {saved ? (
           <>
-            <Row icon="person-circle-outline" title={user.name || 'Signed in'} value={user.email} />
-            <View style={styles.divider} />
             <Row icon="log-out-outline" title="Sign out" onPress={confirmSignOut} />
           </>
         ) : (
@@ -206,6 +224,14 @@ export default function MeScreen({ navigation }) {
 }
 
 const makeStyles = (colors) => ({
+  account: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, marginBottom: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  avatarText: { fontSize: 22, fontWeight: '800', color: colors.onColor },
+  accountMain: { flex: 1, gap: 2 },
+  accountName: { fontSize: 18, fontWeight: '800', color: colors.text },
+  accountEmail: { fontSize: 14, color: colors.muted },
+  synced: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  syncedText: { fontSize: 12, fontWeight: '700', color: colors.success },
   section: { marginTop: spacing.lg, marginBottom: spacing.sm },
   whyLabel: { marginBottom: spacing.sm },
   card: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },

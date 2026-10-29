@@ -89,6 +89,15 @@ export function OnboardingProvider({ children }) {
     [applyUser]
   );
 
+  // What the app calls you (asked once your progress is saved).
+  const updateName = useCallback(
+    async (name) => {
+      const { user: u } = await api.updateMe({ name });
+      applyUser(u);
+    },
+    [applyUser]
+  );
+
   // Signs in to an existing account. A guest on this phone is replaced (and deleted, so nothing is
   // left behind). Returns the screen to land on.
   const signIn = useCallback(
@@ -114,11 +123,12 @@ export function OnboardingProvider({ children }) {
       complete,
       startOver,
       saveAccount,
+      updateName,
       signIn,
       signOut: forgetThisPhone,
       replaceOnboarding: setOnboarding,
     }),
-    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, signIn, forgetThisPhone]
+    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, updateName, signIn, forgetThisPhone]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
