@@ -291,6 +291,26 @@ One `users` document per person. Guests are created on first open (`POST /api/au
 | OTA rules | Store builds use the `production` channel (already in `eas.json`). Only JS and asset changes can ship as OTA updates. Native changes need a new store build. Keep `runtimeVersion` (policy `appVersion`) so old builds never get incompatible updates. |
 | Store content rules | No promises of income. Keep the "Buy Back Your Time" wording as inspiration, without the book's or author's branding (trademark). |
 
+**Status (29 Oct 2026).** The owner chose to build features first and come back to the rest before the store.
+
+- **Done:**
+  - Progress lives on the account: weekly hours, streak and milestones, via `/api/progress`.
+  - The one save-your-progress popup after a handover.
+  - A new sign-up / sign-in page, the account card on Me, and the greeting by name.
+  - Rate limits on the live server.
+  - `npm run backup[:online]` and `npm run guests:report[:online]`.
+- **Left for later (deliberately skipped for now):**
+  - **Email:** pick a sending service (e.g. Resend) and add **Forgot password** (reset link by email). The sign-up page has no "Forgot password?" link until then.
+  - **Privacy policy and terms pages** on a public URL, plus a **web page for account deletion requests**. The sign-up page's terms line is plain text until these exist.
+  - **Separate production database:** the owner decided to keep one database for now. Back up before risky changes.
+  - **Clean up abandoned guests online:** run `npm run guests:report:online` first. Deleting needs the owner's OK.
+- **Native batch (one new APK):**
+  - SDK 58 upgrade.
+  - Notifications (local, scheduled on the phone).
+  - Encrypted login storage (`expo-secure-store`).
+  - **Continue with Google** (the slot is ready on the sign-up page and in the save popup).
+  - Crash reporting (Sentry).
+
 ### 11.3 Route A: Expo EAS (recommended, what we use today)
 
 No Mac needed for iOS, and signing keys are handled for you.
