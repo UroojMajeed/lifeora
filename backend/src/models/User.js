@@ -151,6 +151,13 @@ const userSchema = new mongoose.Schema(
     fills: { type: [fillSchema], default: [] },
     rounds: { type: [roundSchema], default: [] },
     checkIns: { type: [checkInSchema], default: [] },
+    // Progress that follows you to a new phone: hours bought back per week (keyed by the week's
+    // Monday), the weeks you made a move (the streak), and milestones already celebrated.
+    progress: {
+      weeks: { type: Map, of: Number, default: () => new Map() },
+      activeWeeks: { type: [String], default: [] },
+      milestones: { type: Map, of: Date, default: () => new Map() },
+    },
   },
   { timestamps: true }
 );

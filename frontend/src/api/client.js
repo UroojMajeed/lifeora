@@ -49,6 +49,8 @@ export const api = {
   updateFills: (fills) => request('/fills', { method: 'PUT', body: { fills } }),
   startNextRound: () => request('/rounds/next', { method: 'POST' }),
   saveCheckIn: (checkIn) => request('/checkins', { method: 'POST', body: checkIn }),
+  getProgress: () => request('/progress'),
+  updateProgress: (patch) => request('/progress', { method: 'PATCH', body: patch }),
   slipHandoff: (activity) => request(`/handoffs/${encodeURIComponent(activity)}/slip`, { method: 'POST' }),
   updateHandoff: (activity, patch) =>
     request(`/handoffs/${encodeURIComponent(activity)}`, { method: 'PUT', body: patch }),

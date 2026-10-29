@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
+const { lowerThisWeek } = require('./progressController');
 const { HANDOFF_STATUSES, HANDOFF_METHODS, HANDOFF_STEP_KINDS, FINISH_STEP_KINDS, SETTLE_ANSWERS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
@@ -204,6 +205,7 @@ async function slipHandoff(req, res, next) {
       const h = u.handoffs.find((x) => x.activity.toLowerCase() === name);
       if (!h || h.status !== 'done') throw new ApiError(400, 'Only a handed-off task can come back');
       slipBack(h);
+      lowerThisWeek(u, buildHandoffs(u).summary.boughtBackPerWeek);
       return h.activity;
     });
     const result = buildHandoffs(user);
