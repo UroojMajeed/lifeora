@@ -6,7 +6,8 @@ import { Card } from './Card';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
 import { useOnboarding } from '../context/OnboardingContext';
-import { askForReminders, openPhoneSettings, reminderPermission } from '../notifications';
+import { askForReminders, openPhoneSettings, reminderPermission, sendTestReminder } from '../notifications';
+import { TEST_MODE } from '../constants/testing';
 import { CHECK_IN_DAYS, CHECK_IN_HOURS, DEFAULT_REMINDERS } from '../notifications/plan';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -47,6 +48,14 @@ export default function RemindersSettings() {
   const turnOn = async () => {
     await askForReminders();
     setPermission(await reminderPermission());
+  };
+  // Testing only: a sample reminder in 10 seconds, to see how it looks and where a tap goes.
+  const [testSent, setTestSent] = useState(false);
+  const testNow = async () => {
+    if (await sendTestReminder().catch(() => false)) {
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 12000);
+    }
   };
   const saveTime = () => {
     setEditing(false);
@@ -93,6 +102,11 @@ export default function RemindersSettings() {
           <Toggle icon="calendar-outline" title="Start days" value="The morning a handover begins" on={prefs.startDay} onToggle={(v) => change({ startDay: v })} />
           <View style={styles.divider} />
           <Toggle icon="hourglass-outline" title="Stuck handoffs" value="A nudge after 3 quiet days, at most weekly" on={prefs.nudges} onToggle={(v) => change({ nudges: v })} />
+          {TEST_MODE ? (
+            <Pressable onPress={testNow} accessibilityRole="button" style={styles.test}>
+              <Text style={styles.testText}>{testSent ? 'Sent: switch away from the app to see it' : 'Send a test reminder in 10 seconds'}</Text>
+            </Pressable>
+          ) : null}
         </>
       )}
 
@@ -161,6 +175,8 @@ const makeStyles = (colors) => ({
   rowValue: { fontSize: 13, color: colors.muted, marginTop: 1 },
   rowValueLink: { color: colors.primary, fontWeight: '600' },
   divider: { height: 1, backgroundColor: colors.border },
+  test: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: 2 },
+  testText: { fontSize: 13, fontWeight: '700', color: colors.primary },
   sheetTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
   sheetLabel: { fontSize: 13, fontWeight: '700', color: colors.muted, marginTop: spacing.md, marginBottom: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

@@ -7,6 +7,7 @@ import { requireOptionalNativeModule } from 'expo';
 import { planReminders } from './plan';
 
 const CHANNEL = 'reminders';
+const TEST_PREFIX = 'test-';
 const STORE_KEY = 'lifeora.reminders'; // { lastNudged: { [activity]: iso }, scheduledNudges: { [activity]: iso }, asked: bool }
 
 let lib; // undefined: not looked up yet; null: not in this app build
@@ -113,7 +114,11 @@ async function doSync({ handoffs, checkIns, reminders }) {
   });
 
   const plan = planReminders({ handoffs, checkIns, reminders, nudgedAt: lastNudged, now });
-  await N.cancelAllScheduledNotificationsAsync();
+  // Cancel what the planner scheduled before (a test reminder on its way is left alone).
+  const scheduled = await N.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const s of scheduled) {
+    if (!s.identifier.startsWith(TEST_PREFIX)) await N.cancelScheduledNotificationAsync(s.identifier).catch(() => {});
+  }
   for (const n of plan) {
     await N.scheduleNotificationAsync({
       identifier: n.id,
@@ -123,6 +128,19 @@ async function doSync({ handoffs, checkIns, reminders }) {
   }
   const scheduledNudges = Object.fromEntries(plan.filter((n) => n.kind === 'nudge').map((n) => [n.data.params.activity, n.date.toISOString()]));
   await writeStore({ ...store, lastNudged, scheduledNudges });
+}
+
+/** Testing: a sample check-in reminder in 10 seconds (switch away from the app to see it; tap it to open the check-in). */
+export async function sendTestReminder() {
+  const N = notifications();
+  if (!N) return false;
+  await setUpReminders();
+  await N.scheduleNotificationAsync({
+    identifier: `${TEST_PREFIX}${Date.now()}`,
+    content: { title: 'Your weekly check-in is ready', body: 'Did your handoffs stick? About 2 minutes. (Test)', data: { screen: 'CheckIn' } },
+    trigger: { type: N.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 10, channelId: CHANNEL },
+  });
+  return true;
 }
 
 // Something outside the sync component (e.g. permission just granted) asks for a re-plan.
