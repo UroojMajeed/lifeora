@@ -63,13 +63,14 @@ export default function AccountScreen({ navigation, route }) {
     else navigation.goBack();
   };
 
-  // The name is optional: Skip just closes; a name saves first (a failed save still closes).
+  // The name is optional: Skip goes straight Home; a name saves first (a failed save still goes on).
+  const goHome = () => navigation.navigate('Main', { screen: 'Home' });
   const finish = async () => {
     if (name.trim()) {
       setLoading(true);
       await updateName(name.trim()).catch(() => {});
     }
-    navigation.goBack();
+    goHome();
   };
 
   if (saved) {
@@ -96,7 +97,7 @@ export default function AccountScreen({ navigation, route }) {
           maxLength={80}
         />
         <Button title="Done" icon="checkmark" onPress={finish} loading={loading} style={styles.submit} />
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" style={styles.switch}>
+        <Pressable onPress={goHome} accessibilityRole="button" style={styles.switch}>
           <Text style={[styles.switchText, styles.switchLink]}>Skip</Text>
         </Pressable>
       </Screen>
