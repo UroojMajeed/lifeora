@@ -223,6 +223,23 @@ export function recipeFor(tool) {
   return RECIPES.find((r) => name.includes(r.match)) || ANY_TOOL;
 }
 
+/** WhatsApp (the app if it's installed, else the web) and email, with the message already written. */
+export const whatsappLink = (text) => `https://wa.me/?text=${encodeURIComponent(text)}`;
+export const emailLink = (subject, body) => `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+/**
+ * Places to find someone for a task: Upwork and Fiverr open searched for it; OnlineJobs.ph's worker
+ * search can't take the search in its address, so it opens on the search page.
+ */
+export const findWhoSites = (task) => {
+  const q = encodeURIComponent(task.activity);
+  return [
+    { key: 'upwork', label: 'Upwork', url: `https://www.upwork.com/nx/search/talent/?q=${q}` },
+    { key: 'fiverr', label: 'Fiverr', url: `https://www.fiverr.com/search/gigs?query=${q}` },
+    { key: 'onlinejobs', label: 'OnlineJobs.ph', url: 'https://www.onlinejobs.ph/employers/skillsearch' },
+  ];
+};
+
 /** A job post for a task, priced at the user's Buyback Rate. */
 export function jobPostDraft({ task, doneLooksLike, rate, currency }) {
   const lines = [`Looking for help with ${task.activity.toLowerCase()}: about ${Math.round(task.hours * 5 * 10) / 10} h a week.`];

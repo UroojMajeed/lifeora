@@ -6,6 +6,9 @@ import Constants from 'expo-constants';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
 import { Card } from '../components/Card';
+import BottomSheet from '../components/BottomSheet';
+import TextField from '../components/TextField';
+import Button from '../components/Button';
 import MotivationCard from '../components/MotivationCard';
 import MilestoneBadges from '../components/MilestoneBadges';
 import { loadMilestones } from '../storage/milestones';
@@ -46,7 +49,27 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
 
 /** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
 export default function MeScreen({ navigation }) {
-  const { user, onboarding, startOver, signOut } = useOnboarding();
+  const { user, onboarding, startOver, signOut, updateName } = useOnboarding();
+  // Changing your name (tap the account card).
+  const [naming, setNaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const openName = () => {
+    setNewName(user?.name || '');
+    setNaming(true);
+  };
+  const saveName = async () => {
+    if (!newName.trim()) return;
+    setSavingName(true);
+    try {
+      await updateName(newName.trim());
+      setNaming(false);
+    } catch (err) {
+      Alert.alert("Couldn't save your name", err.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
   const { handoffs } = useHandoffs();
   // Preview (development app only): the next task to try the delegation steps on.
   const previewTask = handoffs.find((x) => x.status === 'mine' || x.status === 'in_progress');
@@ -115,7 +138,7 @@ export default function MeScreen({ navigation }) {
       <PageHeader eyebrow="Me" title="Your settings" />
 
       {saved ? (
-        <View style={styles.account}>
+        <Pressable onPress={openName} accessibilityRole="button" accessibilityHint="Change your name" style={({ pressed }) => [styles.account, pressed && { opacity: 0.85 }]}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{(user.name || user.email || '?').trim()[0].toUpperCase()}</Text>
           </View>
@@ -131,8 +154,25 @@ export default function MeScreen({ navigation }) {
               <Text style={styles.syncedText}>Saved · on any phone</Text>
             </View>
           </View>
-        </View>
+          <Ionicons name="create-outline" size={18} color={colors.muted} />
+        </Pressable>
       ) : null}
+
+      <BottomSheet visible={naming} onClose={() => setNaming(false)}>
+        <Text style={styles.sheetTitle}>Your name</Text>
+        <TextField
+          label="What should we call you?"
+          value={newName}
+          onChangeText={setNewName}
+          placeholder="Your name"
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="done"
+          onSubmitEditing={saveName}
+          maxLength={80}
+        />
+        <Button title="Save" icon="checkmark" onPress={saveName} loading={savingName} disabled={!newName.trim()} style={styles.sheetButton} />
+      </BottomSheet>
 
       <Text style={[type.label, styles.whyLabel]}>Your why</Text>
       {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} /> : null}
@@ -224,6 +264,8 @@ export default function MeScreen({ navigation }) {
 }
 
 const makeStyles = (colors) => ({
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  sheetButton: { marginTop: spacing.md },
   account: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, marginBottom: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   avatarText: { fontSize: 22, fontWeight: '800', color: colors.onColor },

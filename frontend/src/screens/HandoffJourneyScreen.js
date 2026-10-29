@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -14,7 +14,7 @@ import { dismissSaveAsk, saveAskDismissed } from '../storage/progress';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
-import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, sameDay, startOptions, startsLater, stepSummary } from '../constants/journey';
+import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, whatsappLink, emailLink, findWhoSites, sameDay, startOptions, startsLater, stepSummary } from '../constants/journey';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
 import { radius, spacing } from '../theme';
@@ -252,6 +252,7 @@ function StepSheet({ step, task, onDone }) {
   const [start, setStart] = useState(task.startDate || null);
   const [saving, setSaving] = useState(false);
   const tick = () => Haptics.selectionAsync().catch(() => {});
+  const openLink = (url) => Linking.openURL(url).catch(() => Alert.alert("Couldn't open that", 'No app on this phone can open it. Try "Other apps" instead.'));
   const rate = onboarding?.buybackRate;
   const currency = onboarding?.currency || 'USD';
   const kind = step.kind;
@@ -429,6 +430,15 @@ function StepSheet({ step, task, onDone }) {
                 <Animated.View entering={FadeIn.duration(200)} style={styles.post}>
                   <Text style={styles.postText}>{post}</Text>
                   <Button title="Share job post" icon="share-social" variant="secondary" onPress={() => Share.share({ message: post }).catch(() => {})} style={styles.postBtn} />
+                  <Text style={styles.label}>Look for someone on</Text>
+                  <View style={styles.sites}>
+                    {findWhoSites(task).map((s) => (
+                      <Pressable key={s.key} onPress={() => openLink(s.url)} style={[styles.chip, styles.siteChip]} accessibilityRole="link" accessibilityLabel={`Search ${s.label}`}>
+                        <Text style={styles.chipText}>{s.label}</Text>
+                        <Ionicons name="open-outline" size={13} color={colors.primary} />
+                      </Pressable>
+                    ))}
+                  </View>
                 </Animated.View>
               ) : null}
             </>
@@ -463,7 +473,13 @@ function StepSheet({ step, task, onDone }) {
             <View style={styles.post}>
               <Text style={styles.label}>✨ A message to send them</Text>
               <Text style={styles.postText}>{message}</Text>
-              <Button title="Send it" icon="share-social" variant="secondary" onPress={() => Share.share({ message }).catch(() => {})} style={styles.postBtn} />
+              <View style={styles.sendRow}>
+                <Button title="WhatsApp" icon="logo-whatsapp" size="small" onPress={() => openLink(whatsappLink(message))} style={styles.sendBtn} />
+                <Button title="Email" icon="mail" size="small" variant="secondary" onPress={() => openLink(emailLink(`Handing over: ${task.activity}`, message))} style={styles.sendBtn} />
+              </View>
+              <Pressable onPress={() => Share.share({ message }).catch(() => {})} hitSlop={8} style={styles.moreApps} accessibilityRole="button">
+                <Text style={styles.moreAppsText}>Other apps</Text>
+              </Pressable>
             </View>
           ) : null}
         </View>
@@ -531,6 +547,12 @@ const makeStyles = (colors) => ({
   draftText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
   post: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   postText: { fontSize: 14, lineHeight: 21, color: colors.text },
+  sites: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  siteChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sendRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  sendBtn: { flex: 1 },
+  moreApps: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: 4 },
+  moreAppsText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   slip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   slipText: { fontSize: 14, fontWeight: '600', color: colors.muted },
   back: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft },
