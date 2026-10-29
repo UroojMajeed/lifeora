@@ -9,9 +9,11 @@ import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import AuditForm from '../../components/AuditForm';
 import AuditStats from '../../components/AuditStats';
+import PopupCard from '../../components/PopupCard';
+import { formatHours } from '../../utils/format';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
-import { stepNumber, valueForMoney } from '../../constants/content';
+import { dollars, stepNumber, valueForMoney } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
@@ -118,7 +120,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
 
   // Picking a choice: the card's next unset button opens; once all three are set, the task's dot
   // drops into the matrix and the next unfinished task opens.
-  const change = (name, patch) => {
+  const applyChange = (name, patch) => {
     const updated = items.map((it) =>
       it.activity === name ? { ...it, ...patch, ...(patch.money ? { value: valueForMoney(patch.money) } : null) } : it
     );
@@ -132,18 +134,78 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
     setItems(updated);
   };
 
-  // A new name for a task (from its card). Empty or already in the list: no (the card keeps the old one).
-  const rename = (oldName, newName) => {
-    if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
+  // The edits themselves (change, rename, remove): the Routine tab confirms each one first (below).
+  const applyRename = (oldName, newName) => {
     setItems((list) => list.map((it) => (it.activity === oldName ? { ...it, activity: newName } : it)));
     renames.current.push({ from: oldName, to: newName });
     setOpen((o) => (o?.name === oldName ? { ...o, name: newName } : o));
     return true;
   };
 
-  const remove = (name) => {
+  const applyRemove = (name) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((it) => it.activity !== name));
+  };
+
+  // In the Routine tab every edit asks first ("Save this change?"), saying what it does to a handoff.
+  // During onboarding edits just happen (it's the first audit; nothing depends on it yet).
+  const [confirm, setConfirm] = useState(null); // { icon, title, body, note, action, apply }
+  const handoffOf = (name) => handoffs.find((x) => x.activity.toLowerCase() === name.toLowerCase());
+  const weekly = (it) => formatHours(it.hours * 5);
+  const ask = (details) => (inTab ? setConfirm(details) : details.apply());
+
+  const describe = (it, patch) => {
+    if (patch.hours !== undefined) return `${it.activity}: ${it.hours ? formatHours(it.hours) : 'no time'} → ${formatHours(patch.hours)} a day`;
+    if (patch.money !== undefined) return `${it.activity}: pays ${it.money ? dollars(it.money) : '?'} → ${dollars(patch.money)}`;
+    const label = (e) => (e === 'draining' ? 'drains you' : e === 'energizing' ? 'energizes you' : 'not rated');
+    return `${it.activity}: ${label(it.energy)} → ${label(patch.energy)}`;
+  };
+  // What the edit does to the task's handoff, if it has one.
+  const effect = (it, patch) => {
+    const h = handoffOf(it.activity);
+    if (!h) return null;
+    const handed = h.status === 'done';
+    if (patch.energy === 'energizing' && it.energy === 'draining') {
+      return handed ? `It leaves your Handoffs, and its ${weekly(it)} a week stop counting as bought back.` : 'It leaves your Handoffs (its steps are kept if it ever drains you again).';
+    }
+    if (patch.hours !== undefined && handed) return `It's handed off: hours bought back become ${formatHours(patch.hours * 5)} a week.`;
+    return null;
+  };
+
+  const change = (name, patch) => {
+    const it = items.find((x) => x.activity === name);
+    const same = Object.keys(patch).every((k) => it?.[k] === patch[k]);
+    if (!it || same || !isAudited(it)) return applyChange(name, patch); // a first rating, or nothing new
+    ask({ icon: 'create-outline', title: 'Save this change?', body: describe(it, patch), note: effect(it, patch), action: 'Save', apply: () => applyChange(name, patch) });
+  };
+
+  // A new name for a task (from its card). Empty or already in the list: no (the card keeps the old one).
+  // In the tab the card keeps its old name until the change is confirmed.
+  const rename = (oldName, newName) => {
+    if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
+    if (!inTab) return applyRename(oldName, newName);
+    ask({
+      icon: 'create-outline',
+      title: 'Rename this task?',
+      body: `"${oldName}" → "${newName}"`,
+      note: handoffOf(oldName) ? 'Its handoff moves with it.' : null,
+      action: 'Rename',
+      apply: () => applyRename(oldName, newName),
+    });
+    return false;
+  };
+
+  const remove = (name) => {
+    const it = items.find((x) => x.activity === name);
+    const h = handoffOf(name);
+    ask({
+      icon: 'trash-outline',
+      title: 'Remove this task?',
+      body: `${name} leaves your routine.`,
+      note: h?.status === 'done' ? `It's handed off: its ${weekly(it)} a week stop counting as bought back.` : h ? 'It leaves your Handoffs too.' : null,
+      action: 'Remove',
+      apply: () => applyRemove(name),
+    });
   };
 
   const unfinished = items.filter((it) => !isAudited(it)).length;
@@ -251,6 +313,23 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           {keyboardHeight ? <View style={{ height: keyboardHeight }} /> : null}
         </ScrollView>
 
+
+        <PopupCard
+          visible={Boolean(confirm)}
+          icon={confirm?.icon || 'create-outline'}
+          title={confirm?.title || ''}
+          body={confirm?.body || ''}
+          note={confirm?.note}
+          action={confirm?.action || 'Save'}
+          actionIcon="checkmark"
+          dismissLabel="Cancel"
+          onAction={() => {
+            const apply = confirm?.apply;
+            setConfirm(null);
+            apply?.();
+          }}
+          onDismiss={() => setConfirm(null)}
+        />
 
         {/* Adding a task: Save & next and Done, pinned to the bottom (the keyboard slides over them). */}
         {mode === 'form' ? (

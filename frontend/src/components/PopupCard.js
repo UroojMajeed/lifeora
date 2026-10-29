@@ -7,9 +7,10 @@ import { radius, spacing } from '../theme';
 
 /**
  * A card that pops up over a dimmed screen for one clear ask (save your progress, turn on reminders):
- * an icon, an optional line above the title, a short reason, one button and "Not now".
+ * an icon, an optional line above the title, a short reason (and an optional warning note), one button,
+ * and "Not now" (or dismissLabel, e.g. "Cancel").
  */
-export default function PopupCard({ visible, icon, kicker, title, body, action, actionIcon, onAction, onDismiss, busy }) {
+export default function PopupCard({ visible, icon, kicker, title, body, note, action, actionIcon, onAction, onDismiss, dismissLabel = 'Not now', busy }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   return (
@@ -23,9 +24,10 @@ export default function PopupCard({ visible, icon, kicker, title, body, action, 
             {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
             <Text style={[styles.title, !kicker && styles.titleAlone]}>{title}</Text>
             <Text style={styles.body}>{body}</Text>
+            {note ? <Text style={styles.note}>{note}</Text> : null}
             <Button title={action} icon={actionIcon} onPress={onAction} loading={busy} style={styles.button} />
             <Pressable onPress={onDismiss} hitSlop={8} style={styles.later} accessibilityRole="button">
-              <Text style={styles.laterText}>Not now</Text>
+              <Text style={styles.laterText}>{dismissLabel}</Text>
             </Pressable>
           </Animated.View>
         ) : null}
@@ -42,6 +44,7 @@ const makeStyles = (colors) => ({
   title: { fontSize: 20, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 4 },
   titleAlone: { marginTop: spacing.md },
   body: { fontSize: 15, lineHeight: 22, color: colors.muted, textAlign: 'center', marginTop: spacing.sm },
+  note: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.accentText, textAlign: 'center', marginTop: spacing.sm },
   button: { alignSelf: 'stretch', marginTop: spacing.lg },
   later: { marginTop: spacing.md, paddingVertical: 4 },
   laterText: { fontSize: 15, fontWeight: '600', color: colors.muted },
