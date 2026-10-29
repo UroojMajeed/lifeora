@@ -1,7 +1,7 @@
 // Reminders on this phone: permission, scheduling what planReminders() returns, and taps.
 // Scheduled locally (no push server), so they work for guests and offline. An app build without the
 // notifications module (testers' APK before the next one) simply has no reminders: nothing breaks.
-import { Linking, Platform } from 'react-native';
+import { Linking, LogBox, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireOptionalNativeModule } from 'expo';
 import { planReminders } from './plan';
@@ -15,6 +15,11 @@ function notifications() {
   if (lib !== undefined) return lib;
   lib = null;
   if (Platform.OS === 'web') return lib;
+  // In Expo Go the library warns that *push* notifications (sent from a server) aren't available there.
+  // We only schedule local ones, which work, so those two notes are hidden from the in-app warning box.
+  if (__DEV__) {
+    LogBox.ignoreLogs(['`expo-notifications` functionality is not fully supported in Expo Go', '[expo-notifications] Push notifications (remote notifications) are unavailable in Expo Go']);
+  }
   try {
     if (requireOptionalNativeModule('ExpoNotificationScheduler')) lib = require('expo-notifications');
   } catch {
