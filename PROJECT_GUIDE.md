@@ -44,7 +44,7 @@ Progress is always shown in **hours bought back**, never money.
 | `JWT_EXPIRES_IN` | `365d`. Guests keep their token for a year. |
 | `CLIENT_ORIGIN` | `*` |
 | `ANTHROPIC_API_KEY` | Optional. Only for the unused `/onboarding/schedule/extract` endpoint; the owner doesn't want paid AI for now. |
-| `MONGODB_URI_ONLINE` | Optional. Only for `npm run reset-guests:online`; the owner adds it themselves. |
+| `MONGODB_URI_ONLINE` | Optional. Only for the `:online` scripts (`reset-guests`, `backup`, `guests:report`); the owner adds it themselves. |
 
 **`frontend/.env`**: one variable, `EXPO_PUBLIC_API_URL`.
 
@@ -80,6 +80,8 @@ reclaim/
 │   ├── api/index.js        Vercel entry
 │   ├── vercel.json         routes everything to /api
 │   ├── scripts/reset-guests.js   delete guest users (local; --online for Atlas)
+│   ├── scripts/backup.js         copy every collection to backend/backups/ (git-ignored; --online for Atlas)
+│   ├── scripts/guest-cleanup.js  report guests untouched 90+ days; deletes only with --delete (--online also needs --yes)
 │   └── src/
 │       ├── server.js, app.js, config/db.js
 │       ├── models/User.js          user + onboarding + handoffs (with steps) + fills + rounds + checkIns
@@ -243,7 +245,8 @@ One `users` document per person. Guests are created on first open (`POST /api/au
 5. **Security:**
    - Never paste or commit passwords or connection strings.
    - Only ever delete `isGuest: true` users.
-   - **Never delete anything in Atlas without asking.** It's testers' real data, and `reset-guests:online` wipes their guests.
+   - **Never delete anything in Atlas without asking.** It's testers' real data, and `reset-guests:online` wipes their guests. Back up first: `npm run backup:online`.
+   - **Rate limits** (live server only): 10 new guests per hour per network, 600 API calls per 15 minutes per IP. Each Vercel instance counts on its own, so for strict limits later use a shared store (e.g. Upstash Redis).
    - The Vercel `MONGODB_URI` is locked, so don't ask the owner to paste it.
 6. **Match the code style:** single quotes, long lines, short comments explaining *why*. Don't run Prettier over files; it reformats them to a different style.
 7. **Windows quirks on the original PC:**

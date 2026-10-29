@@ -8,7 +8,11 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "reset-guests": "node scripts/reset-guests.js",
-    "reset-guests:online": "node scripts/reset-guests.js --online"
+    "reset-guests:online": "node scripts/reset-guests.js --online",
+    "backup": "node scripts/backup.js",
+    "backup:online": "node scripts/backup.js --online",
+    "guests:report": "node scripts/guest-cleanup.js",
+    "guests:report:online": "node scripts/guest-cleanup.js --online"
   },
   "engines": {
     "node": ">=18"
