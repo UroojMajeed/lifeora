@@ -23,12 +23,11 @@ const h = (n) => `${Math.round(n * 10) / 10} h`;
 // What each kind of reminder says and opens (the real ones and the test ones use the same words).
 const checkInText = () => ({ title: 'Your weekly check-in is ready', body: 'Did your handoffs stick? About 2 minutes.', data: { screen: 'CheckIn' } });
 function startDayText(task) {
-  const name = task.activity.toLowerCase();
-  const automate = task.method === 'automate';
-  const who = task.who || (automate ? 'Your automation' : 'Your helper');
+  const who = task.who?.trim();
   return {
-    title: automate ? `${who} takes over ${name} today` : `${who} starts on ${name} today`,
-    body: `Your ${h(task.hours * 5)} a week begin today.`,
+    // Someone (or a tool) takes it over; without a name, it's simply off your plate.
+    title: who ? `${who} takes over ${task.activity.toLowerCase()} today` : `${task.activity} is off your plate from today`,
+    body: `${h(task.hours * 5)} a week back for you, starting today.`,
     data: { screen: 'HandoffJourney', params: { activity: task.activity } },
   };
 }
