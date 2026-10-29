@@ -37,6 +37,7 @@ export default function HandoffJourneyScreen({ navigation, route }) {
   const { onboarding, user } = useOnboarding();
   // Guests get one ask to save their progress, in the "Done!" card (until they say "Not now").
   const [askSave, setAskSave] = useState(false);
+  const [showSave, setShowSave] = useState(false);
   useEffect(() => {
     if (user?.isGuest) saveAskDismissed().then((dismissed) => setAskSave(!dismissed));
     else setAskSave(false);
@@ -187,15 +188,6 @@ export default function HandoffJourneyScreen({ navigation, route }) {
               </Text>
             </>
           )}
-          {askSave ? (
-            <SaveProgressCard
-              onSave={() => navigation.navigate('Account', { mode: 'save' })}
-              onDismiss={() => {
-                setAskSave(false);
-                dismissSaveAsk();
-              }}
-            />
-          ) : null}
           <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
       ) : null}
@@ -216,12 +208,27 @@ export default function HandoffJourneyScreen({ navigation, route }) {
             onDone={(patch) => {
               setSheet((s) => ({ ...s, open: false }));
               // Handed over (or dropped): straight back to Home, where the next task is waiting. A guest
-              // not yet asked stays on "Done!" to see the one ask to save their progress.
-              if (patch?.status === 'done' && !askSave) setTimeout(() => navigation.navigate('Main', { screen: 'Home' }), 260);
+              // not yet asked gets the one ask to save their progress first (once the sheet has closed).
+              if (patch?.status === 'done') setTimeout(() => (askSave ? setShowSave(true) : navigation.navigate('Main', { screen: 'Home' })), askSave ? 400 : 260);
             }}
           />
         ) : null}
       </BottomSheet>
+
+      <SaveProgressCard
+        visible={showSave}
+        hours={startsLater(task) ? '' : h(task.hours * 5)}
+        onSave={() => {
+          setShowSave(false);
+          navigation.navigate('Account', { mode: 'save' });
+        }}
+        onDismiss={() => {
+          setShowSave(false);
+          setAskSave(false);
+          dismissSaveAsk();
+          navigation.navigate('Main', { screen: 'Home' });
+        }}
+      />
     </Screen>
   );
 }
