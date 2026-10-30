@@ -66,7 +66,7 @@ flowchart LR
 - **Guest-first auth:** a guest account and a one-year JWT on first open, upgraded to an email account later without losing data.
 - **Security basics:** helmet headers, CORS, rate limits (stricter on login and sign-up), bcrypt password hashing, and validation with length limits on every field.
 - **Serverless-friendly database connection:** one Mongoose connection reused across requests, with clear 500/503 errors when the server is misconfigured or the database is down.
-- **Tested:** 27 API tests run the real Express app against an in-memory MongoDB (onboarding, handoffs, slip-back, renames, check-ins, accounts), and 22 tests cover the app's own logic (the handoff road, Home's next move, the Buyback Loop).
+- **Tested:** 45 backend tests run the real Express app against an in-memory MongoDB (onboarding, handoffs, slip-back, renames, check-ins, accounts, progress and milestones, rate limits), and 38 tests cover the app's own logic (the handoff road, Home's next move, the Buyback Loop, the reminder planner).
 - **CI on every pull request:** both test suites plus a full Android bundle build.
 - **Real release process:** separate development, preview and production build profiles, and over-the-air updates to testers.
 
