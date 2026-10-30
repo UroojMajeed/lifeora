@@ -6,18 +6,18 @@ import Constants from 'expo-constants';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
 import { Card } from '../components/Card';
-import MotivationCard from '../components/MotivationCard';
+import BottomSheet from '../components/BottomSheet';
+import TextField from '../components/TextField';
+import RemindersSettings from '../components/RemindersSettings';
+import Button from '../components/Button';
 import MilestoneBadges from '../components/MilestoneBadges';
 import { loadMilestones } from '../storage/milestones';
 import { boughtBackTotalHours } from '../storage/progress';
 import { milestoneList, nextMilestone, roundMilestone } from '../constants/milestones';
-import { loadMotivation } from '../storage/motivation';
 import { useOnboarding } from '../context/OnboardingContext';
-import { useHandoffs } from '../context/HandoffsContext';
-import { ROLES } from '../constants/content';
 import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   const { colors } = useTheme();
@@ -44,22 +44,37 @@ function Row({ icon, title, value, onPress, disabled, badge, danger, busy }) {
   );
 }
 
-/** Settings and profile: Buyback Rate, business type, account, about. (Light/dark is the header toggle.) */
+/** Settings and profile: your account, Buyback Rate, milestones, notifications, about. */
 export default function MeScreen({ navigation }) {
-  const { user, onboarding, startOver, signOut } = useOnboarding();
-  const { handoffs } = useHandoffs();
-  // Preview (development app only): the next task to try the delegation steps on.
-  const previewTask = handoffs.find((x) => x.status === 'mine' || x.status === 'in_progress');
+  const { user, onboarding, startOver, signOut, updateName } = useOnboarding();
+  // Changing your name (tap the account card).
+  const [naming, setNaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const openName = () => {
+    setNewName(user?.name || '');
+    setNaming(true);
+  };
+  const saveName = async () => {
+    if (!newName.trim()) return;
+    setSavingName(true);
+    try {
+      await updateName(newName.trim());
+      setNaming(false);
+    } catch (err) {
+      Alert.alert("Couldn't save your name", err.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
   const saved = user && !user.isGuest;
-  const { type } = useTheme();
+  const { type, colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
-  const [motivation, setMotivation] = useState(null);
   const [miles, setMiles] = useState({ earned: [], next: null }); // milestones reached, and the next one
 
   useFocusEffect(
     useCallback(() => {
-      loadMotivation().then(setMotivation);
-      // Milestones reached (kept on this phone) and the next one, from the hours bought back so far.
+      // Milestones reached (kept with your account) and the next one, from the hours bought back so far.
       Promise.all([loadMilestones(), boughtBackTotalHours()]).then(([map, hours]) => {
         const all = [...milestoneList(), ...Object.keys(map).filter((k) => k.startsWith('round-')).map((k) => roundMilestone(Number(k.split('-')[1])))];
         setMiles({ earned: all.filter((m) => map[m.key]), next: nextMilestone({ hours }) });
@@ -98,7 +113,7 @@ export default function MeScreen({ navigation }) {
   const confirmStartOver = () =>
     Alert.alert(
       saved ? 'Delete your account?' : 'Delete everything and start over?',
-      `Your ${saved ? 'account, ' : ''}Buyback Rate, your routine, your handoffs and your photo will be deleted for good.`,
+      `Your ${saved ? 'account, ' : ''}Buyback Rate, your routine and your handoffs will be deleted for good.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: deleteEverything },
@@ -107,15 +122,48 @@ export default function MeScreen({ navigation }) {
     );
   const styles = useStyles(makeStyles);
   const currency = onboarding?.currency || 'USD';
-  const role = ROLES.find((r) => r.key === onboarding?.role);
   const version = Constants.expoConfig?.version || '1.0.0';
 
   return (
     <Screen edges={['top']}>
       <PageHeader eyebrow="Me" title="Your settings" />
 
-      <Text style={[type.label, styles.whyLabel]}>Your why</Text>
-      {motivation ? <MotivationCard motivation={motivation} onChange={setMotivation} /> : null}
+      {saved ? (
+        <Pressable onPress={openName} accessibilityRole="button" accessibilityHint="Change your name" style={({ pressed }) => [styles.account, pressed && { opacity: 0.85 }]}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{(user.name || user.email || '?').trim()[0].toUpperCase()}</Text>
+          </View>
+          <View style={styles.accountMain}>
+            <Text style={styles.accountName} numberOfLines={1}>
+              {user.name || 'Your account'}
+            </Text>
+            <Text style={styles.accountEmail} numberOfLines={1}>
+              {user.email}
+            </Text>
+            <View style={styles.synced}>
+              <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+              <Text style={styles.syncedText}>Saved · on any phone</Text>
+            </View>
+          </View>
+          <Ionicons name="create-outline" size={18} color={colors.muted} />
+        </Pressable>
+      ) : null}
+
+      <BottomSheet visible={naming} onClose={() => setNaming(false)}>
+        <Text style={styles.sheetTitle}>Your name</Text>
+        <TextField
+          label="What should we call you?"
+          value={newName}
+          onChangeText={setNewName}
+          placeholder="Your name"
+          autoComplete="name"
+          textContentType="name"
+          returnKeyType="done"
+          onSubmitEditing={saveName}
+          maxLength={80}
+        />
+        <Button title="Save" icon="checkmark" onPress={saveName} loading={savingName} disabled={!newName.trim()} style={styles.sheetButton} />
+      </BottomSheet>
 
       <Text style={[type.label, styles.section]}>Your numbers</Text>
       <Card style={styles.card}>
@@ -124,13 +172,6 @@ export default function MeScreen({ navigation }) {
           title="Buyback Rate"
           value={`${formatMoney(onboarding?.buybackRate, currency)}/hr · from ${formatMoney(onboarding?.annualIncome, currency, { decimals: 0 })} a year`}
           onPress={() => navigation.navigate('BuybackRate', { editing: true })}
-        />
-        <View style={styles.divider} />
-        <Row
-          icon="briefcase-outline"
-          title="What describes you"
-          value={role?.label || 'Not set'}
-          onPress={() => navigation.navigate('Profile', { editing: true })}
         />
       </Card>
 
@@ -143,12 +184,13 @@ export default function MeScreen({ navigation }) {
         </>
       ) : null}
 
+      <Text style={[type.label, styles.section]}>Notifications</Text>
+      <RemindersSettings />
+
       <Text style={[type.label, styles.section]}>Account</Text>
       <Card style={styles.card}>
         {saved ? (
           <>
-            <Row icon="person-circle-outline" title={user.name || 'Signed in'} value={user.email} />
-            <View style={styles.divider} />
             <Row icon="log-out-outline" title="Sign out" onPress={confirmSignOut} />
           </>
         ) : (
@@ -156,7 +198,7 @@ export default function MeScreen({ navigation }) {
             <Row
               icon="cloud-upload-outline"
               title="Save your progress"
-              value="Create an account so you never lose your data."
+              value="Your data is only on this phone. Save it to get it back on any phone."
               onPress={() => navigation.navigate('Account', { mode: 'save' })}
             />
             <View style={styles.divider} />
@@ -180,20 +222,6 @@ export default function MeScreen({ navigation }) {
         />
       </Card>
 
-      {/* PREVIEW: work in progress, only in the development app (never in testers' updates). */}
-      {__DEV__ ? (
-        <>
-          <Text style={[type.label, styles.section]}>Preview</Text>
-          <Card style={styles.card}>
-            <Row
-              icon="flask-outline"
-              title="Handoff journey (in progress)"
-              value={previewTask ? `Try it on ${previewTask.activity}` : 'Nothing to hand off right now'}
-              onPress={previewTask ? () => navigation.navigate('HandoffJourney', { activity: previewTask.activity }) : undefined}
-            />
-          </Card>
-        </>
-      ) : null}
 
       <Text style={[type.label, styles.section]}>About</Text>
       <Card style={styles.card}>
@@ -206,8 +234,17 @@ export default function MeScreen({ navigation }) {
 }
 
 const makeStyles = (colors) => ({
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
+  sheetButton: { marginTop: spacing.md },
+  account: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, marginBottom: spacing.sm, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  avatarText: { fontSize: 22, fontWeight: '800', color: colors.onColor },
+  accountMain: { flex: 1, gap: 2 },
+  accountName: { fontSize: 18, fontWeight: '800', color: colors.text },
+  accountEmail: { fontSize: 14, color: colors.muted },
+  synced: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  syncedText: { fontSize: 12, fontWeight: '700', color: colors.success },
   section: { marginTop: spacing.lg, marginBottom: spacing.sm },
-  whyLabel: { marginBottom: spacing.sm },
   card: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md - 2 },
   rowIcon: {

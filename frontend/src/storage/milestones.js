@@ -1,15 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LEGACY_MILESTONES_KEY, loadProgress, updateProgress } from './progress';
 
-// Milestones already celebrated (kept on this phone): { [key]: ISO date reached }.
-const KEY = 'lifeora.milestones';
+// Milestones already celebrated, kept with your account: { [key]: date reached }.
 
 export async function loadMilestones() {
-  try {
-    const map = JSON.parse((await AsyncStorage.getItem(KEY)) || '{}');
-    return map && typeof map === 'object' ? map : {};
-  } catch {
-    return {};
-  }
+  return (await loadProgress()).milestones || {};
 }
 
 /**
@@ -17,18 +12,16 @@ export async function loadMilestones() {
  * caller can celebrate the newest.
  */
 export async function markMilestones(list) {
-  const map = await loadMilestones();
-  const fresh = list.filter((m) => !map[m.key]);
-  if (!fresh.length) return [];
-  const now = new Date().toISOString();
-  fresh.forEach((m) => {
-    map[m.key] = now;
-  });
-  await AsyncStorage.setItem(KEY, JSON.stringify(map)).catch(() => {});
-  return fresh;
+  if (!list.length) return [];
+  try {
+    const { fresh = [] } = await updateProgress({ milestones: list.map((m) => m.key) });
+    return list.filter((m) => fresh.includes(m.key));
+  } catch {
+    return []; // offline: celebrate next time
+  }
 }
 
-/** Forget them (used by "Start over"). */
+/** Forgets what this phone kept from before milestones lived on the account (sign out, start over). */
 export function clearMilestones() {
-  return AsyncStorage.removeItem(KEY).catch(() => {});
+  return AsyncStorage.removeItem(LEGACY_MILESTONES_KEY).catch(() => {});
 }

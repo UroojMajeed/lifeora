@@ -1,29 +1,41 @@
 import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Button from './Button';
 import CardHeader, { homeCard } from './CardHeader';
 import { journeyOf } from '../constants/journey';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, spacing } from '../theme';
+import { brand, radius, spacing } from '../theme';
 
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 
 /**
- * PREVIEW (development app only): the handoff journey's card on Home. It shows the task you're
- * handing off and where you left off (one dot per step), and takes you back to that step. The task
- * is the one you've started, or else the next one to hand off.
+ * Home's move card: the drain you're handing off and where you left off in its steps (one dot per
+ * step), with a button back to that step. The task is the one you've started, or else the biggest
+ * drain not handed off yet. `next` once you've handed one off ("Your Next Move").
  */
-export default function JourneyPreviewCard({ handoffs = [], onOpen, style }) {
+export default function JourneyPreviewCard({ handoffs = [], onOpen, next, style }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress');
-  const task = open.find((x) => x.method && !journeyOf(x).finished) || open[0];
+  const open = handoffs.filter((x) => x.status === 'mine' || x.status === 'in_progress').sort((a, b) => b.hours - a.hours);
+  // The one you've started (a plan or a tick), or else the biggest drain.
+  const task = open.find((x) => journeyOf(x).started && !journeyOf(x).finished) || open[0];
   if (!task) return null;
   const { steps, current, doneCount } = journeyOf(task);
-  const started = doneCount > 0;
 
   return (
     <View style={[styles.card, style]}>
-      <CardHeader icon="flask" iconColor={colors.accentText} title="First Move (Preview)" sub={started ? `Handing off ${task.activity}` : `Hand off ${task.activity} · ${h(task.hours)} a day`} />
+      <CardHeader icon="flag" iconColor={colors.accentText} title={next ? 'Your Next Move' : 'Your First Move'} />
+      {/* The drain, lifted out: what it costs you now and what handing it off gives back. */}
+      <View style={styles.taskRow}>
+        <Text style={styles.taskTitle}>{task.activity}</Text>
+        <Text style={styles.taskSub}>
+          {h(task.hours)} a day · <Text style={styles.taskDrains}>drains you</Text>
+        </Text>
+      </View>
+      <View style={styles.gain}>
+        <Ionicons name="sparkles" size={15} color={colors.accentText} />
+        <Text style={styles.gainText}>Free up {h(task.hours * 5)} a week</Text>
+      </View>
       {/* Where you are: one dot per step. */}
       <View style={styles.track}>
         {steps.map((s, i) => (
@@ -36,20 +48,26 @@ export default function JourneyPreviewCard({ handoffs = [], onOpen, style }) {
       <Text style={styles.next}>
         {current ? (
           <>
-            Step {doneCount + 1} of {steps.length}: <Text style={styles.nextStrong}>{current.title}</Text>
+            Step {steps.indexOf(current) + 1} of {steps.length}: <Text style={styles.nextStrong}>{current.title}</Text>
           </>
         ) : (
           'All steps done'
         )}
       </Text>
-      <Button title={started ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
+      <Button title={doneCount ? 'Continue' : 'Start handing it off'} icon="arrow-forward" onPress={() => onOpen(task.activity)} style={styles.button} />
     </View>
   );
 }
 
 const makeStyles = (colors, isDark) => ({
-  card: { ...homeCard(colors, isDark), backgroundColor: colors.surface, borderWidth: 1.5, borderColor: brand.apricot, borderStyle: 'dashed' },
-  track: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
+  card: { ...homeCard(colors, isDark), backgroundColor: colors.tintMove },
+  taskRow: { marginTop: spacing.md, paddingVertical: spacing.sm + 4, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderLeftWidth: 4, borderLeftColor: colors.chart.delegation },
+  taskTitle: { fontSize: 16, lineHeight: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.2 },
+  taskSub: { fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: 2 },
+  taskDrains: { color: colors.error },
+  gain: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: spacing.sm + 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, backgroundColor: colors.surface },
+  gainText: { fontSize: 14, fontWeight: '800', color: colors.accentText },
+  track: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md + 4 },
   seg: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, backgroundColor: colors.surface },
   dotDone: { backgroundColor: colors.primary, borderColor: colors.primary },

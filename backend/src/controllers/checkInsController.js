@@ -1,6 +1,7 @@
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
-const { buildHandoffs } = require('./handoffsController');
+const { buildHandoffs, slipBack } = require('./handoffsController');
+const { lowerThisWeek } = require('./progressController');
 
 const WORKDAYS_PER_WEEK = 5;
 const MAX_CHECKINS = 104; // two years of weeks
@@ -48,11 +49,9 @@ async function saveCheckIn(req, res, next) {
         .filter((a) => a.answer === 'slipped')
         .forEach((a) => {
           const h = u.handoffs.find((x) => x.activity.toLowerCase() === a.activity.toLowerCase());
-          if (h && h.status === 'done') {
-            h.status = 'mine';
-            h.doneAt = undefined;
-          }
+          if (h && h.status === 'done') slipBack(h);
         });
+      if (answers.some((a) => a.answer === 'slipped')) lowerThisWeek(u, buildHandoffs(u).summary.boughtBackPerWeek);
 
       const kept = answers.filter((a) => a.answer === 'kept');
       const confirmedHours = round2(kept.reduce((t, a) => t + (hoursOf.get(a.activity.toLowerCase()) || 0), 0) * WORKDAYS_PER_WEEK);

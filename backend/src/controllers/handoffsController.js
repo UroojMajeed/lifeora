@@ -1,7 +1,8 @@
 const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const updateUser = require('../utils/updateUser');
-const { HANDOFF_STATUSES, HANDOFF_METHODS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
+const { lowerThisWeek } = require('./progressController');
+const { HANDOFF_STATUSES, HANDOFF_METHODS, HANDOFF_STEP_KINDS, FINISH_STEP_KINDS, SETTLE_ANSWERS, FILL_TIMES, quadrantFor } = require('../utils/buyback');
 
 const WORKDAYS_PER_WEEK = 5;
 // Delegation first: the cheapest hours to buy back. Then Replacement, which needs a playbook first.
@@ -9,6 +10,7 @@ const QUADRANT_ORDER = { delegation: 0, replacement: 1 };
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const MAX_PLAYBOOK_STEPS = 15;
+const MAX_PLAN_STEPS = 10;
 const MAX_FILLS = 20;
 const MAX_ACTIVITIES = 30;
 
@@ -23,13 +25,43 @@ const emptyHandoff = (activity) => ({
   playbook: [],
   startDate: null,
   notes: '',
+  steps: [],
+  planConfirmed: false,
+  settleDay3: '',
+  settleDay10: '',
+  cameBackAt: null,
   doneAt: null,
 });
+
+// The app's suggested plan (as in the app's journey), for a handoff saved before plans existed.
+const STEP_TITLES = { how: 'Choose how', brief: 'Write the brief', who: 'Find who', handover: 'Hand it over', drop: 'Stop doing it' };
+const suggestedSteps = (method) =>
+  (method === 'drop' ? ['how', 'drop'] : ['how', 'brief', 'who', 'handover']).map((k) => ({ id: k, kind: k, title: STEP_TITLES[k], done: k === 'how' }));
+
+/**
+ * A handed-off task that came back is yours again, to walk the road once more: "how" stays ticked,
+ * every later step is checked again (answers kept), and the new handover needs a new start date.
+ */
+function slipBack(h) {
+  h.status = 'mine';
+  h.doneAt = undefined;
+  h.settleDay3 = '';
+  h.settleDay10 = '';
+  h.cameBackAt = new Date();
+  h.startDate = undefined;
+  if (!h.steps || !h.steps.length) h.steps = suggestedSteps(h.method);
+  h.steps.forEach((s) => {
+    if (s.kind !== 'how') Object.assign(s, { done: false, doneAt: undefined });
+  });
+}
 
 /** Draining activities from the user's day, each with its saved handoff progress, plus totals. */
 function buildHandoffs(user) {
   const saved = new Map(user.handoffs.map((h) => [h.activity.toLowerCase(), h.toObject ? h.toObject() : h]));
-  const draining = (user.onboarding?.schedule || []).filter((a) => a.quadrant in QUADRANT_ORDER);
+  // Each task once (a routine saved before names were checked could hold one twice).
+  const draining = (user.onboarding?.schedule || []).filter(
+    (a, i, all) => a.quadrant in QUADRANT_ORDER && all.findIndex((x) => x.activity.toLowerCase() === a.activity.toLowerCase()) === i
+  );
 
   const items = draining
     .map((a) => ({
@@ -43,7 +75,10 @@ function buildHandoffs(user) {
 
   const sum = (list) => round2(list.reduce((t, h) => t + h.hours, 0));
   const drainingHours = sum(items);
-  const boughtBackHours = sum(items.filter((h) => h.status === 'done'));
+  // Handed off with a start day still ahead: its hours count from that day, not before.
+  const now = new Date();
+  const live = (h) => h.status === 'done' && (!h.startDate || new Date(h.startDate) <= now);
+  const boughtBackHours = sum(items.filter(live));
   const o = user.onboarding || {};
   const fills = (user.fills || []).map((f) => (f.toObject ? f.toObject() : f));
 
@@ -58,6 +93,7 @@ function buildHandoffs(user) {
       drainingHours,
       boughtBackHours,
       inProgressHours: sum(items.filter((h) => h.status === 'in_progress')),
+      startingHours: sum(items.filter((h) => h.status === 'done' && !live(h))),
       percent: drainingHours ? Math.round((boughtBackHours / drainingHours) * 100) : 0,
       boughtBackPerWeek: round2(boughtBackHours * WORKDAYS_PER_WEEK),
       done: items.filter((h) => h.status === 'done').length,
@@ -130,8 +166,53 @@ function sanitize(body = {}) {
     if (notes.length > 1000) errors.push('notes must be 1000 characters or fewer');
     else out.notes = notes;
   }
+  if (body.steps !== undefined) {
+    const list = Array.isArray(body.steps) ? body.steps : null;
+    if (!list || list.length > MAX_PLAN_STEPS) errors.push(`steps must be a list of up to ${MAX_PLAN_STEPS}`);
+    else {
+      const steps = list.map((s) => ({
+        id: String(s?.id ?? '').trim(),
+        kind: s?.kind,
+        title: String(s?.title ?? '').trim(),
+        done: s?.done === true,
+      }));
+      const bad = steps.some(
+        (s) => !s.id || s.id.length > 24 || !HANDOFF_STEP_KINDS.includes(s.kind) || !s.title || s.title.length > 40
+      );
+      const finishers = steps.filter((s) => FINISH_STEP_KINDS.includes(s.kind));
+      if (bad) errors.push('each step needs an id (24 characters or fewer), a kind and a title of 40 characters or fewer');
+      else if (new Set(steps.map((s) => s.id)).size !== steps.length) errors.push('step ids must be unique');
+      else if (steps.length && (finishers.length !== 1 || !FINISH_STEP_KINDS.includes(steps[steps.length - 1].kind))) {
+        errors.push('a plan ends with one finishing step (handover or drop)');
+      } else out.steps = steps;
+    }
+  }
+  if (body.planConfirmed !== undefined) out.planConfirmed = body.planConfirmed === true;
+  ['settleDay3', 'settleDay10'].forEach((key) => {
+    if (body[key] === undefined) return;
+    if (!SETTLE_ANSWERS.includes(body[key] ?? '')) errors.push(`${key} must be one of: well, help`);
+    else out[key] = body[key] ?? '';
+  });
   if (errors.length) throw new ApiError(400, 'Validation failed', errors);
   return out;
+}
+
+// POST /api/handoffs/:activity/slip: a handed-off task came back (the user says so on its road).
+async function slipHandoff(req, res, next) {
+  try {
+    const name = String(req.params.activity || '').trim().toLowerCase();
+    const { user, result: activityName } = await updateUser(req.userId, (u) => {
+      const h = u.handoffs.find((x) => x.activity.toLowerCase() === name);
+      if (!h || h.status !== 'done') throw new ApiError(400, 'Only a handed-off task can come back');
+      slipBack(h);
+      lowerThisWeek(u, buildHandoffs(u).summary.boughtBackPerWeek);
+      return h.activity;
+    });
+    const result = buildHandoffs(user);
+    res.json({ handoff: result.handoffs.find((x) => x.activity.toLowerCase() === activityName.toLowerCase()), summary: result.summary });
+  } catch (err) {
+    next(err);
+  }
 }
 
 async function listHandoffs(req, res, next) {
@@ -159,8 +240,14 @@ async function updateHandoff(req, res, next) {
         u.handoffs.push(emptyHandoff(activity.activity));
         handoff = u.handoffs[u.handoffs.length - 1];
       }
+      // A step keeps the date it was first ticked; a newly ticked one gets today's.
+      if (data.steps) {
+        const before = new Map((handoff.steps || []).map((s) => [s.id, s.doneAt]));
+        data.steps = data.steps.map((s) => ({ ...s, doneAt: s.done ? before.get(s.id) || new Date() : undefined }));
+      }
       Object.assign(handoff, data);
       handoff.doneAt = handoff.status === 'done' ? handoff.doneAt || new Date() : undefined;
+      if (handoff.status === 'done') handoff.cameBackAt = undefined; // handed off again
       return activity.activity;
     });
     const result = buildHandoffs(user);
@@ -251,4 +338,4 @@ async function startNextRound(req, res, next) {
   }
 }
 
-module.exports = { listHandoffs, updateHandoff, updateFills, startNextRound, buildHandoffs };
+module.exports = { listHandoffs, updateHandoff, slipHandoff, updateFills, startNextRound, buildHandoffs, slipBack };

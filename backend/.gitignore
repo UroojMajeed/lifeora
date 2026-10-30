@@ -1,3 +1,5 @@
 node_modules/
 .env
 npm-debug.log*
+# Database backups hold people's data: never commit them
+backups/

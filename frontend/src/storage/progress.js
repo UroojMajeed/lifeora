@@ -1,35 +1,87 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/client';
 
-// Gentle weekly streak + "what Home last showed", kept on this phone.
-// A week counts when you make at least one move (a handoff step or sorting your day).
-// Missing a week simply starts a new streak: no penalties, no guilt.
-const WEEKS_KEY = 'lifeora.activeWeeks';
+// Progress that follows you to a new phone, kept with your account: hours bought back week by week,
+// the weeks you made a move (a gentle streak: missing a week simply starts a new one), and the
+// milestones already celebrated (storage/milestones.js). Only "what Home last showed" and the
+// "Not now" to saving stay on this phone.
 const SEEN_KEY = 'lifeora.lastBoughtBack';
-const MAX_WEEKS = 104;
+const SAVE_ASK_KEY = 'lifeora.saveAskDismissed';
+// Where this phone kept progress before it lived on the account: sent up once, then removed.
+const LEGACY_WEEKS_KEY = 'lifeora.activeWeeks';
+const LEGACY_HISTORY_KEY = 'lifeora.boughtBackByWeek';
+export const LEGACY_MILESTONES_KEY = 'lifeora.milestones';
 
 /** Monday of the date's week, as YYYY-MM-DD in local time. */
-function weekKey(date = new Date()) {
+export function weekKey(date = new Date()) {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-async function readWeeks() {
+const readJson = async (key, fallback) => {
   try {
-    const list = JSON.parse((await AsyncStorage.getItem(WEEKS_KEY)) || '[]');
-    return Array.isArray(list) ? list : [];
+    return JSON.parse((await AsyncStorage.getItem(key)) || 'null') ?? fallback;
   } catch {
-    return [];
+    return fallback;
   }
+};
+
+// The last progress the server sent (so a moment offline still shows something), and the one-time move up.
+let cache = { weeks: {}, activeWeeks: [], milestones: {} };
+let moved = null;
+
+/** Sends what this phone kept before progress lived on the account, once; then forgets it here. */
+function moveLegacyUp() {
+  if (!moved) {
+    moved = (async () => {
+      const [weeks, activeWeeks, milestones] = await Promise.all([
+        readJson(LEGACY_HISTORY_KEY, {}),
+        readJson(LEGACY_WEEKS_KEY, []),
+        readJson(LEGACY_MILESTONES_KEY, {}),
+      ]);
+      if (Object.keys(weeks).length || activeWeeks.length || Object.keys(milestones).length) {
+        const res = await api.updateProgress({ merge: { weeks, activeWeeks, milestones } });
+        cache = res.progress;
+      }
+      await AsyncStorage.multiRemove([LEGACY_HISTORY_KEY, LEGACY_WEEKS_KEY, LEGACY_MILESTONES_KEY]);
+    })().catch(() => {
+      moved = null; // try again next time
+    });
+  }
+  return moved;
 }
 
+/** The account's progress: { weeks: { [week]: hours }, activeWeeks, milestones: { [key]: date } }. */
+export async function loadProgress() {
+  await moveLegacyUp();
+  try {
+    cache = (await api.getProgress()).progress;
+  } catch {
+    // offline: the last known progress
+  }
+  return cache;
+}
+
+/** Saves a change (see PATCH /api/progress) and returns the server's reply ({ progress, fresh }). */
+export async function updateProgress(patch) {
+  await moveLegacyUp();
+  const res = await api.updateProgress(patch);
+  cache = res.progress;
+  return res;
+}
+
+// This week is marked once per app session (the server ignores repeats anyway).
+let markedWeek = null;
 /** Marks this week as active. Safe to call often. */
-export async function recordMove() {
-  const weeks = await readWeeks();
-  const now = weekKey();
-  if (weeks.includes(now)) return;
-  await AsyncStorage.setItem(WEEKS_KEY, JSON.stringify([...weeks, now].slice(-MAX_WEEKS))).catch(() => {});
+export function recordMove() {
+  const week = weekKey();
+  if (markedWeek === week) return;
+  markedWeek = week;
+  updateProgress({ active: week }).catch(() => {
+    markedWeek = null;
+  });
 }
 
 /**
@@ -37,7 +89,7 @@ export async function recordMove() {
  * current week until it ends, so last week's streak still shows on Monday morning.
  */
 export async function loadStreak() {
-  const active = new Set(await readWeeks());
+  const active = new Set((await loadProgress()).activeWeeks);
   const cursor = new Date();
   const thisWeek = active.has(weekKey(cursor));
   if (!thisWeek) cursor.setDate(cursor.getDate() - 7);
@@ -63,31 +115,20 @@ export async function noticeBoughtBack(hours) {
   }
 }
 
-// Hours bought back, week by week (for Home's weekly chart): { [weekKey]: hours a week }.
-const HISTORY_KEY = 'lifeora.boughtBackByWeek';
-
-async function readHistory() {
-  try {
-    const map = JSON.parse((await AsyncStorage.getItem(HISTORY_KEY)) || '{}');
-    return map && typeof map === 'object' ? map : {};
-  } catch {
-    return {};
-  }
-}
-
 /**
- * Notes this week's hours bought back (a week keeps its highest). Returns the last `count` weeks,
- * oldest first, and `totalHours`: every week so far added up. `confirmed` ({ [weekKey]: hours },
- * from weekly check-ins) replaces the estimate for those weeks.
+ * Notes this week's hours bought back (a week keeps its highest; a slip lowers it on the server).
+ * Returns the last `count` weeks, oldest first, and `totalHours`: every week so far added up.
+ * `confirmed` ({ [week]: hours }, from weekly check-ins) replaces the estimate for those weeks.
  */
 export async function recordWeeklyBoughtBack(hoursAWeek, count = 5, confirmed = {}) {
-  const map = await readHistory();
   const now = weekKey();
-  map[now] = Math.max(map[now] || 0, hoursAWeek);
-  const keys = Object.keys(map).sort().slice(-MAX_WEEKS);
-  const kept = Object.fromEntries(keys.map((k) => [k, map[k]]));
-  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(kept)).catch(() => {});
-  const hoursFor = { ...kept, ...confirmed };
+  let saved = cache.weeks;
+  try {
+    saved = (await updateProgress({ week: now, hours: Math.round(hoursAWeek * 100) / 100 })).progress.weeks;
+  } catch {
+    saved = { ...cache.weeks, [now]: Math.max(cache.weeks[now] || 0, hoursAWeek) }; // offline: show it anyway
+  }
+  const hoursFor = { ...saved, ...confirmed };
   // The last `count` weeks up to this one, with empty weeks as 0.
   const weeks = [];
   const cursor = new Date();
@@ -102,11 +143,26 @@ export async function recordWeeklyBoughtBack(hoursAWeek, count = 5, confirmed = 
 
 /** Every week's hours bought back added up (for Me's next milestone). */
 export async function boughtBackTotalHours() {
-  const map = await readHistory();
-  return Object.values(map).reduce((t, x) => t + (Number(x) || 0), 0);
+  const { weeks } = await loadProgress();
+  return Object.values(weeks).reduce((t, x) => t + (Number(x) || 0), 0);
 }
 
-/** Forget everything (used by "Start over"). */
+// Whether a guest said "Not now" to saving their progress (asked once, after a handoff).
+export async function saveAskDismissed() {
+  try {
+    return (await AsyncStorage.getItem(SAVE_ASK_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+export function dismissSaveAsk() {
+  return AsyncStorage.setItem(SAVE_ASK_KEY, '1').catch(() => {});
+}
+
+/** Forgets what this phone keeps (sign out, start over). The account's progress stays with the account. */
 export function clearProgress() {
-  return AsyncStorage.multiRemove([WEEKS_KEY, SEEN_KEY, HISTORY_KEY]).catch(() => {});
+  cache = { weeks: {}, activeWeeks: [], milestones: {} };
+  moved = null;
+  markedWeek = null;
+  return AsyncStorage.multiRemove([SEEN_KEY, SAVE_ASK_KEY, LEGACY_WEEKS_KEY, LEGACY_HISTORY_KEY, LEGACY_MILESTONES_KEY]).catch(() => {});
 }

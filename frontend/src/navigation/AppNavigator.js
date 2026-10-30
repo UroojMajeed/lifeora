@@ -8,7 +8,6 @@ import BuybackRateScreen from '../screens/onboarding/BuybackRateScreen';
 import AuditScreen from '../screens/onboarding/AuditScreen';
 import ScheduleScreen from '../screens/onboarding/ScheduleScreen';
 import SwipeScreen from '../screens/onboarding/SwipeScreen';
-import HandoffDetailScreen from '../screens/HandoffDetailScreen';
 import AccountScreen from '../screens/AccountScreen';
 import FillScreen from '../screens/FillScreen';
 import CheckInScreen from '../screens/CheckInScreen';
@@ -38,7 +37,6 @@ export default function AppNavigator() {
       <Stack.Screen name="Schedule" component={ScheduleScreen} />
       <Stack.Screen name="Swipe" component={SwipeScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
-      <Stack.Screen name="HandoffDetail" component={HandoffDetailScreen} />
       <Stack.Screen name="Fill" component={FillScreen} />
       <Stack.Screen name="Account" component={AccountScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ animation: 'slide_from_bottom' }} />

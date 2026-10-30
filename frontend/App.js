@@ -6,12 +6,16 @@ import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { OnboardingProvider } from './src/context/OnboardingContext';
 import { HandoffsProvider } from './src/context/HandoffsContext';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { FONT_FILES, fontFamilyFor } from './src/theme/fonts';
 import AppNavigator from './src/navigation/AppNavigator';
+import RemindersSync from './src/notifications/RemindersSync';
+
+// Lets a tapped reminder open its screen from outside the screens.
+const navigationRef = createNavigationContainerRef();
 
 // Keep the splash screen up until the brand font is ready (so text never flashes in the system font)
 // and the update check is done.
@@ -76,9 +80,10 @@ function ThemedApp() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <AppNavigator />
+      <RemindersSync navigationRef={navigationRef} />
     </NavigationContainer>
   );
 }

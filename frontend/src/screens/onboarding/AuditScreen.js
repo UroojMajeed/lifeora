@@ -9,9 +9,11 @@ import ErrorBanner from '../../components/ErrorBanner';
 import AuditTaskCard, { FIELDS, isAudited } from '../../components/AuditTaskCard';
 import AuditForm from '../../components/AuditForm';
 import AuditStats from '../../components/AuditStats';
+import PopupCard from '../../components/PopupCard';
+import { formatHours } from '../../utils/format';
 import { useOnboarding } from '../../context/OnboardingContext';
 import { useHandoffs } from '../../context/HandoffsContext';
-import { stepNumber, valueForMoney } from '../../constants/content';
+import { dollars, stepNumber, valueForMoney } from '../../constants/content';
 import { useStyles, useTheme } from '../../theme/ThemeContext';
 import { radius, spacing } from '../../theme';
 
@@ -29,7 +31,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
   const round = route.params?.round;
   // The Routine tab: the same list, edited the same way, without the onboarding step around it.
   const { onboarding, saveStep } = useOnboarding();
-  const { refresh: refreshHandoffs } = useHandoffs();
+  const { handoffs = [], refresh: refreshHandoffs } = useHandoffs();
+  const handedOff = new Set(handoffs.filter((x) => x.status === 'done').map((x) => x.activity.toLowerCase()));
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
 
@@ -84,6 +87,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
   const firstRender = useRef(true);
   const autosave = useRef(null);
   const saving = useRef(null);
+  // Renames since the last save, in order: the server moves each task's handoff to its new name.
+  const renames = useRef([]);
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false;
@@ -91,10 +96,11 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
     }
     autosave.current = setTimeout(() => {
       autosave.current = null;
-      saving.current = saveStep({ schedule: items.filter((i) => i.hours) }, round || inTab ? 'done' : 'schedule')
+      const moved = renames.current.splice(0);
+      saving.current = saveStep({ schedule: items.filter((i) => i.hours), renames: moved }, round || inTab ? 'done' : 'schedule')
         // In the tab, what drains you (and so your handoffs) follows the routine.
         .then(() => (inTab ? refreshHandoffs() : null))
-        .catch(() => {});
+        .catch(() => renames.current.unshift(...moved));
     }, 600);
     return () => clearTimeout(autosave.current);
   }, [items, saveStep, round, inTab, refreshHandoffs]);
@@ -114,7 +120,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
 
   // Picking a choice: the card's next unset button opens; once all three are set, the task's dot
   // drops into the matrix and the next unfinished task opens.
-  const change = (name, patch) => {
+  const applyChange = (name, patch) => {
     const updated = items.map((it) =>
       it.activity === name ? { ...it, ...patch, ...(patch.money ? { value: valueForMoney(patch.money) } : null) } : it
     );
@@ -128,17 +134,78 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
     setItems(updated);
   };
 
-  // A new name for a task (from its card). Empty or already in the list: no (the card keeps the old one).
-  const rename = (oldName, newName) => {
-    if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
+  // The edits themselves (change, rename, remove): the Routine tab confirms each one first (below).
+  const applyRename = (oldName, newName) => {
     setItems((list) => list.map((it) => (it.activity === oldName ? { ...it, activity: newName } : it)));
+    renames.current.push({ from: oldName, to: newName });
     setOpen((o) => (o?.name === oldName ? { ...o, name: newName } : o));
     return true;
   };
 
-  const remove = (name) => {
+  const applyRemove = (name) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((it) => it.activity !== name));
+  };
+
+  // In the Routine tab every edit asks first ("Save this change?"), saying what it does to a handoff.
+  // During onboarding edits just happen (it's the first audit; nothing depends on it yet).
+  const [confirm, setConfirm] = useState(null); // { icon, title, body, note, action, apply }
+  const handoffOf = (name) => handoffs.find((x) => x.activity.toLowerCase() === name.toLowerCase());
+  const weekly = (it) => formatHours(it.hours * 5);
+  const ask = (details) => (inTab ? setConfirm(details) : details.apply());
+
+  const describe = (it, patch) => {
+    if (patch.hours !== undefined) return `${it.activity}: ${it.hours ? formatHours(it.hours) : 'no time'} → ${formatHours(patch.hours)} a day`;
+    if (patch.money !== undefined) return `${it.activity}: pays ${it.money ? dollars(it.money) : '?'} → ${dollars(patch.money)}`;
+    const label = (e) => (e === 'draining' ? 'drains you' : e === 'energizing' ? 'energizes you' : 'not rated');
+    return `${it.activity}: ${label(it.energy)} → ${label(patch.energy)}`;
+  };
+  // What the edit does to the task's handoff, if it has one.
+  const effect = (it, patch) => {
+    const h = handoffOf(it.activity);
+    if (!h) return null;
+    const handed = h.status === 'done';
+    if (patch.energy === 'energizing' && it.energy === 'draining') {
+      return handed ? `It leaves your Handoffs, and its ${weekly(it)} a week stop counting as bought back.` : 'It leaves your Handoffs (its steps are kept if it ever drains you again).';
+    }
+    if (patch.hours !== undefined && handed) return `It's handed off: hours bought back become ${formatHours(patch.hours * 5)} a week.`;
+    return null;
+  };
+
+  const change = (name, patch) => {
+    const it = items.find((x) => x.activity === name);
+    const same = Object.keys(patch).every((k) => it?.[k] === patch[k]);
+    if (!it || same || !isAudited(it)) return applyChange(name, patch); // a first rating, or nothing new
+    ask({ icon: 'create-outline', title: 'Save this change?', body: describe(it, patch), note: effect(it, patch), action: 'Save', apply: () => applyChange(name, patch) });
+  };
+
+  // A new name for a task (from its card). Empty or already in the list: no (the card keeps the old one).
+  // In the tab the card keeps its old name until the change is confirmed.
+  const rename = (oldName, newName) => {
+    if (!newName || items.some((it) => it.activity !== oldName && it.activity.trim().toLowerCase() === newName.toLowerCase())) return false;
+    if (!inTab) return applyRename(oldName, newName);
+    ask({
+      icon: 'create-outline',
+      title: 'Rename this task?',
+      body: `"${oldName}" → "${newName}"`,
+      note: handoffOf(oldName) ? 'Its handoff moves with it.' : null,
+      action: 'Rename',
+      apply: () => applyRename(oldName, newName),
+    });
+    return false;
+  };
+
+  const remove = (name) => {
+    const it = items.find((x) => x.activity === name);
+    const h = handoffOf(name);
+    ask({
+      icon: 'trash-outline',
+      title: 'Remove this task?',
+      body: `${name} leaves your routine.`,
+      note: h?.status === 'done' ? `It's handed off: its ${weekly(it)} a week stop counting as bought back.` : h ? 'It leaves your Handoffs too.' : null,
+      action: 'Remove',
+      apply: () => applyRemove(name),
+    });
   };
 
   const unfinished = items.filter((it) => !isAudited(it)).length;
@@ -155,11 +222,11 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
       await saving.current;
       // Everything is rated already, so the rating screen opens straight on the DRIP Matrix.
       if (round) {
-        await saveStep({ schedule: items }, 'done');
+        await saveStep({ schedule: items, renames: renames.current.splice(0) }, 'done');
         navigation.navigate('Swipe', { editing: true });
         return;
       }
-      await saveStep({ schedule: items }, 'swipe');
+      await saveStep({ schedule: items, renames: renames.current.splice(0) }, 'swipe');
       navigation.navigate('Swipe');
     } catch (err) {
       setError(err.message);
@@ -192,7 +259,8 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           )}
           {mode === 'form' ? (
             <>
-              {/* Your totals so far, big and clear. */}
+              {/* Your totals so far, in one slim pill. */}
+              {items.length ? <AuditStats items={items} style={styles.formStats} /> : null}
               {items.length < MAX_ACTIVITIES ? (
                 <AuditForm
                   ref={formRef}
@@ -202,23 +270,6 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                   onReadyChange={setFormReady}
                   onReveal={() => listRef.current?.scrollToEnd({ animated: true })}
                 />
-              ) : null}
-              {/* Save & next, right under the task it saves. */}
-              {items.length < MAX_ACTIVITIES ? (
-                <Button
-                  title="Save & next"
-                  icon="arrow-forward"
-                  onPress={() => formRef.current?.save()}
-                  disabled={!formReady}
-                  style={styles.saveNext}
-                />
-              ) : null}
-              {/* Done: a quiet text button under Save & next, once there's a task. */}
-              {items.length ? (
-                <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
-                  <Text style={styles.doneText}>Done · {items.length}</Text>
-                  <Ionicons name="checkmark" size={17} color={colors.primary} />
-                </Pressable>
               ) : null}
             </>
           ) : (
@@ -250,6 +301,7 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
                       onRename={(name) => rename(item.activity, name)}
                       onEditStart={() => bringIntoView(item.activity)}
                       onRemove={() => remove(item.activity)}
+                      handedOff={handedOff.has(item.activity.toLowerCase())}
                     />
                   </View>
                 ))}
@@ -261,6 +313,46 @@ export default function AuditScreen({ navigation, route, inTab = false }) {
           {keyboardHeight ? <View style={{ height: keyboardHeight }} /> : null}
         </ScrollView>
 
+
+        <PopupCard
+          visible={Boolean(confirm)}
+          icon={confirm?.icon || 'create-outline'}
+          title={confirm?.title || ''}
+          body={confirm?.body || ''}
+          note={confirm?.note}
+          action={confirm?.action || 'Save'}
+          actionIcon="checkmark"
+          dismissLabel="Cancel"
+          onAction={() => {
+            const apply = confirm?.apply;
+            setConfirm(null);
+            apply?.();
+          }}
+          onDismiss={() => setConfirm(null)}
+        />
+
+        {/* Adding a task: Save & next and Done, pinned to the bottom (the keyboard slides over them). */}
+        {mode === 'form' ? (
+          <View style={[styles.actionRow, styles.formBar]}>
+            {items.length < MAX_ACTIVITIES ? (
+              <Button
+                title="Save & next"
+                icon="arrow-forward"
+                onPress={() => formRef.current?.save()}
+                disabled={!formReady}
+                style={styles.actionButton}
+              />
+            ) : null}
+            {items.length ? (
+              <Pressable onPress={() => show('list')} hitSlop={10} accessibilityRole="button" style={styles.doneRow}>
+                <Text style={styles.doneText}>
+                  Done · {items.length} {items.length === 1 ? 'task' : 'tasks'}
+                </Text>
+                <Ionicons name="checkmark" size={17} color={colors.primary} />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* From the routine on to the DRIP Matrix (it stays put; the keyboard covers it while you type). */}
         {mode === 'list' && items.length && !inTab ? (
@@ -287,11 +379,10 @@ const makeStyles = (colors) => ({
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, flexGrow: 1 },
   stats: { marginBottom: spacing.md },
   listTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginBottom: spacing.sm },
-  // The sticky bar.
-  saveNext: { marginTop: spacing.lg },
-  doneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: spacing.md, paddingVertical: spacing.xs },
-  // "Done": short and outlined, on the right, so it never competes with "Save & next".
-  done: { borderColor: colors.primary, paddingHorizontal: spacing.md },
+  formStats: { marginBottom: spacing.lg },
+  // The pinned bar while adding a task: the page scrolls under it.
+  formBar: { backgroundColor: colors.background },
+  doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.xs },
   doneText: { fontSize: 15, fontWeight: '800', color: colors.primary },
   // A small outlined pill: clearly a button, quieter than See what drains you.
   addMore: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.surface },

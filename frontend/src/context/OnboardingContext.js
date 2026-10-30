@@ -4,6 +4,7 @@ import { screenForStep } from '../constants/content';
 import { loadMotivation, removeMotivation } from '../storage/motivation';
 import { clearProgress } from '../storage/progress';
 import { clearMilestones } from '../storage/milestones';
+import { clearReminders } from '../notifications';
 
 const OnboardingContext = createContext(null);
 
@@ -66,6 +67,7 @@ export function OnboardingProvider({ children }) {
     await removeMotivation(await loadMotivation());
     await clearProgress();
     await clearMilestones();
+    await clearReminders();
     applyUser(null);
   }, [applyUser]);
 
@@ -84,6 +86,24 @@ export function OnboardingProvider({ children }) {
     async (details) => {
       const { token, user: u } = await api.saveAccount(details);
       await tokenStore.set(token);
+      applyUser(u);
+    },
+    [applyUser]
+  );
+
+  // What the app calls you (asked once your progress is saved).
+  const updateName = useCallback(
+    async (name) => {
+      const { user: u } = await api.updateMe({ name });
+      applyUser(u);
+    },
+    [applyUser]
+  );
+
+  // Reminder settings ({ checkIn, checkInDay, checkInHour, startDay, nudges }, any of them).
+  const updateReminders = useCallback(
+    async (reminders) => {
+      const { user: u } = await api.updateMe({ reminders });
       applyUser(u);
     },
     [applyUser]
@@ -114,11 +134,13 @@ export function OnboardingProvider({ children }) {
       complete,
       startOver,
       saveAccount,
+      updateName,
+      updateReminders,
       signIn,
       signOut: forgetThisPhone,
       replaceOnboarding: setOnboarding,
     }),
-    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, signIn, forgetThisPhone]
+    [user, onboarding, bootstrap, startAsGuest, saveStep, saveEdit, complete, startOver, saveAccount, updateName, updateReminders, signIn, forgetThisPhone]
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

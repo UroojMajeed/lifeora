@@ -44,7 +44,7 @@ function sanitizeSchedule(schedule, errors) {
     // The quadrant is always derived here, never trusted from the client.
     const per = item?.per === 'week' ? 'week' : 'day';
     return { activity, hours, value, money, per, energy, quadrant: quadrantFor({ value, energy }) };
-  });
+  }).filter((item, i, all) => all.findIndex((x) => x.activity.toLowerCase() === item.activity.toLowerCase()) === i); // each task once
 
   const total = items.reduce((sum, item) => sum + (Number.isFinite(item.hours) ? item.hours : 0), 0);
   if (total > 24) errors.push('A day only has 24 hours. Trim a few activities.');
@@ -90,6 +90,14 @@ function sanitize(body = {}) {
     out.schedule = sanitizeSchedule(body.schedule, errors);
   }
 
+  // Tasks renamed since the last save, in order: [{ from, to }]. Their handoffs follow the new name.
+  if (body.renames !== undefined) {
+    const ok = Array.isArray(body.renames) && body.renames.length <= MAX_ACTIVITIES * 2;
+    const renames = ok ? body.renames.map((r) => ({ from: String(r?.from ?? '').trim(), to: String(r?.to ?? '').trim() })) : [];
+    if (!ok || renames.some((r) => !r.from || !r.to || r.from.length > 60 || r.to.length > 60)) errors.push('renames must be a list of { from, to } task names');
+    else out.renames = renames;
+  }
+
   if (errors.length) throw new ApiError(400, 'Validation failed', errors);
   return out;
 }
@@ -106,9 +114,15 @@ async function getOnboarding(req, res, next) {
 
 async function updateOnboarding(req, res, next) {
   try {
-    const data = sanitize(req.body);
+    const { renames = [], ...data } = sanitize(req.body);
     const { user } = await updateUser(req.userId, (u) => {
       Object.assign(u.onboarding, data);
+      // A renamed task keeps its handoff (plan, who, brief), unless the new name already has one.
+      renames.forEach(({ from, to }) => {
+        const h = u.handoffs.find((x) => x.activity.toLowerCase() === from.toLowerCase());
+        const taken = u.handoffs.some((x) => x !== h && x.activity.toLowerCase() === to.toLowerCase());
+        if (h && !taken) h.activity = to;
+      });
       // Derived values are always computed on the server.
       if (data.annualIncome !== undefined) {
         Object.assign(u.onboarding, calculateBuybackRate(data.annualIncome));

@@ -40,6 +40,7 @@ export const api = {
   createGuest: () => request('/auth/guest', { method: 'POST' }),
   me: () => request('/auth/me'),
   deleteMe: () => request('/auth/me', { method: 'DELETE' }),
+  updateMe: (payload) => request('/auth/me', { method: 'PATCH', body: payload }),
   saveAccount: (payload) => request('/auth/save', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
   updateOnboarding: (payload) => request('/onboarding', { method: 'PUT', body: payload }),
@@ -48,6 +49,9 @@ export const api = {
   updateFills: (fills) => request('/fills', { method: 'PUT', body: { fills } }),
   startNextRound: () => request('/rounds/next', { method: 'POST' }),
   saveCheckIn: (checkIn) => request('/checkins', { method: 'POST', body: checkIn }),
+  getProgress: () => request('/progress'),
+  updateProgress: (patch) => request('/progress', { method: 'PATCH', body: patch }),
+  slipHandoff: (activity) => request(`/handoffs/${encodeURIComponent(activity)}/slip`, { method: 'POST' }),
   updateHandoff: (activity, patch) =>
     request(`/handoffs/${encodeURIComponent(activity)}`, { method: 'PUT', body: patch }),
 };

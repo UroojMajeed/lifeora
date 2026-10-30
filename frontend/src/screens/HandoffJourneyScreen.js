@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -7,31 +7,59 @@ import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
 import Button from '../components/Button';
 import BottomSheet from '../components/BottomSheet';
+import PlanEditor from '../components/PlanEditor';
+import WindingRoad from '../components/WindingRoad';
+import PopupCard from '../components/PopupCard';
+import { askForReminders, dismissRemindersAsk, reminderPermission, remindersAsked } from '../notifications';
+import { dismissSaveAsk, saveAskDismissed } from '../storage/progress';
 import { useHandoffs } from '../context/HandoffsContext';
 import { useOnboarding } from '../context/OnboardingContext';
 import { HANDOFF_METHODS, handoffIdeas } from '../constants/content';
-import { formatDay, sameDay, startOptions } from '../constants/handoffSteps';
-import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, handoverDraft, jobPostDraft, journeyOf, stepSummary } from '../constants/journey';
+import { CHECK_DRAFT, DONE_DRAFT, TOOL_IDEAS, formatDay, handoverDraft, jobPostDraft, journeyOf, planForMethod, planOf, recipeFor, whatsappLink, emailLink, findWhoSites, sameDay, startOptions, startsLater, stepSummary } from '../constants/journey';
+import { formatMoney } from '../utils/format';
 import { useStyles, useTheme } from '../theme/ThemeContext';
-import { brand, radius, spacing } from '../theme';
+import { radius, spacing } from '../theme';
 
 const h = (n) => `${Math.round(n * 10) / 10} h`;
 const methodLabel = (key) => HANDOFF_METHODS.find((m) => m.key === key)?.label || '';
 
 /**
- * Handing off one task, as a journey: a road of stations (Choose how → Define done → Find who →
- * Hand it over) ending at the sun. Finished stations show what you chose; the current one glows and
- * opens its step in a bottom sheet; later ones wait. Each step saves when it's done, so you can leave
- * and pick up here (or from the card on Home) where you left off. Handing it over counts as delegated
- * (like "Yes" on Home's move card): its hours are bought back, and the weekly check-in asks if it
- * stuck. Route param: `activity`.
+ * Handing off one task, as a road winding through a sunrise: one stop per step, ending at the sun.
+ * At the top, its hours a day and your Buyback Rate: if someone does it for less, stop doing it yourself. The steps are the
+ * suggested ones unless you change them ("Edit steps": drag, rename, delete, add your own). The
+ * current station opens its step in a sheet; its one button saves your answer and ticks the step.
+ * Ticking the last step hands the task off: its hours are bought back, and the weekly check-in asks
+ * if it stuck. Route param: `activity`.
  */
 export default function HandoffJourneyScreen({ navigation, route }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
-  const { handoffs } = useHandoffs();
+  const { handoffs, update, slipBack } = useHandoffs();
+  const { onboarding, user } = useOnboarding();
+  // After a handover, one ask at most: a guest not yet asked to save their progress; otherwise
+  // reminders, if this phone hasn't offered them yet. Never both at once.
+  const [nextAsk, setNextAsk] = useState(null); // 'save' | 'reminders' | null
+  const [popup, setPopup] = useState(null);
+  const [turningOn, setTurningOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      let ask = null;
+      if (user?.isGuest && !(await saveAskDismissed())) ask = 'save';
+      else if ((await reminderPermission()).status === 'undetermined' && !(await remindersAsked())) ask = 'reminders';
+      if (live) setNextAsk(ask);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [user?.isGuest]);
+  const goHome = () => navigation.navigate('Main', { screen: 'Home' });
+  const checkInDay = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][user?.reminders?.checkInDay ?? 5];
   const task = handoffs.find((x) => x.activity === route.params?.activity);
-  const [sheet, setSheet] = useState({ open: false, key: null, id: 0 });
+  const [sheet, setSheet] = useState({ open: false, id: null, n: 0 });
+  const [editing, setEditing] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   if (!task) {
     return (
@@ -41,73 +69,102 @@ export default function HandoffJourneyScreen({ navigation, route }) {
     );
   }
 
-  const { steps, current, doneCount, finished } = journeyOf(task);
-  const open = (key) => {
+  const { steps, current, finished } = journeyOf(task);
+  // Your Buyback Rate: anyone who does this for less an hour than that is worth paying.
+  const rate = onboarding?.buybackRate;
+  const money = (n) => formatMoney(n, onboarding?.currency || 'USD', { decimals: 0 });
+  const open = (id) => {
     Haptics.selectionAsync().catch(() => {});
-    setSheet((s) => ({ open: true, key, id: s.id + 1 }));
+    setSheet((s) => ({ open: true, id, n: s.n + 1 }));
+  };
+  const confirmSlip = () =>
+    Alert.alert(
+      `Did ${task.activity.toLowerCase()} come back to you?`,
+      "Its steps open again with your answers kept, and its hours stop counting as bought back.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: "Yes, it's back",
+          style: 'destructive',
+          onPress: () =>
+            slipBack(task.activity)
+              .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}))
+              .catch((err) => Alert.alert("Couldn't save that", err.message)),
+        },
+      ]
+    );
+  const savePlan = async (plan) => {
+    setSavingPlan(true);
+    try {
+      await update(task.activity, { steps: plan.map(({ id, kind, title, done }) => ({ id, kind, title, done })), planConfirmed: true });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setEditing(false);
+    } catch (err) {
+      Alert.alert("Couldn't save your steps", err.message);
+    } finally {
+      setSavingPlan(false);
+    }
   };
 
+  // Editing the steps (only when you ask for it).
+  if (editing) {
+    return (
+      <Screen scrollEnabled={!dragging}>
+        <PageHeader eyebrow="Hand it off" title={task.activity} subtitle={`${h(task.hours)} a day · drains you`} />
+        <PlanEditor
+          initial={planOf(task)}
+          method={task.method}
+          saving={savingPlan}
+          onSave={savePlan}
+          onCancel={() => setEditing(false)}
+          onDragging={setDragging}
+        />
+      </Screen>
+    );
+  }
+
+  const sheetStep = steps.find((s) => s.id === sheet.id);
+
   return (
-    <Screen>
-      <PageHeader eyebrow="Hand it off" title={task.activity} subtitle={`${h(task.hours)} a day · ${doneCount} of ${steps.length} steps done`} />
+    <Screen tinted="dawn">
+      <PageHeader eyebrow="Hand it off" title={task.activity} />
 
-      {/* The road: one station per step, then the sun. */}
-      <View style={styles.road}>
-        {steps.map((s, i) => {
-          const isCurrent = current?.key === s.key;
-          const locked = !s.done && !isCurrent;
-          return (
-            <View key={s.key} style={styles.stop}>
-              <View style={styles.rail}>
-                <View style={[styles.node, s.done && styles.nodeDone, isCurrent && styles.nodeNow]}>
-                  {s.done ? (
-                    <Ionicons name="checkmark" size={16} color={colors.onColor} />
-                  ) : (
-                    <Text style={[styles.nodeNum, isCurrent && styles.nodeNumNow]}>{i + 1}</Text>
-                  )}
-                </View>
-                <View style={[styles.line, s.done && styles.lineDone]} />
-              </View>
-              <Pressable
-                onPress={() => open(s.key)}
-                disabled={locked}
-                accessibilityRole="button"
-                accessibilityLabel={`Step ${i + 1}, ${s.title}${s.done ? ', done' : isCurrent ? ', next' : ', later'}`}
-                style={({ pressed }) => [styles.station, isCurrent && styles.stationNow, locked && styles.stationLocked, pressed && styles.pressed]}
-              >
-                <View style={styles.stationHead}>
-                  <Ionicons name={s.icon} size={17} color={isCurrent ? colors.accentText : s.done ? colors.primary : colors.muted} />
-                  <Text style={[styles.stationTitle, locked && styles.mutedText]}>{s.title}</Text>
-                  {s.done ? <Ionicons name="create-outline" size={15} color={colors.muted} /> : null}
-                </View>
-                {s.done ? (
-                  <Text style={styles.summary} numberOfLines={2}>
-                    {stepSummary(s.key, task, methodLabel(task.method))}
-                  </Text>
-                ) : isCurrent ? (
-                  <View style={styles.go}>
-                    <Text style={styles.goText}>{doneCount ? 'Continue' : 'Start'}</Text>
-                    <Ionicons name="arrow-forward" size={15} color={brand.evergreen} />
-                  </View>
-                ) : null}
-              </Pressable>
-            </View>
-          );
-        })}
-
-        {/* The destination. */}
-        <View style={styles.stop}>
-          <View style={styles.rail}>
-            <View style={[styles.sun, finished && styles.sunOn]}>
-              <Ionicons name="sunny" size={22} color={finished ? '#FFFFFF' : colors.muted} />
-            </View>
+      {/* What it costs you, and changing the steps. */}
+      <View style={styles.facts}>
+        <View style={styles.fact}>
+          <Ionicons name="time-outline" size={14} color={colors.text} />
+          <Text style={styles.factText}>
+            {h(task.hours)} a day · <Text style={styles.drains}>drains you</Text>
+          </Text>
+        </View>
+        {!finished ? (
+          <Pressable onPress={() => setEditing(true)} hitSlop={8} style={styles.editPlan} accessibilityRole="button">
+            <Ionicons name="create-outline" size={15} color={colors.primary} />
+            <Text style={styles.editPlanText}>Edit steps</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {rate && task.method !== 'drop' ? (
+        <View style={styles.rateRow}>
+          <View style={[styles.fact, styles.rateChip]}>
+            <Ionicons name="cash-outline" size={14} color={colors.accentText} />
+            <Text style={[styles.factText, styles.rateText]}>Hand it off under {money(rate)}/hr</Text>
           </View>
-          <View style={styles.dest}>
-            <Text style={[styles.destTitle, !finished && styles.mutedText]}>{finished ? 'Off your plate!' : 'Off your plate'}</Text>
-            <Text style={styles.destLine}>+{h(task.hours * 5)} a week back</Text>
+          <Text style={styles.rateNote}>If you find someone who does it for less than {money(rate)} an hour, stop doing it yourself: you buy your time back.</Text>
+        </View>
+      ) : null}
+
+      {task.cameBackAt && task.status !== 'done' ? (
+        <View style={styles.back}>
+          <Ionicons name="refresh" size={18} color={colors.accentText} />
+          <View style={styles.backMain}>
+            <Text style={styles.backTitle}>Came back · {formatDay(task.cameBackAt)}</Text>
+            <Text style={styles.backText}>It slipped back. Your answers are kept: check each step, fix what didn't work, then hand it over again.</Text>
           </View>
         </View>
-      </View>
+      ) : null}
+
+      <WindingRoad steps={steps} current={current} hours={task.hours} onOpen={open} summaryOf={(s) => stepSummary(s.kind, task, methodLabel(task.method))} />
 
       {/* The 10-80-10 brief, once it's written: your start and finish, their middle. */}
       {task.method !== 'drop' && task.doneLooksLike && task.checkHow ? (
@@ -131,32 +188,98 @@ export default function HandoffJourneyScreen({ navigation, route }) {
 
       {finished ? (
         <Animated.View entering={ZoomIn.duration(350)} style={styles.win}>
-          <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
-          <Text style={styles.winText}>
-            {task.method === 'drop' ? 'Dropped. ' : 'Handed over. '}Your weekly check-in will ask how it went.
-          </Text>
+          {startsLater(task) ? (
+            <>
+              <Text style={styles.winTitle}>Handed over · starts {formatDay(task.startDate)}</Text>
+              <Text style={styles.winText}>Your {h(task.hours * 5)} a week count from that day. Your weekly check-in will ask how it went.</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.winTitle}>Done! {h(task.hours * 5)} a week is yours again</Text>
+              <Text style={styles.winText}>
+                {task.method === 'drop' ? 'Dropped. ' : 'Handed over. '}Your weekly check-in will ask how it went.
+              </Text>
+            </>
+          )}
           <Button title="Back to Home" icon="home" onPress={() => navigation.navigate('Main', { screen: 'Home' })} style={styles.winBtn} />
         </Animated.View>
       ) : null}
+      {/* Handed off, but it came back: say so here (with a confirmation) instead of waiting for the check-in. */}
+      {finished && task.status === 'done' ? (
+        <Pressable onPress={confirmSlip} hitSlop={8} style={styles.slip} accessibilityRole="button">
+          <Ionicons name="refresh" size={15} color={colors.muted} />
+          <Text style={styles.slipText}>It slipped back?</Text>
+        </Pressable>
+      ) : null}
 
       <BottomSheet visible={sheet.open} onClose={() => setSheet((s) => ({ ...s, open: false }))}>
-        <StepSheet
-          key={sheet.id}
-          stepKey={sheet.key}
-          task={task}
-          onDone={(patch) => {
-            setSheet((s) => ({ ...s, open: false }));
-            // Handed over (or dropped): straight back to Home, where the next task is waiting.
-            if (patch.status === 'done') setTimeout(() => navigation.navigate('Main', { screen: 'Home' }), 260);
-          }}
-        />
+        {sheetStep ? (
+          <StepSheet
+            key={sheet.n}
+            step={sheetStep}
+            task={task}
+            onDone={(patch) => {
+              setSheet((s) => ({ ...s, open: false }));
+              // Handed over (or dropped): straight back to Home, where the next task is waiting, after
+              // the one ask (if any) once the sheet has closed.
+              if (patch?.status === 'done') setTimeout(() => (nextAsk ? setPopup(nextAsk) : goHome()), nextAsk ? 400 : 260);
+            }}
+          />
+        ) : null}
       </BottomSheet>
+
+      <PopupCard
+        visible={popup === 'save'}
+        icon="lock-closed"
+        kicker={startsLater(task) ? 'Handed over' : `${h(task.hours * 5)} a week bought back`}
+        title="Keep your progress safe"
+        body="Right now it lives only on this phone. Save it to get it back on any phone."
+        action="Save my progress"
+        actionIcon="cloud-upload"
+        onAction={() => {
+          setPopup(null);
+          navigation.navigate('Account', { mode: 'save' });
+        }}
+        onDismiss={() => {
+          setPopup(null);
+          setNextAsk(null);
+          dismissSaveAsk();
+          goHome();
+        }}
+      />
+      <PopupCard
+        visible={popup === 'reminders'}
+        icon="notifications"
+        title={`Want a reminder on ${checkInDay}?`}
+        body="We'll ask if your handoffs stuck, and ping you on start days. Never at night, never daily."
+        action="Turn on reminders"
+        actionIcon="notifications"
+        busy={turningOn}
+        onAction={async () => {
+          setTurningOn(true);
+          await askForReminders();
+          setTurningOn(false);
+          setPopup(null);
+          setNextAsk(null);
+          goHome();
+        }}
+        onDismiss={() => {
+          setPopup(null);
+          setNextAsk(null);
+          dismissRemindersAsk();
+          goHome();
+        }}
+      />
     </Screen>
   );
 }
 
-/** One step, in the sheet: its question, the choices, a "Draft it for me", and Save. */
-function StepSheet({ stepKey, task, onDone }) {
+/**
+ * One step, in the sheet: its question and helpers, and one button that saves the answer and ticks
+ * the step (Save; Hand it over or Drop it on the last step; Mark done on your own steps). A step
+ * you've already ticked opens to change its answer.
+ */
+function StepSheet({ step, task, onDone }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const { update } = useHandoffs();
@@ -170,10 +293,22 @@ function StepSheet({ stepKey, task, onDone }) {
   const [start, setStart] = useState(task.startDate || null);
   const [saving, setSaving] = useState(false);
   const tick = () => Haptics.selectionAsync().catch(() => {});
+  const openLink = (url) => Linking.openURL(url).catch(() => Alert.alert("Couldn't open that", 'No app on this phone can open it. Try "Other apps" instead.'));
   const rate = onboarding?.buybackRate;
   const currency = onboarding?.currency || 'USD';
+  const kind = step.kind;
 
-  const save = async (patch) => {
+  // What the helpers hold, ready to save (only this step's own answers).
+  const fields = () => {
+    if (kind === 'how') return method ? { method, plan: plan || methodLabel(method) } : {};
+    if (kind === 'brief') return { doneLooksLike: doneText.trim(), checkHow: checkText.trim() };
+    if (kind === 'who') return { who: who.trim() };
+    if (kind === 'handover') return start ? { startDate: start } : {};
+    return {};
+  };
+  const strip = (list) => list.map(({ id, kind: k, title, done }) => ({ id, kind: k, title, done }));
+
+  const run = async (patch) => {
     setSaving(true);
     try {
       await update(task.activity, patch);
@@ -185,206 +320,237 @@ function StepSheet({ stepKey, task, onDone }) {
       setSaving(false);
     }
   };
+  // Save and tick this step (choosing how may also reshape the steps); the last one hands it off.
+  // Changing a ticked step's answer un-ticks the steps after it (their answers stay) so they get
+  // checked again; saving it unchanged changes nothing. A handed-off task just saves the edit.
+  const save = () => {
+    const now = planOf(task);
+    if (task.status === 'done') return run(fields());
+    if (step.done) {
+      const answer = fields();
+      const differs = (k) => String(answer[k] ?? '') !== String(task[k] ?? '');
+      // For "how", only a new way counts: another idea for the same way just saves.
+      const changed = kind === 'how' ? differs('method') : Object.keys(answer).some(differs);
+      if (!changed) return Object.keys(answer).some(differs) ? run(answer) : onDone();
+      const reshaped = kind === 'how' ? planForMethod(now, method, task.method) : now;
+      const at = reshaped.findIndex((s) => s.id === step.id);
+      const next = reshaped.map((s, i) => (i > at ? { ...s, done: false } : s));
+      return run({ ...answer, steps: strip(next), status: 'in_progress' });
+    }
+    const next = kind === 'how' ? planForMethod(now, method, task.method) : now.map((s) => (s.id === step.id ? { ...s, done: true } : s));
+    const all = next.every((s) => s.done);
+    return run({ ...fields(), steps: strip(next), status: all ? 'done' : 'in_progress' });
+  };
 
-  if (stepKey === 'how') {
-    const ideas = handoffIdeas(task);
-    return (
-      <View>
-        <Text style={styles.sheetTitle}>How will you hand it off?</Text>
-        <View style={styles.grid}>
-          {HANDOFF_METHODS.map((m) => {
-            const on = method === m.key;
-            return (
-              <Pressable
-                key={m.key}
-                onPress={() => {
-                  tick();
-                  setMethod(m.key);
-                  setPlan('');
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={[styles.choice, on && styles.choiceOn]}
-              >
-                <Ionicons name={m.icon} size={19} color={on ? colors.onColor : colors.primary} />
-                <Text style={[styles.choiceText, on && styles.textOn]}>{m.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Text style={styles.label}>✨ Suggested for this task</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
-          {ideas.map((idea) => {
-            const on = plan === idea.text;
-            return (
-              <Pressable
-                key={idea.text}
-                onPress={() => {
-                  tick();
-                  setMethod(idea.method);
-                  setPlan(idea.text);
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={[styles.idea, on && styles.ideaOn]}
-              >
-                <Text style={styles.ideaText}>{idea.text}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        <Button title="Save" icon="checkmark" disabled={!method} loading={saving} onPress={() => save({ method, plan: plan || methodLabel(method) })} style={styles.save} />
-      </View>
-    );
-  }
+  // What the step needs before it can be saved, and its button.
+  const ready = {
+    how: Boolean(method),
+    brief: Boolean(doneText.trim() && checkText.trim()),
+    who: Boolean(who.trim()),
+    handover: Boolean(start),
+  }[kind] ?? true;
+  const action =
+    kind === 'handover' ? (task.method === 'automate' ? { title: 'Switch it on', icon: 'flash' } : { title: 'Hand it over', icon: 'paper-plane' })
+    : kind === 'drop' ? { title: 'Drop it', icon: 'close' }
+    : kind === 'custom' ? { title: 'Mark done', icon: 'checkmark' }
+    : { title: 'Save', icon: 'checkmark' };
+  const ideas = kind === 'how' ? handoffIdeas(task) : [];
+  const automate = task.method === 'automate';
+  const post = kind === 'who' ? jobPostDraft({ task, doneLooksLike: task.doneLooksLike, rate, currency }) : '';
+  const message = kind === 'handover' ? handoverDraft({ task, who: task.who, doneLooksLike: task.doneLooksLike, checkHow: task.checkHow, start }) : '';
 
-  if (stepKey === 'done') {
-    const auto = task.method === 'automate';
-    return (
-      <View>
-        <Text style={styles.sheetTitle}>Write the brief</Text>
-        <Text style={styles.sheetSub}>You set the start and the finish. They own the 80% in between.</Text>
-        <Text style={styles.qLabel}>
-          <Text style={styles.qPct}>10% · </Text>What does done look like?
-        </Text>
-        <TextInput value={doneText} onChangeText={setDoneText} placeholder="e.g. Finished the same day" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
-        <Text style={styles.qLabel}>
-          <Text style={styles.qPct}>10% · </Text>How will you check it?
-        </Text>
-        <TextInput value={checkText} onChangeText={setCheckText} placeholder="e.g. A look every Friday" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
-        <Pressable
-          onPress={() => {
-            setDoneText(auto ? DONE_DRAFT.automate : DONE_DRAFT.default);
-            setCheckText(auto ? CHECK_DRAFT.automate : CHECK_DRAFT.default);
-          }}
-          style={styles.draft}
-          accessibilityRole="button"
-        >
-          <Ionicons name="sparkles" size={15} color={colors.accentText} />
-          <Text style={styles.draftText}>Draft both for me</Text>
-        </Pressable>
-        <Button
-          title="Save"
-          icon="checkmark"
-          disabled={!doneText.trim() || !checkText.trim()}
-          loading={saving}
-          onPress={() => save({ doneLooksLike: doneText.trim(), checkHow: checkText.trim() })}
-          style={styles.save}
-        />
-      </View>
-    );
-  }
-
-  if (stepKey === 'who') {
-    const automate = task.method === 'automate';
-    const post = jobPostDraft({ task, doneLooksLike: task.doneLooksLike, rate, currency });
-    return (
-      <View>
-        <Text style={styles.sheetTitle}>{automate ? 'Which tool will do it?' : task.method === 'team' ? 'Who on your team takes it?' : 'Who will do it?'}</Text>
-        <TextInput value={who} onChangeText={setWho} placeholder={automate ? 'The tool' : 'Their name'} placeholderTextColor={colors.muted} maxLength={60} style={styles.input} />
-        {automate ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.line}>
-            {TOOL_IDEAS.map((t) => (
-              <Pressable key={t} onPress={() => setWho(t)} style={styles.chip} accessibilityRole="button">
-                <Text style={styles.chipText}>{t}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        ) : task.method === 'hire' ? (
-          <>
-            <Pressable onPress={() => setFind((v) => !v)} style={styles.draft} accessibilityRole="button" accessibilityState={{ expanded: find }}>
-              <Ionicons name="sparkles" size={15} color={colors.accentText} />
-              <Text style={styles.draftText}>No one yet? Draft a job post</Text>
-            </Pressable>
-            {find ? (
-              <Animated.View entering={FadeIn.duration(200)} style={styles.post}>
-                <Text style={styles.postText}>{post}</Text>
-                <Button title="Share job post" icon="share-social" variant="secondary" onPress={() => Share.share({ message: post }).catch(() => {})} style={styles.postBtn} />
-                <Text style={styles.postNote}>Come back and add their name once you've found someone.</Text>
-              </Animated.View>
-            ) : null}
-          </>
-        ) : null}
-        <Button title="Save" icon="checkmark" disabled={!who.trim()} loading={saving} onPress={() => save({ who: who.trim() })} style={styles.save} />
-      </View>
-    );
-  }
-
-  if (stepKey === 'handover') {
-    const message = handoverDraft({ task, who: task.who, doneLooksLike: task.doneLooksLike, checkHow: task.checkHow, start });
-    return (
-      <View>
-        <Text style={styles.sheetTitle}>When does it start?</Text>
-        <View style={styles.grid}>
-          {startOptions().map((o) => {
-            const on = sameDay(start, o.date);
-            return (
-              <Pressable
-                key={o.key}
-                onPress={() => {
-                  tick();
-                  setStart(o.date.toISOString());
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: on }}
-                style={[styles.choice, on && styles.choiceOn]}
-              >
-                <Text style={[styles.choiceText, on && styles.textOn]}>{o.label}</Text>
-                <Text style={[styles.choiceSub, on && styles.textOn]}>{formatDay(o.date)}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {task.method !== 'automate' && start ? (
-          <Animated.View entering={FadeIn.duration(200)} style={styles.post}>
-            <Text style={styles.label}>✨ A message to send them</Text>
-            <Text style={styles.postText}>{message}</Text>
-            <Button title="Send it" icon="share-social" variant="secondary" onPress={() => Share.share({ message }).catch(() => {})} style={styles.postBtn} />
-          </Animated.View>
-        ) : null}
-        <Button title="Hand it over" icon="paper-plane" disabled={!start} loading={saving} onPress={() => save({ startDate: start, status: 'done' })} style={styles.save} />
-      </View>
-    );
-  }
-
-  // Drop it
   return (
     <View>
-      <Text style={styles.sheetTitle}>Stop doing it</Text>
-      <Text style={styles.sheetSub}>If nothing bad happens when it's not done, it never needed doing. You get {h(task.hours)} a day back.</Text>
-      <Button title="Drop it" icon="close" loading={saving} onPress={() => save({ status: 'done' })} style={styles.save} />
+      <Text style={styles.sheetTitle}>{step.title}</Text>
+
+      {kind === 'how' ? (
+        <View>
+          <Text style={styles.sheetSub}>Ask in this order: can you drop it? Automate it? Then hand it to someone.</Text>
+          <View style={styles.grid}>
+            {HANDOFF_METHODS.map((m) => {
+              const on = method === m.key;
+              return (
+                <Pressable
+                  key={m.key}
+                  onPress={() => {
+                    tick();
+                    setMethod(m.key);
+                    setPlan('');
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.choice, on && styles.choiceOn]}
+                >
+                  <Ionicons name={m.icon} size={19} color={on ? colors.onColor : colors.primary} />
+                  <Text style={[styles.choiceText, on && styles.textOn]}>{m.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.label}>✨ Suggested for this task</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.line}>
+            {ideas.map((idea) => {
+              const on = plan === idea.text;
+              return (
+                <Pressable
+                  key={idea.text}
+                  onPress={() => {
+                    tick();
+                    setMethod(idea.method);
+                    setPlan(idea.text);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.idea, on && styles.ideaOn]}
+                >
+                  <Text style={styles.ideaText}>{idea.text}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          {method === 'drop' && task.method !== 'drop' ? <Text style={styles.note}>Dropping it shortens your plan to one more step: stop doing it.</Text> : null}
+          {method === 'automate' && task.method !== 'automate' ? <Text style={styles.note}>Automating it makes your plan two steps: set it up, then switch it on.</Text> : null}
+        </View>
+      ) : null}
+
+      {kind === 'brief' ? (
+        <View>
+          <Text style={styles.sheetSub}>You set the start and the finish. They own the 80% in between.</Text>
+          <Text style={styles.qLabel}>
+            <Text style={styles.qPct}>10% · </Text>What does done look like?
+          </Text>
+          <TextInput value={doneText} onChangeText={setDoneText} placeholder="e.g. Finished the same day" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
+          <Text style={styles.qLabel}>
+            <Text style={styles.qPct}>10% · </Text>How will you check it?
+          </Text>
+          <TextInput value={checkText} onChangeText={setCheckText} placeholder="e.g. A look every Friday" placeholderTextColor={colors.muted} maxLength={200} multiline style={styles.input} />
+          <Pressable
+            onPress={() => {
+              setDoneText(automate ? DONE_DRAFT.automate : DONE_DRAFT.default);
+              setCheckText(automate ? CHECK_DRAFT.automate : CHECK_DRAFT.default);
+            }}
+            style={styles.draft}
+            accessibilityRole="button"
+          >
+            <Ionicons name="sparkles" size={15} color={colors.accentText} />
+            <Text style={styles.draftText}>Draft both for me</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {kind === 'who' ? (
+        <View>
+          <Text style={styles.sheetSub}>{automate ? 'Which tool will do it?' : task.method === 'team' ? 'Who on your team takes it?' : 'Who will do it?'}</Text>
+          <TextInput value={who} onChangeText={setWho} placeholder={automate ? 'The tool' : 'Their name'} placeholderTextColor={colors.muted} maxLength={60} style={styles.input} />
+          {automate ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.line}>
+              {TOOL_IDEAS.map((t) => (
+                <Pressable key={t} onPress={() => setWho(t)} style={styles.chip} accessibilityRole="button">
+                  <Text style={styles.chipText}>{t}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          ) : null}
+          {automate && recipeFor(who) ? (
+            <View>
+              <Text style={styles.label}>How to set it up · about {recipeFor(who).minutes} min</Text>
+              {recipeFor(who).steps.map((s, i) => (
+                <View key={s} style={styles.recipeRow}>
+                  <Text style={styles.recipeNum}>{i + 1}</Text>
+                  <Text style={styles.recipeText}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          ) : !automate && task.method === 'hire' ? (
+            <>
+              <Pressable onPress={() => setFind((v) => !v)} style={styles.draft} accessibilityRole="button" accessibilityState={{ expanded: find }}>
+                <Ionicons name="sparkles" size={15} color={colors.accentText} />
+                <Text style={styles.draftText}>No one yet? Draft a job post</Text>
+              </Pressable>
+              {find ? (
+                <Animated.View entering={FadeIn.duration(200)} style={styles.post}>
+                  <Text style={styles.postText}>{post}</Text>
+                  <Button title="Share job post" icon="share-social" variant="secondary" onPress={() => Share.share({ message: post }).catch(() => {})} style={styles.postBtn} />
+                  <Text style={styles.label}>Look for someone on</Text>
+                  <View style={styles.sites}>
+                    {findWhoSites(task).map((s) => (
+                      <Pressable key={s.key} onPress={() => openLink(s.url)} style={[styles.chip, styles.siteChip]} accessibilityRole="link" accessibilityLabel={`Search ${s.label}`}>
+                        <Text style={styles.chipText}>{s.label}</Text>
+                        <Ionicons name="open-outline" size={13} color={colors.primary} />
+                      </Pressable>
+                    ))}
+                  </View>
+                </Animated.View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
+      ) : null}
+
+      {kind === 'handover' ? (
+        <View>
+          <Text style={styles.sheetSub}>When does it start?</Text>
+          <View style={styles.grid}>
+            {startOptions().map((o) => {
+              const on = sameDay(start, o.date);
+              return (
+                <Pressable
+                  key={o.key}
+                  onPress={() => {
+                    tick();
+                    setStart(o.date.toISOString());
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.choice, on && styles.choiceOn]}
+                >
+                  <Text style={[styles.choiceText, on && styles.textOn]}>{o.label}</Text>
+                  <Text style={[styles.choiceSub, on && styles.textOn]}>{formatDay(o.date)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {!automate ? (
+            <View style={styles.post}>
+              <Text style={styles.label}>✨ A message to send them</Text>
+              <Text style={styles.postText}>{message}</Text>
+              <View style={styles.sendRow}>
+                <Button title="WhatsApp" icon="logo-whatsapp" size="small" onPress={() => openLink(whatsappLink(message))} style={styles.sendBtn} />
+                <Button title="Email" icon="mail" size="small" variant="secondary" onPress={() => openLink(emailLink(`Handing over: ${task.activity}`, message))} style={styles.sendBtn} />
+              </View>
+              <Pressable onPress={() => Share.share({ message }).catch(() => {})} hitSlop={8} style={styles.moreApps} accessibilityRole="button">
+                <Text style={styles.moreAppsText}>Other apps</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {kind === 'drop' ? (
+        <Text style={styles.sheetSub}>If nothing bad happens when it's not done, it never needed doing. You get {h(task.hours)} a day back.</Text>
+      ) : null}
+
+      {kind === 'custom' ? <Text style={styles.sheetSub}>Your own step. Do it your way, then tick it here.</Text> : null}
+
+      {kind === 'custom' && step.done ? null : (
+        <Button title={action.title} icon={action.icon} disabled={!ready} loading={saving} onPress={save} style={styles.save} />
+      )}
     </View>
   );
 }
 
-const NODE = 32;
 const makeStyles = (colors) => ({
   pressed: { opacity: 0.85 },
   mutedText: { color: colors.muted },
-  // The road
-  road: { marginTop: spacing.lg },
-  stop: { flexDirection: 'row', gap: spacing.md },
-  rail: { width: NODE, alignItems: 'center' },
-  node: { width: NODE, height: NODE, borderRadius: NODE / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong },
-  nodeDone: { backgroundColor: colors.primary, borderColor: colors.primary },
-  nodeNow: { borderColor: brand.apricot, backgroundColor: colors.accentSoft, borderWidth: 3 },
-  nodeNum: { fontSize: 14, fontWeight: '800', color: colors.muted },
-  nodeNumNow: { color: colors.accentText },
-  line: { flex: 1, width: 3, minHeight: 18, marginVertical: 4, borderRadius: 2, backgroundColor: colors.border },
-  lineDone: { backgroundColor: colors.primary },
-  station: { flex: 1, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border },
-  stationNow: { borderColor: brand.apricot, backgroundColor: colors.accentSoft },
-  stationLocked: { backgroundColor: 'transparent', borderStyle: 'dashed' },
-  stationHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  stationTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text },
-  summary: { fontSize: 13, lineHeight: 19, color: colors.muted, marginTop: 4 },
-  go: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: spacing.sm, paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: brand.apricot },
-  goText: { fontSize: 13, fontWeight: '800', color: brand.evergreen },
-  sun: { width: NODE + 8, height: NODE + 8, borderRadius: (NODE + 8) / 2, marginLeft: -4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceAlt },
-  sunOn: { backgroundColor: brand.apricot },
-  dest: { flex: 1, paddingTop: 4 },
-  destTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
-  destLine: { fontSize: 13, fontWeight: '700', color: colors.accentText, marginTop: 2 },
+  // At the top
+  facts: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, marginTop: -spacing.sm },
+  fact: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface },
+  factText: { fontSize: 13, fontWeight: '700', color: colors.text },
+  drains: { color: colors.error },
+  rateRow: { marginTop: spacing.sm, gap: 4 },
+  rateChip: { backgroundColor: colors.accentSoft },
+  rateText: { color: colors.accentText },
+  rateNote: { fontSize: 12, lineHeight: 17, color: colors.muted },
   win: { marginTop: spacing.lg, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.successSoft },
   winTitle: { fontSize: 18, fontWeight: '800', color: colors.text, textAlign: 'center' },
   winText: { fontSize: 14, lineHeight: 20, color: colors.text, textAlign: 'center', marginTop: 4 },
@@ -422,7 +588,26 @@ const makeStyles = (colors) => ({
   draftText: { fontSize: 13, fontWeight: '800', color: colors.accentText },
   post: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   postText: { fontSize: 14, lineHeight: 21, color: colors.text },
+  sites: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  siteChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  sendRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  sendBtn: { flex: 1 },
+  moreApps: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: 4 },
+  moreAppsText: { fontSize: 14, fontWeight: '600', color: colors.primary },
+  slip: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, alignSelf: 'center', marginTop: spacing.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  slipText: { fontSize: 14, fontWeight: '600', color: colors.muted },
+  back: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.accentSoft },
+  backMain: { flex: 1, gap: 2 },
+  backTitle: { fontSize: 14, fontWeight: '800', color: colors.accentText },
+  backText: { fontSize: 13, lineHeight: 19, color: colors.text },
+  recipeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  recipeNum: { width: 22, height: 22, borderRadius: 11, overflow: 'hidden', textAlign: 'center', lineHeight: 22, fontSize: 12, fontWeight: '800', color: colors.primary, backgroundColor: colors.primarySoft },
+  recipeText: { flex: 1, fontSize: 14, lineHeight: 21, color: colors.text },
   postBtn: { marginTop: spacing.sm + 4, minHeight: 44 },
   postNote: { fontSize: 12, color: colors.muted, marginTop: spacing.sm, textAlign: 'center' },
   save: { marginTop: spacing.lg },
+  note: { fontSize: 13, lineHeight: 19, color: colors.accentText, marginTop: spacing.md },
+  yours: { fontSize: 11, fontWeight: '800', color: colors.accentText },
+  editPlan: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
+  editPlanText: { fontSize: 14, fontWeight: '800', color: colors.primary },
 });

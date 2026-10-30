@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { rateLimit } = require('express-rate-limit');
 const requireAuth = require('../middleware/auth');
 const ApiError = require('../utils/ApiError');
-const { createGuest, register, saveAccount, login, me, deleteMe } = require('../controllers/authController');
+const { createGuest, register, saveAccount, login, me, updateMe, deleteMe } = require('../controllers/authController');
 
 // Slows down password guessing: 20 tries per 15 minutes per IP is plenty for a real person.
 const accountLimiter = rateLimit({
@@ -11,11 +11,21 @@ const accountLimiter = rateLimit({
   handler: (req, res, next) => next(new ApiError(429, 'Too many tries. Please wait a few minutes and try again.')),
 });
 
-router.post('/guest', createGuest);
+// Starting as a guest creates an account, so a script can't make thousands: a few per hour per IP
+// is plenty (a family or office on one network included).
+const guestLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  skip: () => process.env.NODE_ENV !== 'production', // local test scripts start many guests
+  handler: (req, res, next) => next(new ApiError(429, 'Too many new starts from this network. Please try again in an hour.')),
+});
+
+router.post('/guest', guestLimiter, createGuest);
 router.post('/register', accountLimiter, register);
 router.post('/login', accountLimiter, login);
 router.post('/save', accountLimiter, requireAuth, saveAccount);
 router.get('/me', requireAuth, me);
+router.patch('/me', accountLimiter, requireAuth, updateMe);
 router.delete('/me', requireAuth, deleteMe);
 
 module.exports = router;

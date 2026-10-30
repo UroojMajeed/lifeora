@@ -6,6 +6,7 @@ const {
   ROLES,
   HANDOFF_STATUSES,
   HANDOFF_METHODS,
+  HANDOFF_STEP_KINDS, SETTLE_ANSWERS,
   FILL_TIMES,
 } = require('../utils/buyback');
 
@@ -48,6 +49,19 @@ const onboardingSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// One step of a handoff plan. `kind` is what the step is (the app's helpers for it), `title` the
+// user's own name for it; a step counts as done when the user says so ("I did it").
+const handoffStepSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, trim: true, maxlength: 24 },
+    kind: { type: String, enum: HANDOFF_STEP_KINDS, required: true },
+    title: { type: String, required: true, trim: true, maxlength: 40 },
+    done: { type: Boolean, default: false },
+    doneAt: Date,
+  },
+  { _id: false }
+);
+
 // Progress on handing off one draining activity, keyed by the activity's name in the schedule.
 const handoffSchema = new mongoose.Schema(
   {
@@ -64,6 +78,14 @@ const handoffSchema = new mongoose.Schema(
     playbook: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
     startDate: Date,
     notes: { type: String, trim: true, maxlength: 1000, default: '' },
+    // The user's own plan for this handoff (empty: the app's suggested steps), and whether they've confirmed it.
+    steps: { type: [handoffStepSchema], default: [] },
+    planConfirmed: { type: Boolean, default: false },
+    // The settle-in check after the handover: how it was going on day 3 and day 10 ('' until answered).
+    settleDay3: { type: String, enum: SETTLE_ANSWERS, default: '' },
+    settleDay10: { type: String, enum: SETTLE_ANSWERS, default: '' },
+    // When a weekly check-in said it slipped back (cleared once it's handed off again).
+    cameBackAt: Date,
     doneAt: Date,
   },
   { _id: false }
@@ -129,6 +151,22 @@ const userSchema = new mongoose.Schema(
     fills: { type: [fillSchema], default: [] },
     rounds: { type: [roundSchema], default: [] },
     checkIns: { type: [checkInSchema], default: [] },
+    // Reminder settings (the phone schedules them; kept here so they follow you to a new phone).
+    // The weekly check-in reminder: day (0 Sunday … 6 Saturday) and hour (8 to 20, never at night).
+    reminders: {
+      checkIn: { type: Boolean, default: true },
+      checkInDay: { type: Number, min: 0, max: 6, default: 5 },
+      checkInHour: { type: Number, min: 8, max: 20, default: 17 },
+      startDay: { type: Boolean, default: true },
+      nudges: { type: Boolean, default: true },
+    },
+    // Progress that follows you to a new phone: hours bought back per week (keyed by the week's
+    // Monday), the weeks you made a move (the streak), and milestones already celebrated.
+    progress: {
+      weeks: { type: Map, of: Number, default: () => new Map() },
+      activeWeeks: { type: [String], default: [] },
+      milestones: { type: Map, of: Date, default: () => new Map() },
+    },
   },
   { timestamps: true }
 );

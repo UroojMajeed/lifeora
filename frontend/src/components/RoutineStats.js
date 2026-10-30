@@ -47,7 +47,7 @@ const colStyles = StyleSheet.create({
  * and the graph said in words. Tap a column: it lights up and its tasks show. `items` is the
  * routine as it is now.
  */
-export default function RoutineStats({ items = [], free = 0, tip = true, style }) {
+export default function RoutineStats({ items = [], free = 0, tip = true, style, handedOff = 0 }) {
   const { colors } = useTheme();
   const styles = useStyles(makeStyles);
   const [open, setOpen] = useState(null);
@@ -79,7 +79,7 @@ export default function RoutineStats({ items = [], free = 0, tip = true, style }
         icon="stats-chart"
         iconColor={colors.primary}
         title="Your Routine"
-        sub={`${h(day)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}`}
+        sub={`${h(day)} a day · ${rated.length} ${rated.length === 1 ? 'task' : 'tasks'}${handedOff ? ` · ${handedOff} handed off` : ''}`}
       />
 
       {/* The graph: a track per quadrant, its column rising inside it. */}

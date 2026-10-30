@@ -4,10 +4,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../components/Screen';
 import PageHeader from '../components/PageHeader';
-import HandoffRow from '../components/HandoffRow';
+import HandoffRow, { rowStatus } from '../components/HandoffRow';
+import CardHeader, { homeCard } from '../components/CardHeader';
 import ErrorBanner from '../components/ErrorBanner';
 import Button from '../components/Button';
-import { Card } from '../components/Card';
 import { useHandoffs } from '../context/HandoffsContext';
 import { DRIP } from '../constants/content';
 import { formatHours } from '../utils/format';
@@ -16,7 +16,7 @@ import { radius, spacing } from '../theme';
 
 const SECTIONS = [
   { key: 'delegation', hint: 'Start here: the cheapest hours to buy back.' },
-  { key: 'replacement', hint: 'Record a playbook first, then hand them over.' },
+  { key: 'replacement', hint: 'Write the brief first, then hand them over.' },
 ];
 
 export default function HandoffsScreen({ navigation }) {
@@ -30,33 +30,46 @@ export default function HandoffsScreen({ navigation }) {
     }, [refresh])
   );
 
-  const open = (item) => navigation.navigate('HandoffDetail', { activity: item.activity });
+  const open = (item) => navigation.navigate('HandoffJourney', { activity: item.activity });
+  const count = (state) => handoffs.filter((x) => rowStatus(x) === state).length;
+  const [doneN, goingN, todoN] = [count('done'), count('going') + count('back') + count('starting'), count('todo')];
 
   return (
     <Screen edges={['top']}>
       <PageHeader
         eyebrow="Transfer"
         title="Your handoffs"
-        subtitle="Hand off what drains you, one task at a time. Every task you hand off buys those hours back."
+        subtitle="Hand off what drains you, one task at a time."
       />
 
       {summary && summary.total ? (
-        <Card style={styles.summary}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryBig}>
-              {formatHours(summary.boughtBackHours)}
-              <Text style={styles.summaryOf}> of {formatHours(summary.drainingHours)} a day bought back</Text>
-            </Text>
-          </View>
+        <View style={styles.summary}>
+          <CardHeader
+            icon="trending-up"
+            iconColor={colors.accentText}
+            title="Hours Bought Back"
+            sub={`${formatHours(summary.boughtBackHours)} of ${formatHours(summary.drainingHours)} a day`}
+          />
           <View style={styles.track}>
             <View style={[styles.fill, { width: `${summary.percent}%` }]} />
           </View>
-          <Text style={styles.summaryMeta}>
-            {summary.done} of {summary.total} handed off
-            {summary.later ? ` · ${summary.later} for next round` : ''}
-            {summary.inProgressHours ? ` · ${formatHours(summary.inProgressHours)} on the way` : ''}
-          </Text>
-        </Card>
+          <View style={styles.chips}>
+            {[
+              [doneN, 'handed off', 'checkmark-circle', colors.success],
+              [goingN, 'on the way', 'swap-horizontal', colors.warm],
+              [todoN, 'to go', 'ellipse-outline', colors.muted],
+            ]
+              .filter(([n]) => n)
+              .map(([n, label, icon, color]) => (
+                <View key={label} style={styles.chip}>
+                  <Ionicons name={icon} size={13} color={color} />
+                  <Text style={styles.chipText}>
+                    {n} {label}
+                  </Text>
+                </View>
+              ))}
+          </View>
+        </View>
       ) : null}
 
       {loading && !handoffs.length ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : null}
@@ -114,14 +127,13 @@ export default function HandoffsScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors) => ({
-  summary: { marginBottom: spacing.md },
-  summaryRow: { flexDirection: 'row', alignItems: 'baseline' },
-  summaryBig: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
-  summaryOf: { fontSize: 14, fontWeight: '600', color: colors.muted, letterSpacing: 0 },
-  track: { height: 8, borderRadius: radius.pill, backgroundColor: colors.border, overflow: 'hidden', marginTop: spacing.sm },
-  fill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.success },
-  summaryMeta: { fontSize: 13, color: colors.muted, marginTop: spacing.sm },
+const makeStyles = (colors, isDark) => ({
+  summary: { ...homeCard(colors, isDark), backgroundColor: colors.tintMove, marginBottom: spacing.sm },
+  track: { height: 8, borderRadius: radius.pill, backgroundColor: colors.calmTrack, overflow: 'hidden', marginTop: spacing.md },
+  fill: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.primary },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm + 2 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.surface },
+  chipText: { fontSize: 12, fontWeight: '700', color: colors.text },
   loader: { marginTop: spacing.xl },
   retry: { marginTop: spacing.md },
   empty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl },
