@@ -238,6 +238,7 @@ One `users` document per person. Guests are created on first open (`POST /api/au
 1. **Commit and push every change** to `main`, with a clear message. Pushing deploys the backend.
 2. **After each change, reset the local guests** so the phone restarts onboarding: `cd backend && node scripts/reset-guests.js` (local DB only).
 3. **Check before committing:**
+   - Tests: `cd backend && npm test` (API tests on a throwaway in-memory MongoDB, no setup needed) and `cd frontend && npm test` (the app's logic). GitHub Actions (`.github/workflows/ci.yml`) runs both, plus the bundle check, on every push.
    - Bundle check: `cd frontend && npx expo export --platform android --output-dir <tmp>`, and look for "Exported".
    - An undefined-names check, if you have one.
    - Don't run browser tests unless the owner asks.

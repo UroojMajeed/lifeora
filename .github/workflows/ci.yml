@@ -1,0 +1,50 @@
+# Runs on pushes to main and on every pull request: the backend's API tests (against an in-memory MongoDB),
+# the app's logic tests, and an Android bundle build to catch missing files or broken imports.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  app:
+    name: App tests and bundle
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Bundle check (Android)
+        run: npx expo export --platform android --output-dir ${{ runner.temp }}/expo-export
+        env:
+          CI: 1
+          EXPO_PUBLIC_API_URL: https://lifeora-nine.vercel.app/api
