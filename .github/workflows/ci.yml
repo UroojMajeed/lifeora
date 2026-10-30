@@ -1,9 +1,10 @@
-# Runs on every push and pull request: the backend's API tests (against an in-memory MongoDB),
+# Runs on pushes to main and on every pull request: the backend's API tests (against an in-memory MongoDB),
 # the app's logic tests, and an Android bundle build to catch missing files or broken imports.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
